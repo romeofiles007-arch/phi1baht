@@ -23,3 +23,4 @@ prompt ที่ส่งจริงเป็นข้อความเดี�
 | ไฟล์ | prompt | ขนาด | หมายเหตุ |
 |---|---|---|---|
 | world-bright.png | docs/design/phi-world-bright.prompt.txt | 1024×1536 RGB | โรงพิมพ์เดิมตอนเช้าแดดจ้า แทน world-day/world-night ในส่วนขยาย (ไฟล์ดิบสองภาพเดิมยังเก็บไว้ที่นี่) |
+| world-vivid-night.png | docs/design/phi-world-vivid-night.prompt.txt | 1024×1536 RGB | ผู้ใช้บอกธีมสว่างแสบตา ขอ "มืดแต่สดใส" — แชต "Create Ghost Comic Background" · ใช้แทน world-bright ในส่วนขยาย |

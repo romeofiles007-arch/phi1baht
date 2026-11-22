@@ -1,4 +1,4 @@
-// ธีมหน้าจอของ 5 หมวดผี 1 บาท + คละหมวด — โทนสดใสโทนเดียว (ผู้ใช้สั่ง 23 พ.ย. 2026 "เบื่อแบบทึบแล้ว") สีอ่านง่าย (คอนทราสต์ ≥ 4.5:1)
+// ธีมหน้าจอของ 5 หมวดผี 1 บาท + คละหมวด — มืดแต่สดใสโทนเดียว (ผู้ใช้ 23 พ.ย. 2026 "อยากได้เป็นทีมมืดแต่สดใส ถ้าสว่างแบบนี้มันแสบตา") สีอ่านง่าย (คอนทราสต์ ≥ 4.5:1)
 //   node scripts/test-category-themes.mjs
 // Task 4: เดิมตรวจ 3 หมวดของแอปต้นแบบ → เปลี่ยนเป็น 5 หมวดเล่มละบาท · ภาพฉากยังใช้ชุดเดิมร่วมกันจนกว่างานธีม (Task 9) จะวาดชุดใหม่
 import assert from 'node:assert/strict'
@@ -28,20 +28,22 @@ const luminance=hex=>{const v=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255).
 const contrast=(a,b)=>(Math.max(luminance(a),luminance(b))+.05)/(Math.min(luminance(a),luminance(b))+.05)
 for(const [id,t] of Object.entries(CATEGORY_THEMES)) for(const mode of ['light']) {
  const p=t[mode]
- // พื้นสดใส ไม่ทึบ
- for(const bg of ['bg','panel','pick']) assert.ok(luminance(p[bg])>0.6,`${id}/${mode}/${bg} มืดเกินไป`)
+ // มืดแต่สดใส: พื้นมืด (ไม่แสบตา) · สีเน้นอิ่มจัด ไม่ใช่สีหม่น
+ for(const bg of ['bg','panel','pick']) assert.ok(luminance(p[bg])<0.08,`${id}/${mode}/${bg} สว่างเกินไป (แสบตา)`)
+ const sat=hex=>{const v=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));return (Math.max(...v)-Math.min(...v))/Math.max(...v)}
+ assert.ok(sat(p.accent)>=0.35,`${id}/accent ต้องสด: ${sat(p.accent).toFixed(2)}`)
  // แถบหัวเรื่อง (wood) มีตัวหนังสือขาวทับ
  assert.ok(contrast(p.wood,'#ffffff')>=4.5,`${id}/wood กับตัวหนังสือขาว`)
  for(const fg of ['ink','muted','accent','ok','warn','danger']) for(const bg of ['bg','panel','pick']) assert.ok(contrast(p[fg],p[bg])>=4.5,`${id}/${mode}/${fg}/${bg}: ${contrast(p[fg],p[bg]).toFixed(2)}`)
  assert.ok(contrast(p.accent,p['accent-ink'])>=4.5,`${id}/${mode}/action`)
  if(p.action) assert.ok(contrast(p.action,p['action-ink'])>=4.5,`${id}/${mode}/gold action`)
 }
-console.log('PASS: 5 category IDs/names, mix falls back to ghost, existing art files, bright surfaces, contrast >=4.5:1.')
+console.log('PASS: 5 category IDs/names, mix falls back to ghost, existing art files, dark vivid surfaces, contrast >=4.5:1.')
 
-// ทุกหมวดใช้ฉากโรงพิมพ์ตอนเช้าแดดจ้า
+// ทุกหมวดใช้ฉากโรงพิมพ์ยามค่ำสีสด
 {
   const css = categoryThemeCss()
-  assert.ok(/--world-image:url\('agents\/phi-bright\.png'\)/.test(css) && !/phi-night|phi-day/.test(css), 'ทุกหมวดต้องใช้ภาพฉากสดใส')
+  assert.ok(/--world-image:url\('agents\/phi-night-vivid\.png'\)/.test(css) && !/phi-night\.png|phi-day|phi-bright/.test(css), 'ทุกหมวดต้องใช้ภาพฉากมืดสีสด')
   const { readFileSync } = await import('node:fs')
   const agentsCss = readFileSync(new URL('../extension/agents.css', import.meta.url), 'utf8')
   const sceneLine = agentsCss.split('\n').find(l => l.startsWith('.agentScene {'))

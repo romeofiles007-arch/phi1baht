@@ -23,7 +23,7 @@ for (const animal of Object.values(SEA_ASSETS)) {
   assert.ok(Math.abs(png.readUInt32BE(16) / png.readUInt32BE(20) - 4/3) < .02, animal + ': ตาราง 4×3 ช่องสัดส่วนเท่ากัน')
   assert.equal(png[25], 6, animal + ': มี alpha โปร่งใส')
 }
-const scene = readFileSync(new URL('../extension/agents/phi-bright.png', import.meta.url))
+const scene = readFileSync(new URL('../extension/agents/phi-night-vivid.png', import.meta.url))
 assert.equal(scene.subarray(0, 8).toString('hex'), '89504e470d0a1a0a')
 const css = read('extension/agents.css') + read('extension/temple.css')
 assert.match(css, /steps\(1, end\)/)

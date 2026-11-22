@@ -128,6 +128,13 @@
 .stickyAgent[data-agent='voice'] { --sticky-agent-color: #1d67a8; --sticky-agent-pick: #e0ecf8; }
 .stickyAgent[data-agent='edit'] { --sticky-agent-color: #b0431c; --sticky-agent-pick: #f9e6dc; }
 .agentSetting, .agentSettingInline { scroll-margin-top: 70px; }
+@media all {
+  .stickyAgent[data-agent='chatgpt'] { --sticky-agent-color: #7ed38c; --sticky-agent-pick: #133a26; }
+  .stickyAgent[data-agent='flow'] { --sticky-agent-color: #f19ad9; --sticky-agent-pick: #3a1c38; }
+  .stickyAgent[data-agent='meta'] { --sticky-agent-color: #b9a6ff; --sticky-agent-pick: #2a2248; }
+  .stickyAgent[data-agent='voice'] { --sticky-agent-color: #78bdff; --sticky-agent-pick: #12304f; }
+  .stickyAgent[data-agent='edit'] { --sticky-agent-color: #ff9d70; --sticky-agent-pick: #3b2218; }
+}
 
 /* ── Studio hero: แบนเนอร์ภาพพื้นหลัง + ตัวละครที่กำลังทำงาน + แถวทีมงาน ── */
 .studioHero { margin: 0 0 12px; padding: 0; background: none; border: 0; border-radius: 0; }
@@ -220,11 +227,18 @@ main .seg button[aria-pressed="true"], .overlay .seg button[aria-pressed="true"]
 
 /* ── สีทั้งแผงตามแผนกที่กำลังทำงาน (html[data-dept]) ──
    เขียนบท = เหลืองกระดาษ · วาดภาพ = แดงชาด · แอนิเมชัน = ส้มหลอดฉาย · พากย์ = เขียวหยก · ตัดต่อ = ฟ้าหมึก */
-html[data-dept='chatgpt'] { --bg: #effaf0; --panel: #ffffff; --accent: #2a7336; --accent-ink: #ffffff; --pick: #ffe08a; --sea-top: #ffffff; --hero-edge: #2a7336; }
-html[data-dept='flow'] { --bg: #fbeffa; --panel: #ffffff; --accent: #9a3a8c; --accent-ink: #ffffff; --pick: #ffe08a; --sea-top: #ffffff; --hero-edge: #9a3a8c; }
-html[data-dept='meta'] { --bg: #f3f0ff; --panel: #ffffff; --accent: #5b3fb0; --accent-ink: #ffffff; --pick: #ffe08a; --sea-top: #ffffff; --hero-edge: #5b3fb0; }
-html[data-dept='voice'] { --bg: #eaf4ff; --panel: #ffffff; --accent: #1d67a8; --accent-ink: #ffffff; --pick: #ffe08a; --sea-top: #ffffff; --hero-edge: #1d67a8; }
-html[data-dept='edit'] { --bg: #fff1ea; --panel: #ffffff; --accent: #b0431c; --accent-ink: #ffffff; --pick: #ffe08a; --sea-top: #ffffff; --hero-edge: #b0431c; }
+html[data-dept='chatgpt'] { --bg: #0f1f1a; --panel: #172a24; --accent: #7ed38c; --accent-ink: #140a08; --pick: #1f3a30; --sea-top: #172a24; --hero-edge: #7ed38c; }
+html[data-dept='flow'] { --bg: #1f1030; --panel: #2b1840; --accent: #f19ad9; --accent-ink: #140a08; --pick: #3a2152; --sea-top: #2b1840; --hero-edge: #f19ad9; }
+html[data-dept='meta'] { --bg: #16123a; --panel: #211a4d; --accent: #b9a6ff; --accent-ink: #140a08; --pick: #2d2463; --sea-top: #211a4d; --hero-edge: #b9a6ff; }
+html[data-dept='voice'] { --bg: #0c1a33; --panel: #132546; --accent: #78bdff; --accent-ink: #140a08; --pick: #1b3360; --sea-top: #132546; --hero-edge: #78bdff; }
+html[data-dept='edit'] { --bg: #24112a; --panel: #331a38; --accent: #ff9d70; --accent-ink: #140a08; --pick: #47213f; --sea-top: #331a38; --hero-edge: #ff9d70; }
+@media all {
+  html[data-dept='chatgpt'] { --bg: #0f1f1a; --panel: #172a24; --accent: #7ed38c; --accent-ink: #140a08; --pick: #1f3a30; --sea-top: #172a24; --hero-edge: #7ed38c; }
+  html[data-dept='flow'] { --bg: #1f1030; --panel: #2b1840; --accent: #f19ad9; --accent-ink: #140a08; --pick: #3a2152; --sea-top: #2b1840; --hero-edge: #f19ad9; }
+  html[data-dept='meta'] { --bg: #16123a; --panel: #211a4d; --accent: #b9a6ff; --accent-ink: #140a08; --pick: #2d2463; --sea-top: #211a4d; --hero-edge: #b9a6ff; }
+  html[data-dept='voice'] { --bg: #0c1a33; --panel: #132546; --accent: #78bdff; --accent-ink: #140a08; --pick: #1b3360; --sea-top: #132546; --hero-edge: #78bdff; }
+  html[data-dept='edit'] { --bg: #24112a; --panel: #331a38; --accent: #ff9d70; --accent-ink: #140a08; --pick: #47213f; --sea-top: #331a38; --hero-edge: #ff9d70; }
+}
 .heroBanner { border-left-color: var(--hero-edge, #e0b04a); }
 .heroCrew button[aria-current='true'] { border-color: var(--hero-edge, #e0b04a); box-shadow: 0 0 0 2px color-mix(in srgb, var(--hero-edge, #e0b04a) 40%, transparent); }
 body, main > section, .primary, .ghost, .seg button { transition: background-color .5s ease, border-color .5s ease, color .3s ease; }
@@ -287,6 +301,13 @@ main > #autoSection { background: linear-gradient(180deg, color-mix(in srgb, var
 .seahorseSettings input { width: 100%; box-sizing: border-box; }
 .seahorseSettings a { color: var(--setting-color); align-self: center; }
 .agentSetting[data-focused='true'], .agentSettingInline[data-focused='true'] { box-shadow: 0 0 0 2px color-mix(in srgb, var(--setting-color) 45%, transparent), var(--panel-shadow); }
+@media all {
+  .agentSetting[data-agent='chatgpt'], .agentSettingInline[data-agent='chatgpt'] { --setting-color: #7ed38c; --setting-pick: #133a26; }
+  .agentSetting[data-agent='flow'], .agentSettingInline[data-agent='flow'] { --setting-color: #f19ad9; --setting-pick: #3a1c38; }
+  .agentSetting[data-agent='meta'], .agentSettingInline[data-agent='meta'] { --setting-color: #b9a6ff; --setting-pick: #2a2248; }
+  .agentSetting[data-agent='voice'], .agentSettingInline[data-agent='voice'] { --setting-color: #78bdff; --setting-pick: #12304f; }
+  .agentSetting[data-agent='edit'], .agentSettingInline[data-agent='edit'] { --setting-color: #ff9d70; --setting-pick: #3b2218; }
+}
 
 /* ── ขั้นทำทีละขั้น: หัวกล่องเป็นแถบสีพร้อมเลขขั้น แยกกล่องออกจากกันด้วยระยะห่าง ── */
 main > section.step { padding-top: 0; margin-bottom: 22px; background: color-mix(in srgb, var(--panel) 96%, transparent); box-shadow: var(--panel-shadow); }
@@ -325,6 +346,7 @@ main > section.step { padding-top: 0; margin-bottom: 22px; background: color-mix
 
 /* ── ปุ่มหยุดของทำคลิปอัตโนมัติ: กรอบแดงฟุ้ง เห็นทันทีระหว่างทำงาน ── */
 #stopAuto.stop { --stop-red: #e5484d; min-height: 44px; border: 2px solid var(--stop-red); color: var(--stop-red); background: color-mix(in srgb, var(--stop-red) 12%, var(--panel)); font-weight: 800; }
+@media all { #stopAuto.stop { --stop-red: #ff8f8f; } } /* #ff6b6b บนพื้นปุ่มได้ 4.1:1 — ต่ำกว่า 4.5 */
 #stopAuto.stop:not(:disabled) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--stop-red) 28%, transparent), 0 0 18px 2px color-mix(in srgb, var(--stop-red) 60%, transparent); animation: stop-glow 2.4s ease-in-out infinite; }
 #stopAuto.stop:hover:not(:disabled) { background: var(--stop-red); color: #fff; border-color: var(--stop-red); }
 /* ยังกดไม่ได้: คงกรอบแดงให้รู้ว่าปุ่มอยู่ตรงนี้ แต่ไม่ฟุ้ง */
@@ -390,6 +412,12 @@ main .agentBlock .seg button:hover:not(:disabled):not([aria-pressed="true"]) { b
 /* ระหว่างทำงานปุ่มถูกล็อก — ยังต้องเห็นว่าเลือกอะไรไว้ ไม่จางทั้งแถว */
 main .seg button:disabled { opacity: .6; filter: none; }
 main .seg button[aria-pressed="true"]:disabled { opacity: 1; }
+@media all {
+  /* มืด: ผสมจากสีพื้นของแผนกเอง (--setting-pick) ไม่ผสมกับพื้นสีเขียว — ชมพู/ส้มจะไม่หม่นเป็นเทา */
+  .agentBlock { --setting-ink: #04202c; background: color-mix(in srgb, var(--setting-pick) 60%, var(--panel)); }
+  .clipSettings.agentBlock, .seahorseSettings.agentBlock { background: color-mix(in srgb, var(--setting-pick) 60%, var(--panel)); }
+  .agentBlock > .blockHead, .agentBlock > summary { background: color-mix(in srgb, var(--setting-color) 16%, var(--setting-pick)); }
+}
 /* กล่อง details เดิม (.clipSettings) เป็นเส้นประ — ในการ์ดอัตโนมัติให้เป็นเส้นทึบเท่ากล่องอื่น */
 .clipSettings.agentBlock { border-style: solid; border-width: 1.5px; border-radius: 12px; margin: 12px 0 0; padding: 0 12px 12px; }
 details.clipSettings.agentBlock:not([open]) { padding-bottom: 0; }
@@ -441,6 +469,9 @@ details.clipSettings.agentBlock:not([open]) { padding-bottom: 0; }
 .controlBlock > .run { margin-top: 14px; }
 .controlBlock .autoLive { margin: 0; }
 .controlBlock .restartRow { border-color: color-mix(in srgb, var(--setting-color) 45%, var(--line)); }
+@media all {
+  .controlBlock { --setting-color: #8fe6ff; --setting-pick: #0e3040; --setting-ink: #04202c; }
+}
 
 /* ── การ์ดอัตโนมัติ = สีทองกระดาษทั้งใบ · สีแผนกเหลือแค่ป้ายชื่อ + รูปตัวละคร ──
    กล่องแผนกในการ์ดนี้ใช้ค่าสีทองเดียวกับกล่องควบคุม (--setting-*) ส่วน --agent-* เก็บสีแผนกไว้ให้ป้ายชื่อ */
@@ -452,6 +483,16 @@ details.clipSettings.agentBlock:not([open]) { padding-bottom: 0; }
 .agentBlock { --agent-ink: #fff; }
 #autoSection .agentBlock { --setting-color: #0877a3; --setting-pick: #e3f6fc; --setting-ink: #fff; --accent: var(--setting-color); --accent-ink: var(--setting-ink); }
 #autoSection .agentBlock > .blockHead::after, #autoSection .agentBlock > summary::after { background: var(--agent-color, var(--setting-color)); color: var(--agent-ink); }
+@media all {
+  .agentBlock[data-agent='chatgpt'] { --agent-color: #7ed38c; }
+  .agentBlock[data-agent='flow'] { --agent-color: #f19ad9; }
+  .agentBlock[data-agent='meta'] { --agent-color: #b9a6ff; }
+  .agentBlock[data-agent='voice'] { --agent-color: #78bdff; }
+  .agentBlock[data-agent='edit'] { --agent-color: #ff9d70; }
+  .agentBlock { --agent-ink: #04202c; }
+  #autoSection .agentBlock { --setting-color: #8fe6ff; --setting-pick: #0e3040; --setting-ink: #04202c; }
+  #autoSection .agentBlock, #autoSection .clipSettings.agentBlock, #autoSection .seahorseSettings.agentBlock { background: color-mix(in srgb, var(--setting-pick) 60%, var(--panel)); }
+}
 
 /* ── หรือทำทีละขั้นเอง: แต่ละขั้นเป็นสีของแผนกที่ทำหน้าที่นั้นทั้งกล่อง ──
    พื้น · ขอบ · หัวขั้น · ปุ่มหลัก · ตัวเลือกที่เลือก ใช้สีแผนก (ขั้น 1–2, 4 นักเขียนบท · 3 นักพากย์ · 5 นักวาด · 6 คนฉายหนัง) */
@@ -460,6 +501,9 @@ main > section.step.agentSetting .seg { border-color: color-mix(in srgb, var(--s
 main > section.step.agentSetting .seg button[aria-pressed="true"] { background: var(--setting-color); color: var(--setting-ink); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--setting-color) 60%, #000); }
 main > section.step.agentSetting input:not([type='checkbox']), main > section.step.agentSetting select, main > section.step.agentSetting textarea { border-color: color-mix(in srgb, var(--setting-color) 45%, var(--line)); }
 main > section.step.agentSetting :focus-visible { outline-color: var(--setting-color); }
+@media all {
+  main > section.step.agentSetting { --setting-ink: #04202c; background: color-mix(in srgb, var(--setting-pick) 60%, var(--panel)); }
+}
 
 /* ── ค่าใช้จ่ายของคลิป (ในกล่องควบคุม ใต้ % รวม) ── */
 .autoCost { margin: 10px 0 0; padding: 9px 11px; border: 1px solid color-mix(in srgb, var(--setting-color) 45%, var(--line)); border-radius: 9px; background: var(--panel); }
@@ -478,6 +522,9 @@ main > section.step.agentSetting :focus-visible { outline-color: var(--setting-c
 main > section.step.agentSetting > h2 { gap: 8px; min-height: 52px; padding-top: 6px; padding-bottom: 6px; background: color-mix(in srgb, var(--setting-color) 18%, var(--panel)); border-bottom-color: color-mix(in srgb, var(--setting-color) 40%, transparent); }
 main > section.step.agentSetting > h2::before { content: ''; order: -1; flex: none; width: 30px; height: 40px; background: var(--agent-sprite) 0 0 / 400% 100% no-repeat; }
 main > section.step.agentSetting > h2::after { content: attr(data-agent-label); border: 0; background: var(--setting-color); color: var(--setting-ink); font-size: 12px; font-weight: 700; }
+@media all {
+  main > section.step.agentSetting > h2 { background: color-mix(in srgb, var(--setting-color) 16%, var(--setting-pick)); }
+}
 
 /* ── ตัวละครลอยมุมขวาล่าง: ล้นขอบกล่องเล็กน้อย เปลี่ยนตัวตามกล่องที่อยู่กลางจอ ──
    ตกแต่งล้วน: ไม่ดักการกด ไม่บังเนื้อหาหลัก (กล่องมีขอบขวา 12px) · เฟรมแรกของ sprite 4 เฟรม (543×724) */
@@ -519,6 +566,10 @@ main > section.step.agentSetting > h2 { min-height: 0; padding-top: 11px; paddin
 #autoSection .agentBlock { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75), 0 0 0 1px rgba(255, 255, 255, .35), 0 6px 18px rgba(255, 255, 255, .22); }
 #autoSection .agentBlock > .blockHead, #autoSection .agentBlock > summary { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6); }
 #autoControlBlock .primary { box-shadow: 0 3px 0 color-mix(in srgb, var(--setting-color) 60%, #000), 0 0 16px rgba(255, 255, 255, .45), inset 0 1px 0 rgba(255, 255, 255, .45); }
+@media all {
+  #autoSection .agentBlock { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 0 0 1px rgba(255, 255, 255, .12), 0 6px 20px rgba(200, 245, 255, .14); }
+  #autoSection .agentBlock > .blockHead, #autoSection .agentBlock > summary { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18); }
+}
 
 /* โลโก้ในช่องว่างซ้ายของแถบตัวละครลอย — ตัวละครยังอยู่กลางแถบ · กดแล้วกลับขึ้นบนสุด */
 .agentSticky { position: fixed; }
@@ -597,6 +648,7 @@ main .writerCard[aria-checked='true'] .writerTick { display: inline-block; }
 .writerKey label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; }
 .writerKey label a { font-weight: 500; margin-left: 6px; color: var(--accent); }
 .writerKey .pickRow input { flex: 1; min-width: 0; }
+@media all { .writerStatus[data-tone='warn'] { color: #f0b260; } }
 @media (max-width: 300px) { .writerCards { grid-template-columns: 1fr; } }
 
 /* ── ⏹ หยุดทุกอย่าง — แถบบนสุดของแผง ปกติเป็นปุ่มแดงเส้นขอบ · หยุดอยู่ = แถบแดงทึบ + ปุ่มทำงานต่อสีเขียว ── */

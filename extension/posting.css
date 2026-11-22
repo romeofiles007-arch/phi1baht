@@ -1,7 +1,12 @@
 /* แผนกนกนางนวล · โหมดโพสต์อัตโนมัติ — สีทองแสงแดดริมฝั่ง ไม่ซ้ำ 5 แผนกเดิม (เขียว ชมพู ม่วง ฟ้า ส้มแดง) และฟ้าอมเขียวของปุ่มควบคุม
    ตัวแปรสีกำหนดเฉพาะใน #posting และปุ่มเปิด — ไม่แตะธีมของแผนกอื่น */
 #posting, #openPosting {
-  --gull: #8a5a00; --gull-ink: #ffffff; --gull-pick: #fff1c2; --gull-bg: #fffaf0; --gull-panel: #ffffff; --gull-edge: #d9a425; --gull-line: #e6d3a3;
+  --gull: #ecc763; --gull-ink: #141b24; --gull-pick: #38331f; --gull-bg: #1b2430; --gull-panel: #24313f; --gull-edge: #d9a425; --gull-line: #5e7084;
+}
+@media all {
+  #posting, #openPosting {
+    --gull: #ecc763; --gull-ink: #0f141c; --gull-pick: #31301d; --gull-bg: #0f141c; --gull-panel: #18212c; --gull-edge: #d9a425; --gull-line: #566675;
+  }
 }
 
 #openPosting { border-color: var(--gull-edge); color: var(--gull); font-weight: 700; background: color-mix(in srgb, var(--gull-pick) 70%, transparent); }
@@ -47,6 +52,12 @@
 .pList > .pCard:nth-child(4n + 2) { --p-card-bg: #f2ecf8; --p-card-line: #90759f; }
 .pList > .pCard:nth-child(4n + 3) { --p-card-bg: #e9f3ee; --p-card-line: #628571; }
 .pList > .pCard:nth-child(4n + 4) { --p-card-bg: #fbefd9; --p-card-line: #957744; }
+@media all {
+  .pCard { --p-card-bg: #182c3a; --p-card-line: #688ba7; }
+  .pList > .pCard:nth-child(4n + 2) { --p-card-bg: #302438; --p-card-line: #a08bad; }
+  .pList > .pCard:nth-child(4n + 3) { --p-card-bg: #203529; --p-card-line: #789d88; }
+  .pList > .pCard:nth-child(4n + 4) { --p-card-bg: #3b2f1d; --p-card-line: #b79a63; }
+}
 .pCard.fail { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--p-card-bg)); }
 .pCard.done { border-color: var(--ok); }
 .pCard .pField input, .pCard .pField textarea, .pCard .pField select { background: var(--gull-panel); border-color: var(--p-card-line); }
