@@ -27,7 +27,7 @@ const sleep = async (ms) => {
  * คำตอบใหม่ (ใบที่ 1) จะเท่ากับจำนวนเดิม → ไม่เคยรู้ว่าตอบจบ ค้างรอ 30 นาที (เจอจริง ก.ย. 2026)
  */
 async function startNewChat() {
-  const empty = () => location.pathname === '/' && !assistantTurns().length && pick(S.input)
+  const empty = () => location.pathname === '/' && !assistantTurns().length && pickVisible(S.input)
   // service worker โหลดหน้าแรกให้ก่อนส่งงานแล้ว — หน้าว่างอยู่แล้วก็ไม่ต้องกดอะไร
   if (await waitFor(empty, { timeout: 8000, label: 'หน้าแชตใหม่' }).then(() => true, () => false)) return sleep(500)
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -141,7 +141,7 @@ function retryButton(turn) {
 const REMOVE = 'button[aria-label^="Remove" i], button[aria-label^="ลบ"], button[aria-label^="นำออก"]'
 /** ของที่อยู่ในช่องพิมพ์ตอนนี้ — prompt ยาว ChatGPT แปลงเป็นไฟล์แนบ ช่องพิมพ์จึงว่างได้ทั้งที่วางสำเร็จ */
 function composerState() {
-  const input = pick(S.input)
+  const input = pickVisible(S.input)
   return { chars: input?.textContent.trim().length ?? 0, files: (input?.closest('form') ?? document).querySelectorAll(REMOVE).length }
 }
 
@@ -160,7 +160,7 @@ async function fillPrompt(input, prompt) {
   input.click()
   await chrome.runtime.sendMessage({ type: 'CHATGPT_PASTE', text: prompt, selectors: S.input }).catch(() => null)
   if (await landed()) return
-  await typeInto(pick(S.input) ?? input, prompt)
+  await typeInto(pickVisible(S.input) ?? input, prompt)
   if (await landed()) return
   throw new Error('วาง prompt ลงช่องพิมพ์ของ ChatGPT ไม่ได้ — ช่องพิมพ์ยังว่างอยู่ · กด F5 ที่แท็บ ChatGPT แล้วสั่งใหม่')
 }
@@ -186,7 +186,7 @@ async function clearComposer(input) {
 async function runPrompt(prompt, { newChat = true, attachments = [] } = {}) {
   if (newChat) await startNewChat()
 
-  const input = await waitFor(() => pick(S.input), { label: 'ช่องพิมพ์ของ ChatGPT' })
+  const input = await waitFor(() => pickVisible(S.input), { label: 'ช่องพิมพ์ของ ChatGPT' })
   await clearComposer(input)
   // รูปตัวละคร: วางรูปก่อน แล้วรอให้ขึ้นเป็นไฟล์แนบ (ปุ่มส่งจะรอจนอัปโหลดเสร็จอีกชั้น)
   if (attachments.length) {
@@ -202,7 +202,7 @@ async function runPrompt(prompt, { newChat = true, attachments = [] } = {}) {
 
   // prompt ยาว ChatGPT แปลงเป็นไฟล์แนบ — รอจนปุ่มส่งพร้อม (แนบเสร็จ) ก่อนกด Enter
   await waitFor(() => {
-    const btn = pick(S.send)
+    const btn = pickVisible(S.send)
     return btn && !btn.disabled
   }, { timeout: 60_000, label: 'ปุ่มส่งของ ChatGPT พร้อม' }).catch(() => null)
   guard()
@@ -223,8 +223,8 @@ async function runPrompt(prompt, { newChat = true, attachments = [] } = {}) {
   let sent = false
   // สลับวิธี: Enter → คลิกปุ่มส่ง → Enter — ChatGPT บางจังหวะไม่รับ Enter ที่จำลองขึ้น
   for (let attempt = 0; attempt < 3 && !sent; attempt++) {
-    const box = pick(S.input) ?? input
-    const sendBtn = pick(S.send)
+    const box = pickVisible(S.input) ?? input
+    const sendBtn = pickVisible(S.send)
     if (attempt === 1 && sendBtn && !sendBtn.disabled) sendBtn.click()
     else {
       box.focus()
@@ -234,7 +234,7 @@ async function runPrompt(prompt, { newChat = true, attachments = [] } = {}) {
   }
   guard()
   if (!sent) {
-    const btn = pick(S.send)
+    const btn = pickVisible(S.send)
     const why = !btn ? 'ไม่เจอปุ่มส่ง' : btn.disabled ? 'ปุ่มส่งกดไม่ได้ (ไฟล์แนบยังอัปโหลดไม่เสร็จ หรือมีหน้าต่างแจ้งเตือนบังอยู่)' : 'ChatGPT ไม่ตอบสนอง'
     const { chars, files } = composerState()
     throw new Error(`ส่งข้อความไป ChatGPT ไม่สำเร็จ — ${why} [ช่องพิมพ์: ${chars} ตัวอักษร, ไฟล์แนบ ${files}] · ดูที่แท็บ ChatGPT แล้วสั่งใหม่`)
@@ -298,7 +298,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   // หน้าตรวจความพร้อม: ChatGPT ใช้แบบไม่ล็อกอินได้ แต่โควตาน้อยและตอบยาวไม่ได้ → ถือว่ายังไม่พร้อม
   if (msg.type === 'PING') {
     const loginButton = document.querySelector('[data-testid="login-button"], a[href*="/auth/login"]')
-    const input = pick(S.input)
+    const input = pickVisible(S.input)
     sendResponse({ ok: true, loggedIn: loginButton ? false : input ? true : null, url: location.href })
     return
   }

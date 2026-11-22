@@ -660,7 +660,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         world: 'MAIN',
         args: [msg.text, msg.selectors],
         func: (text, selectors) => {
-          const el = selectors.map((s) => document.querySelector(s)).find(Boolean)
+          // เลือกช่องพิมพ์ที่มองเห็นเท่านั้น — หลังเปลี่ยนหน้า / → /c/... ChatGPT มีช่องพิมพ์ซ่อนค้างอยู่ก่อนช่องจริง (23 พ.ย. 2026)
+          const shown = (e) => e.offsetWidth > 0 || e.offsetHeight > 0 || e.getClientRects().length > 0
+          const el = selectors.flatMap((s) => { try { return [...document.querySelectorAll(s)] } catch { return [] } }).find(shown)
           if (!el) return false
           el.focus()
           const data = new DataTransfer()
