@@ -25,7 +25,7 @@ const posting = createPosting({
   readBody: async () => requestBody,
   port: 1, token: 'test', log: () => {}, scheduler: false,
   deps: {
-    listVideos: async () => [{ slug, title: 'คลิปตำนานจีน', files: [{ name: file, main: true, createdAt: clipAt }] }],
+    listVideos: async () => [{ slug, title: 'คลิปนิทานผี', files: [{ name: file, main: true, createdAt: clipAt }] }],
     facebookUpload: async () => { throw new Error('Must not publish future clips') },
   },
 })
@@ -43,12 +43,15 @@ const test = async (name, fn) => {
   passed++
   console.log(`  ✓ ${name}`)
 }
-const item = (extra = {}) => ({ ...P.newItem({ slug, file, title: 'คลิปตำนานจีน', post: { title: 'ชื่อโพสต์' } }), status: 'scheduled', scheduleAt: future, ...extra })
+const item = (extra = {}) => ({ ...P.newItem({ slug, file, title: 'คลิปนิทานผี', post: { title: 'ชื่อโพสต์' } }), status: 'scheduled', scheduleAt: future, ...extra })
 
 try {
   mkdirSync(join(projectDir, '00_ref'))
   mkdirSync(join(projectDir, '06_render'))
   writeFileSync(join(projectDir, '00_ref', 'profile.json'), JSON.stringify({ category: 'folk' }))
+  // ข้อความโพสต์มีแล้ว — เทสต์นี้ตรวจปลายทาง ไม่ใช่การให้ ChatGPT เขียนโพสต์ (ไม่มี = fillPosts สั่งงาน AI)
+  mkdirSync(join(projectDir, '01_script'))
+  writeFileSync(join(projectDir, '01_script', 'post.json'), JSON.stringify({ titles: ['ชื่อโพสต์'], description: 'คำบรรยาย', hashtags: ['#ผี1บาท'] }))
   writeFileSync(join(projectDir, '06_render', file), '')
 
   await test('automatic enrollment reads clip category and selects its matching page', async () => {
@@ -56,21 +59,21 @@ try {
     await posting.tick()
     const [q] = P.loadQueue()
     assert.equal(q.category, category)
-    assert.deepEqual(q.targets, ['fb:tale'])
+    assert.deepEqual(q.targets, ['fb:folk'])
   })
 
   await test('adding from the library selects the page accepting the clip category', async () => {
     const v = await request('/api/posting/add', { slug, file })
     assert.equal(v.queue[0].category, category)
-    assert.deepEqual(v.queue[0].targets, ['fb:tale'])
+    assert.deepEqual(v.queue[0].targets, ['fb:folk'])
   })
 
   await test('opening the panel repairs an old scheduled clip before its posting time', async () => {
     P.saveQueue([item()])
     const v = await request('/api/posting')
-    assert.deepEqual(v.queue[0].targets, ['fb:tale'])
+    assert.deepEqual(v.queue[0].targets, ['fb:folk'])
     const [q] = P.loadQueue()
-    assert.deepEqual(q.targets, ['fb:tale'], 'repair must persist')
+    assert.deepEqual(q.targets, ['fb:folk'], 'repair must persist')
     assert.equal(q.category, category)
     assert.equal(q.scheduleAt, future)
     assert.equal(q.status, 'scheduled')
@@ -79,14 +82,14 @@ try {
   await test('a background tick fills the page of future scheduled clips', async () => {
     P.saveQueue([item()])
     await posting.tick()
-    assert.deepEqual(P.loadQueue()[0].targets, ['fb:tale'])
+    assert.deepEqual(P.loadQueue()[0].targets, ['fb:folk'])
   })
 
   await test('a new page repairs only automatic destinations; explicit selections stay intact', async () => {
     P.saveQueue([item({ id: 'auto', category, categoryBy: 'clip' }), item({ id: 'manual', targetsEdited: true }), item({ id: 'assigned', targets: ['fb:old'] })])
     await request('/api/posting')
     const q = P.loadQueue()
-    assert.deepEqual(q[0].targets, ['fb:tale'])
+    assert.deepEqual(q[0].targets, ['fb:folk'])
     assert.deepEqual(q[1].targets, [])
     assert.deepEqual(q[2].targets, ['fb:old'])
   })

@@ -5,9 +5,5 @@ scripts/test-posting-fullauto.mjs
 scripts/test-posting-newpage.mjs
 scripts/test-posting-pertarget.mjs
 scripts/test-posting-skipcheck.mjs
-scripts/test-posting-targets.mjs
 scripts/test-posting.mjs
 scripts/test-production-pages.mjs
-scripts/test-self-host.mjs
-scripts/test-update-package.mjs
-scripts/test-update-version.mjs
