@@ -45,7 +45,9 @@ const luminance = hex => {
 }
 const contrast = (a,b) => (Math.max(luminance(a),luminance(b))+.05)/(Math.min(luminance(a),luminance(b))+.05)
 const roots = [...css.matchAll(/:root, html\[data-dept\] \{([^}]+)\}/g)]
-assert.equal(roots.length,2)
+assert.equal(roots.length,1,'ธีมสดใสโทนเดียว ไม่มีโหมดมืด (ผู้ใช้สั่ง 23 พ.ย. 2026)')
+assert.doesNotMatch(css,/prefers-color-scheme: dark/)
+assert.doesNotMatch(html,/prefers-color-scheme: dark/)
 for(const [i,root] of roots.entries()) {
   const c=Object.fromEntries([...root[1].matchAll(/--([\w-]+):\s*(#[\da-f]{6})/gi)].map(m=>[m[1],m[2]]))
   for(const fg of ['ink','muted','accent','ok','warn','danger']) for(const bg of ['bg','panel','pick']) assert.ok(contrast(c[fg],c[bg])>=4.5,`${i}/${fg}/${bg} text contrast ${contrast(c[fg],c[bg]).toFixed(2)}`)
@@ -57,7 +59,7 @@ for(const [i,root] of roots.entries()) {
     assert.ok(contrast(accent,c['accent-ink'])>=4.5,`${i}/${id} button contrast`)
   }
 }
-console.log('PASS: light/dark text, semantic statuses, department labels and action contrast >=4.5:1.')
+console.log('PASS: bright single theme, text, semantic statuses, department labels and action contrast >=4.5:1.')
 
 if (!process.argv.includes('--assets')) process.exit(0)
 
@@ -106,7 +108,7 @@ for(const {id} of DEPARTMENTS) {
   assert.equal(new Set(hashes).size,12,`${id}: all twelve actual cells must differ`)
   console.log(`PASS: ${id} ${width}x${height}: twelve nonempty distinct frames with native transparency.`)
 }
-for(const theme of Object.values(CATEGORY_THEMES)) for(const mode of ['day','night']) {
+for(const theme of Object.values(CATEGORY_THEMES)) for(const mode of ['day']) {
   const bytes=readFileSync(new URL(`../extension/${theme[mode]}`,import.meta.url))
   assert.ok(bytes.readUInt32BE(16)>=1024&&bytes.readUInt32BE(20)>=1024)
 }

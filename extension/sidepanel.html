@@ -10,26 +10,17 @@
 <style>
   /* Shared control layout. Print-shop colours and illustrations are defined in temple.css. */
   :root {
-    color-scheme: dark;
-    --bg: #2b2318; --panel: #3a2f21; --ink: #f6ead0; --muted: #d6c49c; --line: #8f7b55;
-    --accent: #ff8a73; --accent-ink: #1c0d0a; --ok: #8fd3ad; --warn: #ecc763; --pick: #4a3b28;
-    --danger: #ff9f93; --sea-top: #3a2f21; --sand-deep: #8f7b55; --panel-shadow: 0 3px 12px rgba(12, 7, 2, .3);
-    --studio-tint: #5a4326; --studio-sand: #e0b04a; --world-wash: rgba(20, 14, 8, .26); --world-image: url('agents/phi-day.png');
+    color-scheme: light;
+    --bg: #eef6ff; --panel: #ffffff; --ink: #1d1b2e; --muted: #4e4c66; --line: #b9c6dc;
+    --accent: #c4202c; --accent-ink: #ffffff; --ok: #15663a; --warn: #7a4f00; --pick: #ffe08a;
+    --danger: #b3141f; --sea-top: #ffffff; --sand-deep: #b9c6dc; --panel-shadow: 0 3px 12px rgba(30, 60, 110, .14);
+    --studio-tint: #c4202c; --studio-sand: #ffc21a; --world-wash: rgba(255, 255, 255, .12); --world-image: url('agents/phi-bright.png');
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      color-scheme: dark;
-      --bg: #14100c; --panel: #1f1812; --ink: #f1e4c4; --muted: #c4b18a; --line: #7d6a48;
-      --accent: #ff8a73; --accent-ink: #140a08; --ok: #8fd3ad; --warn: #ecc763; --pick: #2c2318;
-      --danger: #ff9f93; --sea-top: #1f1812; --sand-deep: #7d6a48; --panel-shadow: 0 3px 16px rgba(2, 1, 0, .34);
-      --studio-sand: #e0b04a; --world-wash: rgba(8, 5, 2, .4); --world-image: url('agents/phi-night.png');
-    }
-  }
-  * { box-sizing: border-box; }
+    * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 "Noto Sans Thai", "Leelawadee UI", system-ui, sans-serif; }
   /* ฉากใหญ่เต็มหน้าต่าง อยู่หลังเนื้อหาและไม่กีดขวางการกด */
   body { background: var(--bg); min-height: 100vh; position: relative; isolation: isolate; }
-  body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(var(--world-wash), var(--world-wash)), var(--world-image) center / cover no-repeat, url('agents/phi-night.png') center / cover no-repeat, var(--bg); }
+  body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(var(--world-wash), var(--world-wash)), var(--world-image) center / cover no-repeat, var(--bg); }
   html { scrollbar-color: var(--accent) var(--bg); scrollbar-width: thin; }
   input, textarea { caret-color: var(--accent); }
   input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }

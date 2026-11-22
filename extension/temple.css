@@ -1,39 +1,23 @@
 /* ผี 1 บาท — โรงพิมพ์การ์ตูนผียุค 2520 · ทุกภาพเก็บในส่วนขยาย
-   โทนมืดนวลตา: กระดาษเหลืองหม่น หมึกดำ แดงชื่อเรื่อง · ห้ามพื้นขาวทั้งสองโหมด
-   โหมดสว่าง = โรงพิมพ์ตอนกลางวัน (สว่างกว่าโหมดมืดเพียงเล็กน้อย) · โหมดมืด = โรงพิมพ์ยามดึก
+   โทนสดใส (ผู้ใช้สั่ง 23 พ.ย. 2026 "อยากได้ธีมฉากหลังสดใส เบื่อแบบทึบแล้ว"): กระดาษขาว หมึกดำ สีปกเล่มละบาทจัดจ้าน
+   ใช้โทนเดียวทุกโหมดของเครื่อง (ไม่มีโหมดมืดแล้ว) · ฉากหลัง = โรงพิมพ์ตอนเช้าแดดจ้า
    สีประจำแผนก: เขียนบท = เหลืองกระดาษพิมพ์ดีด · วาดภาพ = แดงชาดหมึก · แอนิเมชัน = ส้มหลอดฉาย
                 พากย์ = เขียวหยกหน้าปัดวิทยุ · ตัดต่อ = ฟ้าหมึกโรงพิมพ์ */
 :root, html[data-dept] {
-  color-scheme: dark;
-  --bg: #2b2318; --panel: #3a2f21; --ink: #f6ead0; --muted: #d6c49c;
-  --line: #8f7b55; --accent: #ff8a73; --accent-ink: #1c0d0a; --pick: #4a3b28;
-  --ok: #8fd3ad; --warn: #ecc763; --danger: #ff9f93;
-  --world-image: url('agents/phi-day.png'); --world-wash: rgba(20, 14, 8, .26);
-  --sea-top: #3a2f21; --sand-deep: #8f7b55; --studio-sand: #e0b04a;
-  --panel-shadow: 0 5px 18px rgba(12, 7, 2, .3);
-  --temple-wood: #1d160d; --temple-gold: #e0b04a; --temple-surface: #33291c;
-  --dept-chatgpt: #e9c46a; --dept-chatgpt-pick: #4d3f1f;
-  --dept-flow: #ff8a78; --dept-flow-pick: #5a2d28;
-  --dept-meta: #f2a65a; --dept-meta-pick: #55371c;
-  --dept-voice: #8fd0b8; --dept-voice-pick: #284a3e;
-  --dept-edit: #8fb4e8; --dept-edit-pick: #2c3f5c;
-  --hero-edge: #e0b04a;
-}
-@media (prefers-color-scheme: dark) {
-  :root, html[data-dept] {
-    color-scheme: dark;
-    --bg: #14100c; --panel: #1f1812; --ink: #f1e4c4; --muted: #c4b18a;
-    --line: #7d6a48; --accent: #ff8a73; --accent-ink: #140a08; --pick: #2c2318;
-    --ok: #8fd3ad; --warn: #ecc763; --danger: #ff9f93;
-    --world-image: url('agents/phi-night.png'); --world-wash: rgba(8, 5, 2, .32);
-    --sea-top: #1f1812; --sand-deep: #7d6a48; --temple-surface: #281f16;
-    --temple-wood: #0c0906; --panel-shadow: 0 5px 18px rgba(2, 1, 0, .34);
-    --dept-chatgpt: #e9c46a; --dept-chatgpt-pick: #3a2f16;
-    --dept-flow: #ff8a78; --dept-flow-pick: #43211e;
-    --dept-meta: #f2a65a; --dept-meta-pick: #402914;
-    --dept-voice: #8fd0b8; --dept-voice-pick: #1c382e;
-    --dept-edit: #8fb4e8; --dept-edit-pick: #1f3048;
-  }
+  color-scheme: light;
+  --bg: #eef6ff; --panel: #ffffff; --ink: #1d1b2e; --muted: #4e4c66;
+  --line: #b9c6dc; --accent: #c4202c; --accent-ink: #ffffff; --pick: #ffe08a;
+  --ok: #15663a; --warn: #7a4f00; --danger: #b3141f;
+  --world-image: url('agents/phi-bright.png'); --world-wash: rgba(255, 255, 255, .12);
+  --sea-top: #ffffff; --sand-deep: #ffc21a; --studio-sand: #ffc21a;
+  --panel-shadow: 0 4px 16px rgba(30, 60, 110, .14);
+  --temple-wood: #c4202c; --temple-gold: #ffc21a; --temple-surface: #ffe08a;
+  --dept-chatgpt: #2a7336; --dept-chatgpt-pick: #e3f2e1;
+  --dept-flow: #9a3a8c; --dept-flow-pick: #f6e3f2;
+  --dept-meta: #5b3fb0; --dept-meta-pick: #ece8fa;
+  --dept-voice: #1d67a8; --dept-voice-pick: #e0ecf8;
+  --dept-edit: #b0431c; --dept-edit-pick: #f9e6dc;
+  --hero-edge: #ffc21a;
 }
 html { scrollbar-color: var(--accent) var(--bg); }
 body { background: var(--bg); }
@@ -116,7 +100,7 @@ main .seg button[aria-pressed='true'], .overlay .seg button[aria-pressed='true']
 .agentBlock, #autoSection .agentBlock {
   --setting-color: var(--dept-chatgpt); --setting-pick: var(--temple-surface);
   --setting-ink: var(--accent-ink); --agent-ink: var(--accent-ink);
-  --accent: var(--setting-color); --accent-ink: #1c0d0a;
+  --accent: var(--setting-color); --accent-ink: #ffffff;
   margin-top: 18px; padding-inline: 12px; border: 1px solid var(--line);
   background: var(--panel); box-shadow: none;
 }
@@ -138,7 +122,7 @@ main .seg button[aria-pressed='true'], .overlay .seg button[aria-pressed='true']
 #newAuto small { color: var(--muted); opacity: 1; line-height: 1.6; text-align: left; }
 #newAuto:hover { background: var(--pick); }
 .step > h2 { background: var(--temple-surface); border-bottom-color: var(--line); }
-main > section.step.agentSetting { --setting-ink: #141b24; background: var(--panel); border: 1px solid var(--line); }
+main > section.step.agentSetting { --setting-ink: #ffffff; background: var(--panel); border: 1px solid var(--line); }
 main > section.step.agentSetting .seg button[aria-pressed='true'] { box-shadow: none; }
 .step > h2::after { background: transparent; border: 0; color: var(--setting-color); padding: 0; font-size: 11px; white-space: normal; flex: 0 1 auto; text-align: right; }
 main > section.step.agentSetting > h2::before { display: none; }
@@ -189,18 +173,13 @@ main > section.step.agentSetting > h2::after { background: transparent; color: v
   --gull: var(--dept-flow); --gull-ink: var(--accent-ink); --gull-pick: var(--dept-flow-pick);
   --gull-bg: var(--bg); --gull-panel: var(--panel); --gull-edge: var(--line); --gull-line: var(--line);
 }
-#posting { --bg: #2b2318; --panel: #3a2f21; --line: #8f7b55; --accent: var(--dept-flow); --accent-ink: #141b24; --pick: var(--dept-flow-pick); background: var(--bg); }
+#posting { --bg: #f7f1ff; --panel: #ffffff; --line: #d4c3e6; --accent: var(--dept-flow); --accent-ink: #ffffff; --pick: var(--dept-flow-pick); background: var(--bg); }
 #posting .bar, .pHero { background: var(--panel); border: 1px solid var(--line); }
 #posting .bar { border-width: 0 0 1px; }
 .pHero { padding: 15px; border-radius: 12px; }
 .pHero .gullIcon { width: 44px; height: 44px; }
 .pTabs { border-color: var(--line); }
 #openPosting { background: var(--panel); border-color: var(--line); color: var(--ink); }
-@media (prefers-color-scheme: dark) {
-  .agentBlock, #autoSection .agentBlock { --accent-ink: #0d1520; --setting-ink: #0d1520; --agent-ink: #0d1520; }
-  main > section.step.agentSetting { --setting-ink: #0d1520; background: var(--panel); }
-  #posting { --bg: #14100c; --panel: #1f1812; --line: #7d6a48; --accent-ink: #140a08; }
-}
 @media (max-width: 380px) {
   main { padding-inline: 11px; }
   .heroActor { width: 122px; height: 156px; }

@@ -185,7 +185,7 @@ test('ธีมหมวด 5 ธีม + คละหมวด · ใช้ไ�
   const { existsSync } = await import('node:fs')
   const { CATEGORY_THEMES, themeForGenre } = await import('../extension/category-themes.js')
   assert.deepEqual(Object.keys(CATEGORY_THEMES), CATEGORIES.map((c) => c.id))
-  for (const t of Object.values(CATEGORY_THEMES)) for (const f of [t.day, t.night, t.icon]) assert.ok(existsSync(new URL(`../extension/${f}`, import.meta.url)), f)
+  for (const t of Object.values(CATEGORY_THEMES)) for (const f of [t.day, t.icon]) assert.ok(existsSync(new URL(`../extension/${f}`, import.meta.url)), f)
   assert.equal(themeForGenre('mix'), CATEGORY_THEMES.ghost)
 })
 
