@@ -91,3 +91,23 @@ test('autopilot ขอเขียนใหม่เมื่อตัวเอ�
   assert.match(src, /endsGeneric\(text\) && attempt < 3/)
   assert.ok(!/category !== 'self'/.test(src), 'ไม่มีหมวดผู้เล่าเรื่องเองแล้ว')
 })
+
+// 23 พ.ย. 2026 ผู้ใช้: "ปรับรูปแบบเนื้อเรื่องให้ซับซ้อนกว่านี้ ... อันนี้ถือว่าแบบเดาได้ เอาแบบเดายากกว่านี้หน่อย"
+// คลิปแรก: ผิดสัญญา → ผีมาทวง → ไหว้ขอขมา — เดาได้ตั้งแต่ชื่อเรื่อง
+test('หัวใจของบท: พล็อตเดายาก — ตัดตอนจบที่เดาได้ · ฝังเบาะแส · มีทางหลอก · จุดพลิกเปลี่ยนความหมายฉากก่อนหน้า', () => {
+  assert.match(STORY_CRAFT, /ตอนจบที่คนดูเดาได้/)
+  assert.match(STORY_CRAFT, /เบาะแส 2 จุด/)
+  assert.match(STORY_CRAFT, /ทางหลอก/)
+  assert.match(STORY_CRAFT, /เปลี่ยนความหมายของฉากก่อนหน้า/)
+  assert.match(STORY_CRAFT, /ผิดสัญญา → ผีมาทวง → ขอขมา/, 'ต้องยกพล็อตสำเร็จรูปที่ห้ามใช้')
+  assert.match(STORY_CRAFT, /แค่ความฝัน/, 'ห้ามหักมุมแบบโกง')
+  // คำสั่งเขียนบทจริงได้กฎนี้ทุกหมวด
+  const prompt = scriptPrompt(BLUEPRINT, 'ผีทวงสัญญาใต้ถุนเรือน', { language: 'th', targetMinutes: 1, profile: { category: 'ghost', scare: 'medium' }, engage: false })
+  assert.match(prompt, /เบาะแส 2 จุด/)
+})
+
+test('ชื่อเรื่องห้ามเฉลยตอนจบหรือจุดพลิก', async () => {
+  const { STORY_TITLE_RULE, scoredTopicsPrompt } = await import('../extension/prompts.js')
+  assert.match(STORY_TITLE_RULE, /ห้ามเฉลย/)
+  assert.match(scoredTopicsPrompt(BLUEPRINT, { genre: 'ghost' }), /ห้ามเฉลย/)
+})
