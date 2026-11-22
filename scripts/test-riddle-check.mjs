@@ -57,3 +57,11 @@ test('ภาพ Story: หัวข้อ "ทายสิ ผีอะไร?" 
   assert.ok([...hint.split(',,').pop().replace('คำใบ้: ', '')].length <= 49)
   assert.ok(hint.endsWith('…'))
 })
+
+test('ตัวอย่างผีและ prompt ภาพเงาผ่านตัวกรองความรุนแรง · prompt จับคู่เป็น riddle.png ของ Flow agent ได้ (ไม่ใช่ cover)', () => {
+  for (const g of R.RIDDLE_GHOSTS) assert.deepEqual(sanitizeShotPrompt(g).removed, [], g)
+  const prompt = R.riddlePrompt({ answer: 'กระสือ', shape: 'ผู้หญิงผมยาวลอยเหนือพื้น' })
+  assert.deepEqual(sanitizeShotPrompt(prompt).removed, [])
+  assert.match(prompt, /riddle|rebus|ปริศนา/i)
+  assert.ok(!/cover|thumbnail|ภาพปก/i.test(prompt))
+})

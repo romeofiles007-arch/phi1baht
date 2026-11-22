@@ -20,7 +20,7 @@ const riddleFile = (slug) => join(projectDir(slug, 'shotlist'), 'riddle.json')
 
 export const RIDDLE_TITLE = 'ทายสิ ผีอะไร?'
 /** ผีไทยที่ทำเป็นภาพเงาแล้วทายได้ — ตัวอย่างให้ ChatGPT เลือก ไม่บังคับ */
-export const RIDDLE_GHOSTS = ['กระสือ', 'กระหัง', 'ปอบ', 'ผีตะเคียน', 'แม่นาคพระโขนง', 'นางตานี', 'ผีโพง', 'ผีกองกอย', 'ผีหัวขาด', 'ผีเปรต', 'ผีแม่ซื้อ', 'นางไม้']
+export const RIDDLE_GHOSTS = ['กระสือ', 'กระหัง', 'ปอบ', 'ผีตะเคียน', 'แม่นาคพระโขนง', 'นางตานี', 'ผีโพง', 'ผีกองกอย', 'ผีเปรต', 'ผีแม่ซื้อ', 'นางไม้']
 
 /** กฎสำหรับ ChatGPT รอบแรก — ขอโจทย์ "ทายสิ ผีอะไร?" ต่อท้ายปก (คลิปไทยเท่านั้น) */
 export function riddleRequest(language = 'th', theme = null) {
@@ -74,6 +74,9 @@ export function readRiddle(slug) {
 
 export const hasRiddleImage = (slug) => existsSync(riddlePath(slug))
 
+/** prompt ภาพเงา — ต้องมีคำว่า riddle/ปริศนา (Flow agent จับคู่ riddle.png จากคำใน prompt) และห้ามมี ปก/cover */
+export const riddlePrompt = (riddle) => `ภาพปริศนาเงาผีไทยให้ทาย (ghost silhouette riddle) — เงาดำสนิทของผีตัวเดียวกลางภาพ: ${riddle.shape || riddle.answer}`
+
 /** "ช็อต" ภาพเงาสำหรับส่งให้ Flow — ไม่มีโจทย์ = null (คลิปเก่า/คลิปภาษาอื่น ไม่ทำ) */
 export function riddleShot(slug) {
   const riddle = readRiddle(slug)
@@ -82,7 +85,7 @@ export function riddleShot(slug) {
     filename: RIDDLE_NAME,
     shot: 'RIDDLE',
     // ห้ามมีคำว่า ปก/cover/thumbnail — extension จับคู่ภาพพิเศษจากคำใน prompt · ไม่ใส่ชื่อผีในภาพ (เงาเท่านั้น)
-    prompt: `ภาพเงาผีไทยให้ทาย (ghost silhouette guessing game) — เงาดำสนิทของผีตัวเดียวกลางภาพ: ${riddle.shape || riddle.answer}`,
+    prompt: riddlePrompt(riddle),
   }
 }
 
