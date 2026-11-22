@@ -38,12 +38,19 @@ const MIN_SHARE = 0.03 // พื้นกระดาษต้องมีอย
 const MIN_CAST = 0.04 // แดงมากกว่าฟ้าเกิน 4% ถึงนับว่าเหลือง
 const MAX_GAIN = 1.35 // ยกช่องสีได้มากสุด — เหลืองจัดมากก็ปรับแค่พอดี ไม่ให้สีอื่นเพี้ยน
 
+/** พิกเซล "พื้นกระดาษ" = สว่างและสีอ่อน — เกณฑ์เดียวที่ใช้ทั้งตัวแก้และเทสต์ */
+export function isPaper(r, g, b) {
+  const max = Math.max(r, g, b)
+  return max >= BRIGHT && (max - Math.min(r, g, b)) / max <= PALE
+}
+
 /**
  * ตัวคูณช่องสี { r, g, b } ที่ทำให้พื้นกระดาษ (ส่วนที่สว่างและสีอ่อน) เป็นขาวกลาง — ไม่ต้องปรับ = null
  *   ยกเขียว/ฟ้าขึ้นหาแดงเท่านั้น ไม่ลดช่องใด (ภาพจึงไม่มืดลง) · ไม่มีพื้นกระดาษ (ฉากกลางคืน) หรือพื้นเป็นกลาง/อมฟ้าอยู่แล้ว = null
  * @param {Buffer|Uint8Array} rgb พิกเซล rgb24 ต่อกัน (ภาพย่อก็พอ)
+ * @param {{ minShare?: number }} [o] สัดส่วนพื้นกระดาษขั้นต่ำ (ค่าตั้งต้น 3% — กันฉากกลางคืนของ Flow)
  */
-export function paperGains(rgb) {
+export function paperGains(rgb, { minShare = MIN_SHARE } = {}) {
   let n = 0
   let sr = 0
   let sg = 0
@@ -53,14 +60,13 @@ export function paperGains(rgb) {
     const r = rgb[i]
     const g = rgb[i + 1]
     const b = rgb[i + 2]
-    const max = Math.max(r, g, b)
-    if (max < BRIGHT || (max - Math.min(r, g, b)) / max > PALE) continue
+    if (!isPaper(r, g, b)) continue
     n++
     sr += r
     sg += g
     sb += b
   }
-  if (!total || n / total < MIN_SHARE) return null
+  if (!total || !n || n / total < minShare) return null
   const [r, g, b] = [sr / n, sg / n, sb / n]
   // เหลือง/ส้ม = แดงนำ ฟ้าตาม · พื้นเป็นกลางหรืออมฟ้าอยู่แล้วไม่ต้องแตะ
   if (r < b || (r - b) / r < MIN_CAST) return null
@@ -68,14 +74,21 @@ export function paperGains(rgb) {
   return { r: 1, g: gain(g), b: gain(b) }
 }
 
-/** อ่านภาพย่อ (กว้าง 160px) เป็น rgb24 แล้วหา paperGains — ใช้ทั้งตอนแปลงจริงและในเทสต์ */
-export function paperGainsOf(file) {
+/** ภาพย่อ (กว้าง 160px) เป็น rgb24 — พอสำหรับวัดพื้นกระดาษ */
+export function thumbRgb(file) {
   return new Promise((resolve, reject) => {
     execFile('ffmpeg', ['-v', 'error', '-i', file, '-vf', 'scale=160:-1:flags=area,format=rgb24', '-frames:v', '1', '-f', 'rawvideo', 'pipe:1'],
       { encoding: 'buffer', maxBuffer: 1 << 24, windowsHide: true },
-      (err, stdout, stderr) => (err ? reject(new Error(`ffmpeg อ่านภาพย่อไม่ได้: ${String(stderr || err.message).trim().split('\n').slice(-1)[0]}`)) : resolve(paperGains(stdout))))
+      (err, stdout, stderr) => (err ? reject(new Error(`ffmpeg อ่านภาพย่อไม่ได้: ${String(stderr || err.message).trim().split('\n').slice(-1)[0]}`)) : resolve(stdout)))
   })
 }
+
+/**
+ * ตัวคูณสมดุลขาวของไฟล์ภาพ (วัดจากภาพย่อ รอบเดียว) — null = ไม่ต้องปรับ
+ *   รอบเดียวพอ: ทำให้พื้นกระดาษเดิมเป็นขาวกลางพอดี · เคยลองวัดซ้ำบนผลลัพธ์จนไม่เหลือให้แก้ — ผิว ฟาง ดินที่สว่างขึ้นหลังแก้
+ *   ถูกนับเป็นกระดาษ แล้วดันทั้งภาพไปฟ้า (ผ้าขาวกลายเป็นฟ้า พื้นกระดาษสังเคราะห์ R 235 B 249) จึงไม่ทำ
+ */
+export const paperGainsOf = async (file, options) => paperGains(await thumbRgb(file), options)
 
 /**
  * เมทริกซ์สี 3×3 (เรียงแถว rr rg rb gr gg gb br bg bb) = ความสด × ตัวคูณสมดุลขาว
@@ -86,6 +99,25 @@ export function colorMatrix(gains, saturation = SATURATION) {
   const m = []
   for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) m.push(Math.round(((1 - saturation) * LUMA[j] + (i === j ? saturation : 0)) * G[j] * 1e4) / 1e4)
   return m
+}
+
+/** ตัวแก้สี (ขาวกลาง × ความสด) เป็น filter ffmpeg ตัวเดียว — ใช้ทั้งใน inkify และตอนสร้างภาพ Style Kit */
+export function colorCorrectFilter(gains, saturation = SATURATION) {
+  const [rr, rg, rb, gr, gg, gb, br, bg, bb] = colorMatrix(gains, saturation)
+  return `colorchannelmixer=rr=${rr}:rg=${rg}:rb=${rb}:gr=${gr}:gg=${gg}:gb=${gb}:br=${br}:bg=${bg}:bb=${bb}`
+}
+
+/**
+ * แก้สีอย่างเดียว (ไม่มีชั้นงานพิมพ์: ไม่มีเส้นหมึก เกรน สีเหลื่อม) จาก input เขียนเป็น output — input ไม่ถูกแตะ
+ *   vf = filter ต่อท้ายหลังแก้สี (เช่นย่อขนาด) · args = ตัวเลือก encoder (เช่น -q:v) · minShare = ส่งต่อให้ paperGains
+ *   คืนตัวคูณที่ใช้ (null = แค่เพิ่มความสด)
+ *   ใช้กับ Style Kit (scripts/build-style-kit.mjs): ภาพอ้างอิงเทคนิคเส้น จึงไม่ใส่ชั้นงานพิมพ์ทับเส้นเดิม
+ */
+export async function correctColour(input, output, { vf = '', args = [], minShare } = {}) {
+  const gains = await paperGainsOf(input, { minShare })
+  const chain = [colorCorrectFilter(gains), vf].filter(Boolean).join(',')
+  await run('ffmpeg', ['-y', '-v', 'error', '-i', input, '-vf', chain, '-frames:v', '1', '-update', '1', ...args, output])
+  return gains
 }
 
 export const paletteOf = (categoryId) => (CATEGORIES.find((c) => c.id === categoryId) ?? CATEGORIES.find((c) => c.id === FALLBACK_CATEGORY)).palette
@@ -100,8 +132,7 @@ export function inkifyFilter({ palette, width, height, seed, gains = null }) {
   const swatches = colors.map((c, i) => `color=c=0x${c}:s=1x1:r=1:d=1,format=rgb32[p${i}]`)
   const pal = `${colors.map((_, i) => `[p${i}]`).join('')}hstack=inputs=${colors.length},format=rgb32,pad=256:1:0:0:color=0x${colors.at(-1)}[pal]` // paletteuse ต้องการจานสี 256 ช่องพอดี → เติมซ้ำสีสุดท้าย
   const seed32 = Math.abs(Math.trunc(Number(seed) || 0)) % 0x7fffffff
-  const [rr, rg, rb, gr, gg, gb, br, bg, bb] = colorMatrix(gains)
-  const mixer = `colorchannelmixer=rr=${rr}:rg=${rg}:rb=${rb}:gr=${gr}:gg=${gg}:gb=${gb}:br=${br}:bg=${bg}:bb=${bb}`
+  const mixer = colorCorrectFilter(gains)
   return [
     ...swatches,
     pal,

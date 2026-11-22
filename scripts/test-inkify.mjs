@@ -6,7 +6,7 @@ import { spawnSync, execFileSync } from 'node:child_process'
 import { mkdtempSync, existsSync, rmSync, readFileSync, writeFileSync, utimesSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { inkifyFilter, inkify, inkifyAll, inkifyEnabled, paletteOf, paperGains, paperGainsOf, colorMatrix, SATURATION } from '../pipeline/lib/inkify.mjs'
+import { inkifyFilter, inkify, inkifyAll, inkifyEnabled, paletteOf, paperGains, paperGainsOf, colorMatrix, SATURATION, isPaper, colorCorrectFilter, correctColour, thumbRgb } from '../pipeline/lib/inkify.mjs'
 import { CATEGORIES } from '../extension/prompts.js'
 
 const hasFfmpeg = spawnSync('ffmpeg', ['-version']).status === 0
@@ -271,5 +271,54 @@ test('inkify: ฉากกลางคืนไม่มีพื้นกระ
     const m = meanRect(f, 200, [10, 10, 70, 70]), w = meanRect(want, 200, [10, 10, 70, 70])
     for (let c = 0; c < 3; c++) assert.ok(Math.abs(m[c] - w[c]) <= 2, `ช่อง ${c}: ${m[c].toFixed(1)} vs ${w[c].toFixed(1)}`)
     assert.ok(m[2] - m[0] <= night[2] - night[0] + 8, 'ฉากกลางคืนถูกดันไปฟ้า')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+// ── ตัวแก้สีที่ใช้ร่วมกัน (inkify + build-style-kit): ปรับขาวจนนิ่ง + ความสด · ไม่มีชั้นงานพิมพ์ ──
+const applyMatrix = (m, rgb) => {
+  const out = Buffer.alloc(rgb.length)
+  for (let i = 0; i + 2 < rgb.length; i += 3) {
+    const [r, g, b] = [rgb[i], rgb[i + 1], rgb[i + 2]]
+    for (let c = 0; c < 3; c++) out[i + c] = Math.max(0, Math.min(255, Math.round(m[c * 3] * r + m[c * 3 + 1] * g + m[c * 3 + 2] * b)))
+  }
+  return out
+}
+
+test('paperGains minShare: ฉากที่มีพื้นกระดาษน้อย (2%) ค่าตั้งต้นไม่แตะ (กันฉากกลางคืนของ Flow) · ภาพ Style Kit ลดเกณฑ์เป็น 1% ได้ · isPaper = เกณฑ์เดียวกัน', () => {
+  const img = fill([[[230, 200, 180], 20], [[40, 50, 80], 980]])
+  assert.equal(paperGains(img), null)
+  const g = paperGains(img, { minShare: 0.01 })
+  assert.ok(g && g.r === 1 && g.b > g.g && g.g > 1, JSON.stringify(g))
+  assert.equal(isPaper(230, 200, 180), true)
+  assert.equal(isPaper(255, 150, 40), false) // เปลวตะเกียงสีจัด
+  assert.equal(isPaper(150, 150, 150), false) // มืดเกิน
+})
+
+test('colorCorrectFilter: colorchannelmixer เดียว (ขาวกลาง × ความสด) · inkifyFilter ใช้ตัวเดียวกัน ไม่เขียนซ้ำ', () => {
+  const g = { r: 1, g: 1.05, b: 1.25 }
+  const f = colorCorrectFilter(g)
+  assert.match(f, /^colorchannelmixer=rr=[^,;]+$/)
+  assert.ok(inkifyFilter({ palette: ['#000000', '#ffffff'], width: 8, height: 8, seed: 1, gains: g }).includes(`[0:v]${f},`))
+  assert.notEqual(colorCorrectFilter(null), f)
+})
+
+test('correctColour: แก้สีอย่างเดียว (ไม่มีเกรน/เส้น/สีเหลื่อม) · ภาพต้นทางไม่ถูกแตะ · ผลไม่เหลือเหลืองให้แก้อีก', { skip: !hasFfmpeg && 'ไม่มี ffmpeg' }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inkify-'))
+  try {
+    const src = join(dir, 'raw.png'), out = join(dir, 'out.jpg')
+    ff(['-f', 'lavfi', '-i', 'color=c=0xefe2bf:s=200x300', '-vf', 'drawbox=x=0:y=200:w=200:h=100:color=0x4682be:t=fill', '-frames:v', '1', src])
+    const before = readFileSync(src)
+    const g = await correctColour(src, out, { vf: 'scale=100:150:flags=lanczos', args: ['-q:v', '3'] })
+    assert.ok(g && g.b > 1, JSON.stringify(g))
+    assert.deepEqual(readFileSync(src), before, 'ต้นฉบับต้องไม่เปลี่ยน')
+    assert.equal(size(out), '100,150')
+    assert.equal(paperGains(await thumbRgb(out)), null)
+    const bg = meanRect(out, 100, [10, 10, 90, 90])
+    assert.ok(Math.abs(bg[0] - bg[2]) <= 4, `พื้นไม่เป็นกลาง ${bg.map((v) => v.toFixed(1))}`)
+    // ไม่มีชั้นงานพิมพ์: พื้นเรียบไม่มีเกรน (ส่วนเบี่ยงเบนต่ำมาก)
+    const px = rawPixels(out)
+    let s = 0, s2 = 0, n = 0
+    for (let y = 10; y < 90; y++) for (let x = 10; x < 90; x++) { const v = px[(y * 100 + x) * 3 + 1]; s += v; s2 += v * v; n++ }
+    assert.ok(Math.sqrt(s2 / n - (s / n) ** 2) < 1.5, 'ไม่ควรมีเกรนกระดาษ')
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })

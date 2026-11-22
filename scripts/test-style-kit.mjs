@@ -11,6 +11,9 @@ import { styleKitAttachments, styleKitFiles, STYLE_KIT_DIR } from '../pipeline/l
 import { styleKitFlowNote } from '../pipeline/lib/prompts.mjs'
 import { characterFlowNote } from '../pipeline/lib/character.mjs'
 import { shipsToCustomer } from '../bridge/package-rules.js'
+import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+import { paperGains, thumbRgb, isPaper } from '../pipeline/lib/inkify.mjs'
 
 const PNG = Buffer.from('89504e470d0a1a0a', 'hex') // หัวไฟล์ PNG พอให้มีเนื้อไฟล์
 
@@ -149,4 +152,45 @@ test('การส่งลูกค้า: ภาพ kit ส่ง · ต้น
   assert.equal(shipsToCustomer('extension/style-kit/kit.json'), true)
   assert.equal(shipsToCustomer('assets/style-kit-raw/kit-ghost-house.png'), false)
   assert.equal(shipsToCustomer('references/onebaht/x.png'), false)
+})
+
+// ── ผู้ใช้ตัดสิน 22 พ.ย.: ภาพต้องไม่ออกเหลือง — JPEG ที่ส่งไปกับแอปผ่านตัวแก้สีเดียวกับ inkify (scripts/build-style-kit.mjs) ──
+// วัด "พื้นกระดาษ" ด้วยเกณฑ์เดียวกับ paperGains (isPaper: สว่าง ≥165 สีอ่อน ≤0.3) บนภาพย่อ 160px
+//   ตำแหน่งที่เป็นพื้นกระดาษในต้นฉบับ (ที่มาของโทนเหลือง) → ในภาพที่ส่ง ต้อง mean R − mean B ≤ 8/255 และ paperGains ไม่มีอะไรให้แก้อีก
+//   (ไม่วัดทั้งภาพหลังแก้: ผิว ฟาง ดิน ที่สว่างขึ้นหลังแก้จะถูกนับเป็นกระดาษ แก้ตามนั้นแล้วผ้าขาวกลายเป็นฟ้า — ดูรายงาน Task 10c)
+const KIT_CAST_TOLERANCE = 8
+const KIT_MIN_SHARE = 0.01 // ต้องตรงกับ scripts/build-style-kit.mjs
+const hasFfmpeg = spawnSync('ffmpeg', ['-version']).status === 0
+const RAW_DIR = new URL('../assets/style-kit-raw/', import.meta.url)
+
+test('ภาพ kit ที่ส่งไปกับแอปไม่มีโทนเหลือง/ซีเปีย: พื้นกระดาษของต้นฉบับ R−B ≤ 8 · paperGains = null · 768x1152', { skip: !hasFfmpeg && 'ไม่มี ffmpeg' }, async () => {
+  const kit = JSON.parse(readFileSync(join(STYLE_KIT_DIR, 'kit.json'), 'utf8'))
+  for (const f of kit.files) {
+    const p = join(STYLE_KIT_DIR, f.file)
+    const dims = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', p]).stdout.toString().trim()
+    assert.equal(dims, '768,1152', f.file)
+    const raw = await thumbRgb(fileURLToPath(new URL(f.file.replace(/\.jpg$/, '.png'), RAW_DIR)))
+    const shipped = await thumbRgb(p)
+    assert.equal(raw.length, shipped.length, f.file)
+    const picked = []
+    for (let i = 0; i + 2 < raw.length; i += 3) if (isPaper(raw[i], raw[i + 1], raw[i + 2])) picked.push(shipped[i], shipped[i + 1], shipped[i + 2])
+    const n = picked.length / 3
+    if (n / (raw.length / 3) < KIT_MIN_SHARE) continue // ไม่มีพื้นกระดาษให้วัด (เช่นภาพที่ขาวเป็นกลางอยู่แล้วแต่เล็กมาก)
+    const mean = [0, 1, 2].map((c) => picked.filter((_, k) => k % 3 === c).reduce((a, v) => a + v, 0) / n)
+    assert.ok(mean[0] - mean[2] <= KIT_CAST_TOLERANCE, `${f.file}: พื้นกระดาษ R ${mean[0].toFixed(1)} B ${mean[2].toFixed(1)}`)
+    assert.equal(paperGains(Buffer.from(picked), { minShare: 0 }), null, `${f.file} ยังมีเหลืองให้แก้`)
+  }
+})
+
+test('build-style-kit.mjs สร้าง JPEG จาก assets/style-kit-raw ด้วย correctColour (ตัวเดียวกับ inkify) ไม่เขียนทับต้นฉบับ', () => {
+  const src = readFileSync(new URL('../scripts/build-style-kit.mjs', import.meta.url), 'utf8')
+  assert.match(src, /correctColour/)
+  assert.match(src, /style-kit-raw/)
+  assert.match(src, /768:1152/)
+  assert.match(src, /KIT_MIN_SHARE = 0\.01/) // ต้องตรงกับ KIT_MIN_SHARE ของเทสต์นี้
+  assert.match(src, /minShare: KIT_MIN_SHARE/)
+  assert.ok(!/colorchannelmixer|edgedetect|noise=|rgbashift/.test(src), 'ห้ามเขียนตัวแก้สีซ้ำ / ห้ามชั้นงานพิมพ์')
+  const doc = readFileSync(new URL('../docs/design/phi-style-kit.prompt.txt', import.meta.url), 'utf8')
+  assert.match(doc.split(/\r?\n/).slice(0, 8).join('\n'), /build-style-kit\.mjs/)
+  assert.match(doc, /clean white paper/)
 })
