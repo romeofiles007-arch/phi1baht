@@ -9,7 +9,8 @@ import { shipsToCustomer } from '../bridge/package-rules.js'
 
 const ROOT = new URL('..', import.meta.url)
 const IDENTITY = /Dhamma ?Auto|ตำนานจีน|China ?Auto|china[_-]auto|ChinaAuto|romeofiles007-arch\/china\b|\b8786\b/i
-const FULL = /จีน|ตำนานจีน|China ?Auto|china[_-]auto|ChinaAuto|romeofiles007-arch\/china\b|\b8786\b|ธรรมะ|dhamma/i
+// คำเนื้อหาเดิม: ธรรมะ/ปริศนาธรรม (ทุกคำที่มี "ธรรม" ยกเว้น ธรรมชาติ ธรรมดา ธรรมเนียม ยุติธรรม คุณธรรม และ regex "คุณ(?!ธรรม" ใน prompts.js) · ม้าน้ำ (มาสคอตธีมทะเล) · เวทีทอง · สามก๊ก/ขงเบ้ง · พระเกจิ/พระของฉัน
+const FULL = /จีน|ตำนานจีน|China ?Auto|china[_-]auto|ChinaAuto|romeofiles007-arch\/china\b|\b8786\b|ธรรมะ|dhamma|(?<!ยุติ|คุณ|คุณ\(\?!)ธรรม(?!ชาติ|ดา|เนียม)|ม้าน้ำ|เวทีทอง|สามก๊ก|ขงเบ้ง|พระเกจิ|พระของฉัน/i
 const RULE = process.env.PHI_IDENTITY_ONLY === '1' ? IDENTITY : FULL
 const BINARY = /\.(png|jpe?g|gif|webp|ico|exe|dll|woff2?|ttf|otf|mp3|wav|ogg|m4a|mp4|webm|zip|pdf)$/i
 
@@ -39,4 +40,30 @@ test('ข้อความที่มองเห็นใน sidepanel.html �
   const visible = read('extension/sidepanel.html').replace(/<(?:script|style)[\s\S]*?<\/(?:script|style)>/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ')
   assert.ok(visible.includes('ผี 1 บาท'))
   assert.ok(!visible.includes('ตำนานจีน'), 'ยังมี "ตำนานจีน" ในข้อความที่ผู้ใช้เห็น')
+})
+
+test('regex เนื้อหาเดิมจับคำที่เคยหลุด (final review I4) และไม่จับคำไทยปกติ', () => {
+  for (const bad of ['ลง Story ภาพปริศนาธรรม', 'ปริศนาจีน', 'ตั้งค่าม้าน้ำ', 'ปริศนาแบบเวทีทอง', 'หลักธรรม', 'พระเกจิ']) assert.match(bad, FULL, bad)
+  for (const ok of ['ธรรมชาติ', 'ธรรมดา', 'ธรรมเนียม', 'ความยุติธรรม', 'คุณธรรม', 'ทายสิ ผีอะไร?']) assert.doesNotMatch(ok, FULL, ok)
+})
+
+// final review I5: .env.example ส่งถึงลูกค้า — ห้ามมีพอร์ตของแอปพี่น้องบนเครื่องเดียวกัน (native host จะไปปิด bridge ของแอปนั้น)
+test('.env.example และไฟล์ที่ส่งลูกค้าไม่ใช้พอร์ตของแอปอื่น (8765 8766 8775 8785 8786) · BRIDGE_PORT = 8787 หรือไม่ระบุ', () => {
+  const port = /^\s*BRIDGE_PORT\s*=\s*(\d+)/m.exec(read('.env.example'))
+  if (port) assert.equal(port[1], '8787')
+  const SIBLING = /\b(?:8765|8766|8775|8785|8786)\b/
+  const hits = []
+  for (const f of files) {
+    let text
+    try { text = read(f) } catch { continue }
+    text.split(/\r?\n/).forEach((line, i) => { if (SIBLING.test(line)) hits.push(`${f}:${i + 1}: ${line.trim().slice(0, 100)}`) })
+  }
+  assert.deepEqual(hits, [])
+})
+
+test('.gitignore: .env และ .env.* ถูกกัน แต่ .env.example (ไฟล์ตัวอย่างที่ส่งลูกค้า) ไม่ถูกกลืน', () => {
+  const ignored = (p) => { try { execFileSync('git', ['check-ignore', '--no-index', '-q', p], { cwd: ROOT }); return true } catch { return false } }
+  assert.equal(ignored('.env'), true)
+  assert.equal(ignored('.env.local'), true)
+  assert.equal(ignored('.env.example'), false)
 })

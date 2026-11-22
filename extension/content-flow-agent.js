@@ -656,7 +656,7 @@ async function scanAllTiles() {
   return tiles
 }
 
-// ชื่อภาพที่เก็บกลับ: timecode ของช็อต · cover.png (ภาพปกคลิป) · riddle.png (ภาพปริศนาธรรมสำหรับ Story)
+// ชื่อภาพที่เก็บกลับ: timecode ของช็อต · cover.png (ภาพปกคลิป) · riddle.png (ภาพ "ทายสิ ผีอะไร?" สำหรับ Story)
 const TIMECODE_NAME = /(\d{2}_\d{2}_\d{2}(?:_\d)?\.png|cover\.png|riddle\.png)/i
 
 /** ภาพจาก flow-content.google เป็น JPEG → แปลงเป็น PNG ให้ตรงกับชื่อไฟล์ตาม Blueprint กฎ 4 */
@@ -844,7 +844,7 @@ async function backToGrid() {
 
 async function readTilePrompt(id) {
   if (tilePrompts.has(id)) return tilePrompts.get(id)
-  // รูปที่อัปโหลดเองชื่อเป็นชื่อไฟล์ (เช่น buddha_1.jpg) ไม่มี prompt — ไม่ต้องเปิด
+  // รูปที่อัปโหลดเองชื่อเป็นชื่อไฟล์ (เช่น character_1.jpg) ไม่มี prompt — ไม่ต้องเปิด
   const name = tiles.get(id)?.name ?? ''
   if (/\.(jpe?g|png|webp|gif)$/i.test(name) && !TIMECODE_NAME.test(name)) { tilePrompts.set(id, ''); return '' }
   const img = tileImg(id)

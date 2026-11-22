@@ -5,7 +5,7 @@
  *   1. ChatGPT อ่านบททั้งคลิปแล้วเลือกช่วงสำคัญ (ฉากเปิด จุดหักมุม ไคลแมกซ์ ตอนจบ)
  *      ตามสัดส่วนที่ตั้งไว้ (config.clips.coveragePercent) · ChatGPT ตอบไม่ได้ → เลือกด้วยกฎในเครื่อง
  *   2. แนบภาพจริงให้ ChatGPT คิดคำสั่งการเคลื่อนไหวทีละภาพ (พลาด → ใช้ Action ของ prompt ภาพแทน)
- *   3. ม้าน้ำส่งภาพ + คำสั่งไป Kie API → รอวิดีโอ → เซฟ 05_images/clips/<timecode>.mp4
+ *   3. ส่งภาพ + คำสั่งไป Kie API → รอวิดีโอ → เซฟ 05_images/clips/<timecode>.mp4
  *
  * ไม่มีคลิป / Kie เครดิตไม่พอ → ขั้นตัดต่อใช้ภาพเหมือนเดิม คลิปไม่พัง
  *
@@ -147,7 +147,7 @@ for (let i = 0; i < needMotion.length; i += 8) {
   writeFileSync(promptsFile, JSON.stringify(motions, null, 2))
 }
 
-// ── ม้าน้ำส่งให้ Kie API ทีละช็อต ──
+// ── ส่งให้ Kie API ทีละช็อต ──
 let made = 0
 let failedInRow = 0
 const tier = kieTier(settings.tier)

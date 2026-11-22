@@ -110,7 +110,7 @@ export function shortHint(text, max = 48) {
   return `${(space > max * 0.6 ? cut.slice(0, space) : cut).trim()}…`
 }
 
-/** ข้อความบนภาพ (ASS 1080×1920) — หัวข้อบน คำใบ้ล่าง เฉลยตัวเล็กที่มุมขวาล่างแบบเวทีทอง */
+/** ข้อความบนภาพ (ASS 1080×1920) — หัวข้อบน คำใบ้ล่าง เฉลยตัวเล็กที่มุมขวาล่าง (แบบเกมทายภาพ) */
 export function riddleAss(riddle) {
   const font = 'Leelawadee UI'
   const line = (style, text) => `Dialogue: 0,0:00:00.00,0:00:05.00,${style},,0,0,0,,${assText(text)}`

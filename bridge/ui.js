@@ -1,7 +1,7 @@
 /**
  * หน้า UI บน bridge — ทำคลิปครบทุกขั้นด้วยการกดปุ่ม ไม่ต้องพิมพ์คำสั่ง
  *
- *   ดับเบิลคลิก เปิดโปรแกรม.bat → http://127.0.0.1:8785/
+ *   ดับเบิลคลิก เปิดโปรแกรม.bat → http://127.0.0.1:8787/
  *
  * ขั้น 1 หัวข้อ + บทพากย์ ส่งงานเข้าคิว ChatGPT ตรงๆ (prompt ตัวเดียวกับ CLI — Blueprint ทั้งฉบับ)
  *   STAGE 1 ได้ตาราง "# | Video Title | Genre" 5 แถว แล้วผู้ใช้คลิกเลือกจากตาราง
@@ -168,7 +168,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
   }
 
   /**
-   * สถานะของแต่ละ agent: ChatGPT / Google Flow (งานในคิว) + ม้าน้ำ Kie / เสียงพากย์ / ตัดต่อ (โปรแกรมในเครื่อง)
+   * สถานะของแต่ละ agent: ChatGPT / Google Flow (งานในคิว) + คนฉายหนังกลางแปลง (Kie) / เสียงพากย์ / ตัดต่อ (โปรแกรมในเครื่อง)
    * state: working | waiting (มีงานรอคิว) | idle | offline
    */
   function agentsStatus() {
@@ -836,7 +836,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
         if (!title && !autoTopic) return json(res, 400, { error: 'พิมพ์หัวข้อก่อน' }), true
         const config = loadConfig()
         if (clipSettings(config).enabled && !hasKey('KIE_API_KEY')) {
-          return json(res, 400, { error: 'เปิดแอนิเมชัน Kie อยู่ แต่ยังไม่มี API key — กรอกในตั้งค่าม้าน้ำ หรือเลือกปิดเพื่อใช้ภาพนิ่ง' }), true
+          return json(res, 400, { error: 'เปิดแอนิเมชัน Kie อยู่ แต่ยังไม่มี API key — กรอกในตั้งค่าแอนิเมชัน (คนฉายหนังกลางแปลง) หรือเลือกปิดเพื่อใช้ภาพนิ่ง' }), true
         }
         const language = ['th', 'en'].includes(body.language) ? body.language : config.script.language
         const titleLanguage = ['th', 'en'].includes(body.titleLanguage) ? body.titleLanguage : (config.script.titleLanguage ?? language)
@@ -963,7 +963,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
             }
             // ผู้เขียนบทและหัวข้อ: chatgpt (ค่าเริ่มต้น) | gemini — ใช้กับคลิปที่เริ่มหลังจากนี้
             if (WRITERS[body.writer]) c.script.writer = body.writer
-            // ม้าน้ำ/Kie: 'off' · เปอร์เซ็นต์ของฉากทั้งเรื่อง · 'first' = N ภาพแรก (จำนวนจาก firstCount)
+            // แอนิเมชัน Kie (คนฉายหนังกลางแปลง): 'off' · เปอร์เซ็นต์ของฉากทั้งเรื่อง · 'first' = N ภาพแรก (จำนวนจาก firstCount)
             const aiCoverage = body.aiCoverage ?? body.aiClips // aiClips รองรับ extension รุ่นเก่า
             if (aiCoverage === 'off') c.clips = { ...(c.clips ?? {}), provider: 'off' }
             else if (aiCoverage === 'first') c.clips = { ...(c.clips ?? {}), provider: 'kie', pick: 'first' }

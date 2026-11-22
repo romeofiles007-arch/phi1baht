@@ -35,7 +35,7 @@ const INPUTS = {
 }
 
 /**
- * 3 ระดับให้เลือกในตั้งค่าม้าน้ำ (ราคา kie.ai/pricing ก.ย. 2026 · 1 เครดิต = $0.005)
+ * 3 ระดับให้เลือกในตั้งค่าแอนิเมชัน (คนฉายหนังกลางแปลง) (ราคา kie.ai/pricing ก.ย. 2026 · 1 เครดิต = $0.005)
  * ทุกตัวทดสอบยิงจริงกับภาพการ์ตูนแนวตั้งแล้ว
  */
 export const KIE_TIERS = {
@@ -63,7 +63,7 @@ const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
 export function kieKey() {
   loadEnv()
   const key = process.env.KIE_API_KEY?.trim()
-  if (!key) throw new Error('ยังไม่มี Kie API key — กรอกในตั้งค่าม้าน้ำ หรือปิดแอนิเมชันเพื่อใช้ภาพนิ่ง')
+  if (!key) throw new Error('ยังไม่มี Kie API key — กรอกในตั้งค่าแอนิเมชัน (คนฉายหนังกลางแปลง) หรือปิดแอนิเมชันเพื่อใช้ภาพนิ่ง')
   return key
 }
 

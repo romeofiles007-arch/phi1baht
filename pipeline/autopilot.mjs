@@ -610,7 +610,7 @@ async function imagesDepartment() {
   dept('images', { status: 'done', detail: `ภาพ ${cov.have}/${cov.total} ใบ${hasCover(slug) ? ' + ปกคลิป' : ' · ยังไม่มีปก'}` })
 }
 
-// ── แผนก 5: ม้าน้ำทำแอนิเมชันจากภาพ Flow ด้วย Kie API ──
+// ── แผนก 5: คนฉายหนังกลางแปลงทำแอนิเมชันจากภาพ Flow ด้วย Kie API ──
 async function clipsDepartment() {
   const settings = clipSettings(config)
   if (!settings.enabled) return dept('clips', { status: 'done', detail: 'ปิด Kie — ใช้ภาพนิ่งซูม/เลื่อนกล้องแล้วตัดต่อ' })
@@ -626,7 +626,7 @@ async function clipsDepartment() {
     console.warn(`   ⚠️ ${msg}`)
     return dept('clips', { status: 'done', detail: msg })
   }
-  dept('clips', { status: 'working', detail: `ม้าน้ำใช้ Kie (${kieTier(settings.tier).label} · ${kieTier(settings.tier).name}) ขยับ ${clipScopeLabel(settings)} (${target} ฉากจากภาพ Flow)` })
+  dept('clips', { status: 'working', detail: `คนฉายหนังกลางแปลงใช้ Kie (${kieTier(settings.tier).label} · ${kieTier(settings.tier).name}) ขยับ ${clipScopeLabel(settings)} (${target} ฉากจากภาพ Flow)` })
   let clipLog = ''
   const run = await step('5b_clips.mjs', [slug], {
     onText: (chunk) => {

@@ -61,3 +61,6 @@ references/
 # ไฟล์ลงทะเบียน native host ที่ตัวติดตั้งสร้างต่อเครื่อง (มี path ของเครื่อง)
 native/com.phi1baht.bridge.json
 .env.*
+# ตัวอย่างที่ส่งไปกับแอป ต้องติดตามใน git เสมอ (.env.* ด้านบนจะกลืนมันถ้าไฟล์หลุดจาก index)
+!.env.example
+!.env.*.example

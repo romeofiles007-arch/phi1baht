@@ -32,15 +32,3 @@ html[data-category] .crewTip small { color: #e8ddc6; }
   --line: var(--category-line, var(--gull-line)); --accent: var(--category-accent, var(--gull)); --accent-ink: var(--category-accent-ink, var(--gull-ink)); --pick: var(--category-pick, var(--gull-pick));
   background: var(--bg, #1b2430);
 }
-/* หมวดสามก๊ก: ทองชัดบนปุ่มหลัก ใช้หมึกเข้มเพื่อให้อ่านได้ */
-html[data-category='sanguo'] .primary,
-html[data-category='sanguo'] #autoControlBlock .primary,
-html[data-category='sanguo'] #autoSection .seg button[aria-pressed='true'],
-html[data-category='sanguo'] main > section.step.agentSetting .seg button[aria-pressed='true'],
-html[data-category='sanguo'] .overlay .seg button[aria-pressed='true'] {
-  background: var(--action); color: var(--action-ink); border-color: var(--line); box-shadow: none;
-}
-html[data-category='sanguo'] .primary:hover:not(:disabled),
-html[data-category='sanguo'] #autoControlBlock .primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--action) 88%, var(--panel)); color: var(--action-ink);
-}

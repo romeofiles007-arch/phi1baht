@@ -368,7 +368,7 @@ export function createPosting({ jobs, enqueue, json, readBody, log, port, token,
   }
 
   // ── Facebook Story ตามรอบ: ภาพ "ไขปริศนา" ของคลิป (riddle.mjs) ──
-  // ผู้ใช้ (5 พ.ย. 2026): Story ให้เป็นภาพปริศนาแบบเวทีทอง แทนการตัดคลิปลงทีละตอน
+  // ผู้ใช้ (5 พ.ย. 2026): Story ให้เป็นภาพปริศนา "ทายสิ ผีอะไร?" ของคลิป แทนการตัดคลิปลงทีละตอน
   // คลิปที่ไม่มีภาพปริศนา (คลิปเก่า/ภาษาอื่น) → ข้าม ไม่นับรอบ โพสต์ถัดไปจะลองใหม่
   // คืนผลเสมอ ไม่ throw — โพสต์หน้าเพจขึ้นไปแล้ว Story พลาดต้องไม่ทำให้นับว่าโพสต์ไม่สำเร็จ
   async function postStory(account, file, identity, itemId, title, slug) {

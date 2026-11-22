@@ -730,8 +730,8 @@ export function initPosting({ api, localApp }) {
           el('button', { type: 'button', className: 'ghost', 'aria-expanded': 'false', on: { click: (e) => { const form = e.currentTarget.parentElement.querySelector('.pEditPage'); form.hidden = !form.hidden; e.currentTarget.setAttribute('aria-expanded', String(!form.hidden)) } } }, 'แก้ไข'),
           el('button', { type: 'button', className: 'ghost', on: { click: () => { if (confirm(`ลบเพจ "${a.name}" ออกจากโหมดโพสต์? (โทเค็นจะถูกลบจากเครื่องนี้)`)) call('/api/posting/facebook/remove', { id: a.id }, 'ลบเพจแล้ว').catch(() => {}) } } }, 'ลบ'),
           editPageForm(a),
-          // ลง Story ทุก N โพสต์ — เป็นภาพ "ไขปริศนาธรรม" ของคลิป (คลิปไม่มีภาพปริศนา = ข้ามไปโพสต์ถัดไป)
-          el('label', { className: 'pField' }, 'ลง Story ภาพปริศนาธรรม',
+          // ลง Story ทุก N โพสต์ — เป็นภาพ "ทายสิ ผีอะไร?" ของคลิป (คลิปไม่มีภาพปริศนา = ข้ามไปโพสต์ถัดไป)
+          el('label', { className: 'pField' }, 'ลง Story ภาพ "ทายสิ ผีอะไร?"',
             el('select', {
               'aria-label': `รอบลง Story ของ ${a.name}`,
               on: { change: (e) => call('/api/posting/facebook/update', { id: a.id, storyEvery: Number(e.target.value) }, Number(e.target.value) ? 'บันทึกแล้ว · เริ่มนับรอบ Story ใหม่' : 'ปิดการลง Story แล้ว').catch(() => {}) },

@@ -161,7 +161,7 @@ export async function facebookStory({ pageId, token, file, aiGenerated = true },
 }
 
 /**
- * Facebook Story แบบภาพนิ่ง (ภาพปริศนาธรรม) — อัปโหลดภาพแบบยังไม่เผยแพร่ แล้วสั่งลง Story ด้วยเลขภาพนั้น
+ * Facebook Story แบบภาพนิ่ง (ภาพ "ทายสิ ผีอะไร?") — อัปโหลดภาพแบบยังไม่เผยแพร่ แล้วสั่งลง Story ด้วยเลขภาพนั้น
  * (Pages API: POST /{page}/photos published=false → POST /{page}/photo_stories photo_id)
  */
 export async function facebookPhotoStory({ pageId, token, file }, { fetchImpl = fetch } = {}) {

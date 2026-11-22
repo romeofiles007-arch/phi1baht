@@ -371,7 +371,7 @@ const postEvent = (item) => ({
  * นับเฉพาะโพสต์หลังเปิดตั้งค่า (storySince) และหลัง Story ครั้งล่าสุด · Story ที่ไม่รู้ผล (needsVerification) นับเป็นลงแล้ว กันลงถี่
  * Story พลาดแบบรู้ว่ายังไม่ขึ้น → ยังถึงรอบอยู่ โพสต์ถัดไปลองใหม่เอง
  */
-// Story เป็นภาพปริศนาธรรมแล้ว (เบากว่าคลิป) — ลงได้ถี่ถึงทุกโพสต์
+// Story เป็นภาพ "ทายสิ ผีอะไร?" แล้ว (เบากว่าคลิป) — ลงได้ถี่ถึงทุกโพสต์
 export const STORY_EVERY = [0, 1, 2, 3, 5, 10, 20]
 export function postsSinceStory(queue, key, since = 0, excludeId = null) {
   let last = Number(since) || 0
