@@ -1,7 +1,7 @@
 (() => {
-  if (globalThis.__dhamma_tiktok) return
-  globalThis.__dhamma_tiktok = true
-  const D = globalThis.DhammaTikTokDom
+  if (globalThis.__phi_tiktok) return
+  globalThis.__phi_tiktok = true
+  const D = globalThis.PhiTikTokDom
   const H = globalThis.bridgeHelpers
   let active = null
   let accountMenuOpened = false
@@ -57,7 +57,7 @@
     // จึงยกเลิกทุกการคลิกที่ช่องเลือกไฟล์ระหว่างทำงาน (คลิกที่ยกเลิกแล้ว browser ไม่เปิดหน้าต่างเลือกไฟล์)
     const blockPicker = (event) => { if (event.target instanceof HTMLInputElement && event.target.type === 'file') event.preventDefault() }
     document.addEventListener('click', blockPicker, true)
-    document.documentElement.dataset.dhammaBlockPicker = '1' // ชั้นที่สองในสคริปต์ของหน้าเว็บ (background ฉีดไว้) — ช่องไฟล์ที่ไม่ได้อยู่ในหน้า
+    document.documentElement.dataset.phiBlockPicker = '1' // ชั้นที่สองในสคริปต์ของหน้าเว็บ (background ฉีดไว้) — ช่องไฟล์ที่ไม่ได้อยู่ในหน้า
     const assertActive = async () => {
       if (cancelled) throw new Error('งาน TikTok ถูกยกเลิกแล้ว')
       D.checkPage(document, location.href)
@@ -213,7 +213,7 @@
         try { diagnostic = D.inspectStudio(document) } catch {}
       }
       return { ok: false, error: String(error.message), phase, needsVerification: error.needsVerification === true || attempt?.submitted === true, ...(diagnostic ? { diagnostic } : {}) }
-    } finally { closeAccountMenu(); stopBeat(); document.removeEventListener('click', blockPicker, true); delete document.documentElement.dataset.dhammaBlockPicker }
+    } finally { closeAccountMenu(); stopBeat(); document.removeEventListener('click', blockPicker, true); delete document.documentElement.dataset.phiBlockPicker }
   }
   chrome.runtime.onMessage.addListener((message, _sender, respond) => {
     if (message.type === 'PING') { respond({ ok: true, url: location.href }); return }

@@ -90,7 +90,7 @@ export async function checklist({ connected } = {}) {
       id: `poll-${agent}`, group: 'Extension', label: `Extension รับงาน ${label} จากโปรแกรมในเครื่อง`, need: 'required',
       status: on ? 'ok' : 'warn',
       detail: on ? 'ต่ออยู่' : 'ยังไม่เห็น extension มารับงานใน 1 นาทีที่ผ่านมา',
-      fix: on ? null : { text: 'เปิด chrome://extensions แล้วกดรีโหลด ธรรมะ Auto Bridge · ถ้ายังไม่ขึ้น ปิดเปิด Chrome' },
+      fix: on ? null : { text: 'เปิด chrome://extensions แล้วกดรีโหลด ผี 1 บาท Bridge · ถ้ายังไม่ขึ้น ปิดเปิด Chrome' },
     })
   }
 

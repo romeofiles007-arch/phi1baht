@@ -8,7 +8,7 @@ const semantic = {
 const palette = (mode, values) => ({...semantic[mode], ...values})
 
 // ภาพฉากและไอคอนยังเป็นชุดเดิมของแอปต้นแบบทุกหมวด — งานธีม (Task 9) จะวาดชุดของผี 1 บาทแล้วเปลี่ยนชื่อไฟล์ที่นี่
-const ART = { day:'agents/china-day.png', night:'agents/china-night.png', icon:'icons/category-sanguo.png' }
+const ART = { day:'agents/phi-day.png', night:'agents/phi-night.png', icon:'icons/category-phi.png' }
 
 /**
  * ธีมหน้าจอของแต่ละหมวด — โรงพิมพ์การ์ตูนผียุค 2520 ยามดึก ทุกหมวดเป็นพื้นมืดนวลตา (ไม่มีพื้นขาว)

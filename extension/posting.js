@@ -819,7 +819,7 @@ export function initPosting({ api, localApp }) {
     })
     const driveBox = el('section', { className: 'pBox', 'aria-label': 'Google Drive' },
       el('h3', {}, el('span', { className: 'kind drive' }, 'DR'), 'Google Drive · ที่พักคลิป'),
-      el('p', { className: 'hint' }, 'คลิปที่เข้าคิวจะอัปขึ้นโฟลเดอร์ "ธรรมะ Auto · รอโพสต์" เอง และย้ายไปถังขยะของ Drive เมื่อโพสต์ครบทุกที่ (รวมคลิปที่ตีกลับหรือเอาออกจากคิว) — ไฟล์ในเครื่องไม่ถูกลบ'),
+      el('p', { className: 'hint' }, 'คลิปที่เข้าคิวจะอัปขึ้นโฟลเดอร์ "ผี 1 บาท · รอโพสต์" เอง และย้ายไปถังขยะของ Drive เมื่อโพสต์ครบทุกที่ (รวมคลิปที่ตีกลับหรือเอาออกจากคิว) — ไฟล์ในเครื่องไม่ถูกลบ'),
       dr.connected
         ? el('ul', { className: 'pAccounts' }, el('li', {},
           el('strong', {}, dr.email || dr.name),

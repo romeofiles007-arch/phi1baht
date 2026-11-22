@@ -6,7 +6,7 @@ let Q
 try {
   const ctx = vm.createContext({ URL, Date })
   vm.runInContext(readFileSync(new URL('../extension/flow-quota.js', import.meta.url), 'utf8'), ctx)
-  Q = ctx.DhammaFlowQuota
+  Q = ctx.PhiFlowQuota
 } catch (e) { if (e.code !== 'ENOENT') throw e }
 const api = () => { assert.ok(Q, 'Flow quota policy is missing'); return Q }
 test('confirmed generation quota is distinct from demand, safety and generic errors', () => {

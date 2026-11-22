@@ -23,7 +23,7 @@ export const HANDOFF = [
 export const SPRITE_COLUMNS = 4
 export const SPRITE_ROWS = 3
 export const SPRITE_FRAMES = SPRITE_COLUMNS * SPRITE_ROWS
-export const TEMPLE_ASSETS = Object.fromEntries(DEPARTMENTS.map(({ id }) => [id, `china-${id}`]))
+export const TEMPLE_ASSETS = Object.fromEntries(DEPARTMENTS.map(({ id }) => [id, `phi-${id}`]))
 // Retain the export consumed by the existing department selector.
 export const SEA_ASSETS = TEMPLE_ASSETS
 

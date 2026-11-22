@@ -80,7 +80,7 @@ export const riddlePrompt = (riddle) => `ภาพปริศนาเงาผ
 /** "ช็อต" ภาพเงาสำหรับส่งให้ Flow — ไม่มีโจทย์ = null (คลิปเก่า/คลิปภาษาอื่น ไม่ทำ) */
 export function riddleShot(slug) {
   const riddle = readRiddle(slug)
-  if (!riddle || riddleProblem(riddle)) return null // โจทย์ผิด (เช่นโจทย์ปริศนาจีนของเก่า) ไม่ต้องเสียเวลาวาด
+  if (!riddle || riddleProblem(riddle)) return null // โจทย์ผิด (เช่นโจทย์ปริศนาของเก่า) ไม่ต้องเสียเวลาวาด
   return {
     filename: RIDDLE_NAME,
     shot: 'RIDDLE',

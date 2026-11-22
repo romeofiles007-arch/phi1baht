@@ -258,7 +258,7 @@ async function runJob(job, agent) {
     const snapshots = []
     for (const tab of tabs) {
       await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['tiktok-dom.js'] })
-      const [snapshot] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => ({ url: location.href, ...globalThis.DhammaTikTokDom.inspectStudio(document) }) })
+      const [snapshot] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => ({ url: location.href, ...globalThis.PhiTikTokDom.inspectStudio(document) }) })
       snapshots.push({ tabId: tab.id, ...snapshot?.result })
     }
     await postReliable('/result', { id: job.id, meta: { ok: true, runtimeVersion: chrome.runtime.getManifest().version, tabs: snapshots } })
@@ -294,9 +294,9 @@ async function runJob(job, agent) {
       target: { tabId: tab.id },
       world: 'MAIN',
       func: () => {
-        if (window.__dhammaPickerGuard) return
-        window.__dhammaPickerGuard = true
-        const blocked = (input) => input?.type === 'file' && document.documentElement.dataset.dhammaBlockPicker === '1'
+        if (window.__phiPickerGuard) return
+        window.__phiPickerGuard = true
+        const blocked = (input) => input?.type === 'file' && document.documentElement.dataset.phiBlockPicker === '1'
         const click = HTMLInputElement.prototype.click
         HTMLInputElement.prototype.click = function () { if (!blocked(this)) return click.call(this) }
         const showPicker = HTMLInputElement.prototype.showPicker

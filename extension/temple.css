@@ -8,7 +8,7 @@
   --bg: #2b2318; --panel: #3a2f21; --ink: #f6ead0; --muted: #d6c49c;
   --line: #8f7b55; --accent: #ff8a73; --accent-ink: #1c0d0a; --pick: #4a3b28;
   --ok: #8fd3ad; --warn: #ecc763; --danger: #ff9f93;
-  --world-image: url('agents/china-night.png'); --world-wash: rgba(20, 14, 8, .26);
+  --world-image: url('agents/phi-day.png'); --world-wash: rgba(20, 14, 8, .26);
   --sea-top: #3a2f21; --sand-deep: #8f7b55; --studio-sand: #e0b04a;
   --panel-shadow: 0 5px 18px rgba(12, 7, 2, .3);
   --temple-wood: #1d160d; --temple-gold: #e0b04a; --temple-surface: #33291c;
@@ -25,7 +25,7 @@
     --bg: #14100c; --panel: #1f1812; --ink: #f1e4c4; --muted: #c4b18a;
     --line: #7d6a48; --accent: #ff8a73; --accent-ink: #140a08; --pick: #2c2318;
     --ok: #8fd3ad; --warn: #ecc763; --danger: #ff9f93;
-    --world-image: url('agents/china-night.png'); --world-wash: rgba(8, 5, 2, .32);
+    --world-image: url('agents/phi-night.png'); --world-wash: rgba(8, 5, 2, .32);
     --sea-top: #1f1812; --sand-deep: #7d6a48; --temple-surface: #281f16;
     --temple-wood: #0c0906; --panel-shadow: 0 5px 18px rgba(2, 1, 0, .34);
     --dept-chatgpt: #e9c46a; --dept-chatgpt-pick: #3a2f16;

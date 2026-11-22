@@ -349,7 +349,7 @@ export function clipsToPull(videos, queue, slots) {
 
 // ── บอกผู้ใช้ว่าโพสต์ไปไหนบ้าง (แจ้งเตือนบนเครื่อง + บรรทัด "โพสต์ล่าสุด" ในแผงข้าง) ──
 
-/** "เพจธรรมะ ✓ · ช่องธรรมะ ✗ (โควตาหมด)" */
+/** "เพจผี 1 บาท ✓ · ช่องผี 1 บาท ✗ (โควตาหมด)" */
 export function resultSummary(item) {
   return (item.targets ?? []).map((k) => {
     const r = item.results?.[k]

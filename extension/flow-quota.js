@@ -41,5 +41,5 @@
     }
     return null
   }
-  globalThis.DhammaFlowQuota = { emailOf, profileLabel, quotaNotice, nextAccount, sameAccount: (label, email) => !!emailOf(email) && emailOf(label) === emailOf(email) }
+  globalThis.PhiFlowQuota = { emailOf, profileLabel, quotaNotice, nextAccount, sameAccount: (label, email) => !!emailOf(email) && emailOf(label) === emailOf(email) }
 })()

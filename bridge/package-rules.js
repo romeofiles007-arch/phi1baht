@@ -7,7 +7,7 @@
 export const EXCLUDE = [
   /^\.impeccable\//,
   /^docs\/design\//,
-  /^scripts\/(test-|preview-|selftest|build-icons|build-dhamma-icons|build-package|build-setup|build-installer)/,
+  /^scripts\/(test-|preview-|selftest|build-icons|build-package|build-setup|build-installer)/,
   /^docs\/superpowers\//,
   /^installer\//, // สคริปต์สร้าง Setup.exe — ของนักพัฒนา
   /^\.claude\//,

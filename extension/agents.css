@@ -20,7 +20,7 @@
 .agent-mini[data-state='waiting']::after { background: var(--warn); }
 .agent-mini[data-state='idle']::after { background: var(--ok); }
 .agent-mini[data-state='offline']::after { box-sizing: border-box; background: transparent; border: 1px solid var(--muted); }
-.agentScene { position: relative; isolation: isolate; margin: 8px -12px -9px; padding: 12px 0 22px; border-top: 1px solid var(--line); border-radius: 0 0 14px 14px; overflow: hidden; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 94%, transparent) 0 calc(100% - 22px), color-mix(in srgb, var(--panel) 65%, transparent)), url('agents/china-night.png') center bottom / cover no-repeat; }
+.agentScene { position: relative; isolation: isolate; margin: 8px -12px -9px; padding: 12px 0 22px; border-top: 1px solid var(--line); border-radius: 0 0 14px 14px; overflow: hidden; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 94%, transparent) 0 calc(100% - 22px), color-mix(in srgb, var(--panel) 65%, transparent)), url('agents/phi-night.png') center bottom / cover no-repeat; }
 .agents { list-style: none; margin: 0; padding: 0 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .agent { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: 10px 12px 12px; font-size: 13px; }
 .agent:nth-child(odd) { border-right: 1px solid var(--line); }
@@ -153,14 +153,6 @@
 .studioHero[data-department='voice'] { --studio-tint: #2c5446; }
 .studioHero[data-department='edit'] { --studio-tint: #34486b; }
 /* ช่องภาพโปร่งใสแยกจากข้อความ ไม่วางกองสีทับสถานะ */
-.heroProps { position: absolute; right: 14px; bottom: 0; width: 90px; height: 120px; pointer-events: none; background: url('agents/department-props.png') 0% center / 400% auto no-repeat; transform-origin: 50% 75%; }
-.studioHero[data-department='flow'] .heroProps { background-position-x: 33.333333%; }
-.studioHero[data-department='voice'] .heroProps { background-position-x: 66.666667%; }
-.studioHero[data-department='edit'] .heroProps { background-position-x: 100%; }
-.studioHero[data-department='meta'] .heroProps { display: none; }
-.studioHero[data-mood='working'] .heroProps { animation: studio-tools 5s ease-in-out infinite; }
-.studioHero[data-mood='idle'] .heroProps { animation: studio-tools 8s ease-in-out infinite; }
-.studioHero[data-mood='offline'] .heroProps { filter: grayscale(1); opacity: .5; }
 @keyframes studio-tools { 50% { transform: translateY(-2px) rotate(.8deg); } }
 .heroActor { flex: none; width: 156px; height: 156px; margin: 0 -10px 0 -8px; display: grid; place-items: center; }
 .heroActor .sea-portrait { --portrait-size: 156px; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, .5)); }
@@ -235,11 +227,11 @@ main .seg button[aria-pressed="true"], .overlay .seg button[aria-pressed="true"]
 
 /* ── สีทั้งแผงตามแผนกที่กำลังทำงาน (html[data-dept]) ──
    เขียนบท = เหลืองกระดาษ · วาดภาพ = แดงชาด · แอนิเมชัน = ส้มหลอดฉาย · พากย์ = เขียวหยก · ตัดต่อ = ฟ้าหมึก */
-html[data-dept='chatgpt'] { --world-image: url('agents/china-night.png'); --bg: #2a2210; --panel: #382e17; --accent: #e9c46a; --accent-ink: #1c0d0a; --pick: #4d3f1f; --sea-top: #382e17; --hero-edge: #e9c46a; }
-html[data-dept='flow'] { --world-image: url('agents/china-night.png'); --bg: #2e1815; --panel: #3d2320; --accent: #ff8a78; --accent-ink: #1c0d0a; --pick: #5a2d28; --sea-top: #3d2320; --hero-edge: #ff8a78; }
-html[data-dept='meta'] { --world-image: url('agents/china-night.png'); --bg: #2c1f12; --panel: #3b2a19; --accent: #f2a65a; --accent-ink: #1c0d0a; --pick: #55371c; --sea-top: #3b2a19; --hero-edge: #f2a65a; }
-html[data-dept='voice'] { --world-image: url('agents/china-night.png'); --bg: #14281f; --panel: #1e382d; --accent: #8fd0b8; --accent-ink: #1c0d0a; --pick: #284a3e; --sea-top: #1e382d; --hero-edge: #8fd0b8; }
-html[data-dept='edit'] { --world-image: url('agents/china-night.png'); --bg: #16202f; --panel: #202d42; --accent: #8fb4e8; --accent-ink: #1c0d0a; --pick: #2c3f5c; --sea-top: #202d42; --hero-edge: #8fb4e8; }
+html[data-dept='chatgpt'] { --bg: #2a2210; --panel: #382e17; --accent: #e9c46a; --accent-ink: #1c0d0a; --pick: #4d3f1f; --sea-top: #382e17; --hero-edge: #e9c46a; }
+html[data-dept='flow'] { --bg: #2e1815; --panel: #3d2320; --accent: #ff8a78; --accent-ink: #1c0d0a; --pick: #5a2d28; --sea-top: #3d2320; --hero-edge: #ff8a78; }
+html[data-dept='meta'] { --bg: #2c1f12; --panel: #3b2a19; --accent: #f2a65a; --accent-ink: #1c0d0a; --pick: #55371c; --sea-top: #3b2a19; --hero-edge: #f2a65a; }
+html[data-dept='voice'] { --bg: #14281f; --panel: #1e382d; --accent: #8fd0b8; --accent-ink: #1c0d0a; --pick: #284a3e; --sea-top: #1e382d; --hero-edge: #8fd0b8; }
+html[data-dept='edit'] { --bg: #16202f; --panel: #202d42; --accent: #8fb4e8; --accent-ink: #1c0d0a; --pick: #2c3f5c; --sea-top: #202d42; --hero-edge: #8fb4e8; }
 @media (prefers-color-scheme: dark) {
   html[data-dept='chatgpt'] { --bg: #1b150a; --panel: #261e0f; --accent: #e9c46a; --accent-ink: #140a08; --pick: #3a2f16; --sea-top: #261e0f; }
   html[data-dept='flow'] { --bg: #1e0f0d; --panel: #2b1715; --accent: #ff8a78; --accent-ink: #140a08; --pick: #43211e; --sea-top: #2b1715; }
@@ -377,11 +369,11 @@ main > section.step { padding-top: 0; margin-bottom: 22px; background: color-mix
    การ์ดหลักเป็นพื้นกลาง ไม่ย้อมสีแผนกใด · กล่องย่อยถือสีของตัวละครตัวเอง (นักเขียน/นักพากย์/นักวาด/คนฉายหนัง)
    หัวกล่องมีรูปตัวละคร + ป้ายชื่อทึบ ปุ่มที่เลือกเป็นสีทึบของแผนกนั้น */
 main > #autoSection { background: color-mix(in srgb, var(--panel) 94%, transparent); border-color: color-mix(in srgb, var(--ink) 28%, var(--line)); }
-.agentBlock[data-agent='chatgpt'] { --agent-sprite: url('agents/china-chatgpt.png'); }
-.agentBlock[data-agent='flow'] { --agent-sprite: url('agents/china-flow.png'); }
-.agentBlock[data-agent='meta'] { --agent-sprite: url('agents/china-meta.png'); }
-.agentBlock[data-agent='voice'] { --agent-sprite: url('agents/china-voice.png'); }
-.agentBlock[data-agent='edit'] { --agent-sprite: url('agents/china-edit.png'); }
+.agentBlock[data-agent='chatgpt'] { --agent-sprite: url('agents/phi-chatgpt.png'); }
+.agentBlock[data-agent='flow'] { --agent-sprite: url('agents/phi-flow.png'); }
+.agentBlock[data-agent='meta'] { --agent-sprite: url('agents/phi-meta.png'); }
+.agentBlock[data-agent='voice'] { --agent-sprite: url('agents/phi-voice.png'); }
+.agentBlock[data-agent='edit'] { --agent-sprite: url('agents/phi-edit.png'); }
 .agentBlock { --setting-ink: #fff; margin: 12px 0 0; padding: 0 12px 12px; border: 1.5px solid color-mix(in srgb, var(--setting-color) 62%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--setting-color) 8%, var(--panel)); }
 details.agentBlock:not([open]) { padding-bottom: 0; }
 .agentBlock > .blockHead, .agentBlock > summary {
@@ -522,11 +514,11 @@ main > section.step.agentSetting :focus-visible { outline-color: var(--setting-c
 .costDetail { margin: 5px 0 0; padding: 0; list-style: none; font-size: 12px; line-height: 1.55; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* ── หรือทำทีละขั้นเอง: หัวขั้นมีรูปตัวละครของแผนก + ป้ายชื่อตัวละคร · แผนกพื้นทึบ (แบบเดียวกับกล่องในการ์ดอัตโนมัติ) ── */
-.step.agentSetting[data-agent='chatgpt'] { --agent-sprite: url('agents/china-chatgpt.png'); }
-.step.agentSetting[data-agent='flow'] { --agent-sprite: url('agents/china-flow.png'); }
-.step.agentSetting[data-agent='meta'] { --agent-sprite: url('agents/china-meta.png'); }
-.step.agentSetting[data-agent='voice'] { --agent-sprite: url('agents/china-voice.png'); }
-.step.agentSetting[data-agent='edit'] { --agent-sprite: url('agents/china-edit.png'); }
+.step.agentSetting[data-agent='chatgpt'] { --agent-sprite: url('agents/phi-chatgpt.png'); }
+.step.agentSetting[data-agent='flow'] { --agent-sprite: url('agents/phi-flow.png'); }
+.step.agentSetting[data-agent='meta'] { --agent-sprite: url('agents/phi-meta.png'); }
+.step.agentSetting[data-agent='voice'] { --agent-sprite: url('agents/phi-voice.png'); }
+.step.agentSetting[data-agent='edit'] { --agent-sprite: url('agents/phi-edit.png'); }
 main > section.step.agentSetting > h2 { gap: 8px; min-height: 52px; padding-top: 6px; padding-bottom: 6px; background: color-mix(in srgb, var(--setting-color) 18%, var(--panel)); border-bottom-color: color-mix(in srgb, var(--setting-color) 40%, transparent); }
 main > section.step.agentSetting > h2::before { content: ''; order: -1; flex: none; width: 30px; height: 40px; background: var(--agent-sprite) 0 0 / 400% 100% no-repeat; }
 main > section.step.agentSetting > h2::after { content: attr(data-agent-label); border: 0; background: var(--setting-color); color: var(--setting-ink); font-size: 12px; font-weight: 700; }
@@ -539,11 +531,11 @@ main > section.step.agentSetting > h2::after { content: attr(data-agent-label); 
 .floatMascot { --mascot-w: clamp(92px, 28vw, 132px); position: fixed; right: -14px; bottom: 10px; z-index: 30; width: var(--mascot-w); aspect-ratio: 543 / 724; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, .28)); }
 .floatMascot[hidden] { display: none; }
 .floatSprite { display: block; width: 100%; height: 100%; background: var(--mascot-sprite, none) 0 0 / 400% 100% no-repeat; }
-.floatMascot[data-agent='chatgpt'] { --mascot-sprite: url('agents/china-chatgpt.png'); }
-.floatMascot[data-agent='flow'] { --mascot-sprite: url('agents/china-flow.png'); }
-.floatMascot[data-agent='meta'] { --mascot-sprite: url('agents/china-meta.png'); }
-.floatMascot[data-agent='voice'] { --mascot-sprite: url('agents/china-voice.png'); }
-.floatMascot[data-agent='edit'] { --mascot-sprite: url('agents/china-edit.png'); }
+.floatMascot[data-agent='chatgpt'] { --mascot-sprite: url('agents/phi-chatgpt.png'); }
+.floatMascot[data-agent='flow'] { --mascot-sprite: url('agents/phi-flow.png'); }
+.floatMascot[data-agent='meta'] { --mascot-sprite: url('agents/phi-meta.png'); }
+.floatMascot[data-agent='voice'] { --mascot-sprite: url('agents/phi-voice.png'); }
+.floatMascot[data-agent='edit'] { --mascot-sprite: url('agents/phi-edit.png'); }
 /* เปลี่ยนตัว: ลอยขึ้นจากขอบขวาล่าง — จังหวะเดียว ease-out */
 .floatMascot.swap .floatSprite { animation: mascot-in .42s cubic-bezier(.16, 1, .3, 1); }
 @keyframes mascot-in { from { opacity: 0; transform: translate(18px, 22px) scale(.92); } to { opacity: 1; transform: none; } }

@@ -141,7 +141,7 @@ if (autoTopic) {
   writeFileSync(join(projectDir(slug, 'script'), 'topics_scored.json'), JSON.stringify(topicPick, null, 2))
 }
 
-// ── หมวดของคลิป (พุทธประวัติ / พระเกจิ / ธรรมะทั่วไป) — หมวดพระเกจิดึงประวัติ + ภาพอ้างอิงจากวิกิพีเดียให้เอง ──
+// ── หมวดของคลิป (ตามหมวดของคลิป) — หมวดพระเกจิดึงประวัติ + ภาพอ้างอิงจากวิกิพีเดียให้เอง ──
 const profile = await ensureProfile(slug, { title, genre: topicPick?.chosen?.genre || config.script.genre })
 
 // ── สถานะของแต่ละแผนก ──

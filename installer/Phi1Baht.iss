@@ -72,7 +72,7 @@ Filename: "{app}\runtime\node\node.exe"; Parameters: """{app}\native\install.mjs
 Filename: "{cmd}"; Parameters: "/k chcp 65001 >nul & set ""PATH={localappdata}\Programs\Python\Launcher;%PATH%"" & powershell -NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\setup-tts.ps1"""; WorkingDir: "{app}"; Flags: nowait; Tasks: localvoice
 
 [UninstallRun]
-Filename: "{app}\ปิดโปรแกรม.bat"; Parameters: "--quiet"; WorkingDir: "{app}"; Flags: runhidden waituntilterminated; RunOnceId: "StopDhamma"
+Filename: "{app}\ปิดโปรแกรม.bat"; Parameters: "--quiet"; WorkingDir: "{app}"; Flags: runhidden waituntilterminated; RunOnceId: "StopPhi"
 Filename: "{app}\runtime\node\node.exe"; Parameters: """{app}\native\install.mjs"" --uninstall"; WorkingDir: "{app}"; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterHost"
 
 ; ไฟล์ที่โปรแกรมสร้างเองตอนใช้งาน — ลบได้ · งานคลิป (projects) ตัวละคร การตั้งค่า และ .env (API key) เก็บไว้ให้ลูกค้า

@@ -19,7 +19,7 @@ assert.deepEqual(positions[11], [100, 100])
 assert.equal(new Set(positions.map(JSON.stringify)).size, 12)
 for (const invalid of [-1, 12, NaN, 0.5, '1', null]) assert.throws(() => spritePosition(invalid), RangeError)
 for (const {id, animal} of DEPARTMENTS) {
-  assert.equal(TEMPLE_ASSETS[id], `china-${id}`)
+  assert.equal(TEMPLE_ASSETS[id], `phi-${id}`)
   assert.doesNotMatch(animal, /เณร|เด็ก|เต่า|ปลาหมึก|ม้าน้ำ|โลมา|^ปู$/)
 }
 console.log('PASS: twelve unique atlas positions, both row transitions, invalid frames, five temple departments.')

@@ -5,7 +5,7 @@
     const name = String(value ?? '').trim().replace(/^@/, '').toLowerCase()
     return /^[a-z0-9._]{1,24}$/.test(name) ? name : null
   }
-  const ownProfile = '[data-e2e="nav-profile"], [data-e2e="profile-icon"], [data-e2e="user-avatar"], [data-dhamma-tiktok-current-account]'
+  const ownProfile = '[data-e2e="nav-profile"], [data-e2e="profile-icon"], [data-e2e="user-avatar"], [data-phi-tiktok-current-account]'
   function checkPage(doc, url) {
     if (/\/login(?:[/?]|$)/.test(url) || /Log in to TikTok|เข้าสู่ระบบ TikTok/.test(doc.body?.innerText ?? '')) throw new Error('กรุณาล็อกอิน TikTok Studio ใน Chrome แล้วเชื่อมต่ออีกครั้ง')
     if (doc.querySelector('iframe[src*="captcha"], [id*="captcha-verify"], [class*="captcha_verify"], [data-e2e="captcha"]')) throw new Error('พบ CAPTCHA — เปิดแท็บ TikTok และยืนยันด้วยตัวเอง แล้วลองใหม่')
@@ -19,7 +19,7 @@
     let link = links.find(a => a.matches(ownProfile) || a.closest(ownProfile) || (/^(?:View profile|Profile|ดูโปรไฟล์|โปรไฟล์)$/i.test(text(a)) && a.closest('header, nav, [role="menu"], [role="navigation"], [role="dialog"]')))
     if (!link && fromAvatar) {
       const menuLinks = links.filter(a => !a.closest('[contenteditable="true"], textarea') && /^\/@[^/]+\/?$/.test(new URL(a.getAttribute('href'), 'https://www.tiktok.com').pathname))
-      if (menuLinks.length === 1) { link = menuLinks[0]; link.setAttribute?.('data-dhamma-tiktok-current-account', 'true') }
+      if (menuLinks.length === 1) { link = menuLinks[0]; link.setAttribute?.('data-phi-tiktok-current-account', 'true') }
     }
     const path = link && new URL(link.getAttribute('href'), 'https://www.tiktok.com').pathname
     const name = path && /^\/@([^/]+)\/?$/.exec(path)?.[1]
@@ -50,7 +50,7 @@
     return { published: true, username: username(expected) }
   }
   function claimAttempt(storage, id) {
-    const key = `dhamma-tiktok-${id}`
+    const key = `phi-tiktok-${id}`
     if (storage.getItem(key)) throw Object.assign(new Error('หยุดงาน TikTok ซ้ำ — ตรวจในบัญชีก่อนลองใหม่'), { needsVerification: true })
     storage.setItem(key, JSON.stringify({ phase: 'preparing', at: Date.now() }))
     let submitted = false
@@ -132,5 +132,5 @@
     })
     return { controls, profiles, avatars, navigation, settingRows, pageText: text(doc.body).slice(0, 4000) }
   }
-  globalThis.DhammaTikTokDom = { text, visible, username, checkPage, account, avatarTrigger, assertAccount, published, publicationSignals, claimAttempt, privacyLabels, exact, findButton, enabled, privacyControl, aiControl, aiConfirmation, checked, tipDismissButtons, coverButton, coverDialog, coverUploadTab, coverConfirm, coverCancel, inspectStudio }
+  globalThis.PhiTikTokDom = { text, visible, username, checkPage, account, avatarTrigger, assertAccount, published, publicationSignals, claimAttempt, privacyLabels, exact, findButton, enabled, privacyControl, aiControl, aiConfirmation, checked, tipDismissButtons, coverButton, coverDialog, coverUploadTab, coverConfirm, coverCancel, inspectStudio }
 })()

@@ -182,7 +182,7 @@ async function ensure() {
   return { ok: true, port, token, url: `http://127.0.0.1:${port}/` }
 }
 
-// เปิดโปรแกรม.bat / shortcut "ธรรมะ Auto" เรียก `node host.mjs --open` — เปิด bridge แบบซ่อน (ถ้ายังไม่เปิด) แล้วเปิดหน้าเว็บ
+// เปิดโปรแกรม.bat / shortcut "ผี 1 บาท" เรียก `node host.mjs --open` — เปิด bridge แบบซ่อน (ถ้ายังไม่เปิด) แล้วเปิดหน้าเว็บ
 // Chrome ไม่เคยส่ง --open มา (ส่งแค่ origin ของ extension กับ --parent-window)
 if (process.argv.includes('--open')) {
   const r = await ensure()

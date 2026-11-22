@@ -6,7 +6,7 @@ import { test } from 'node:test'
 // The driver's decisions run unchanged against small, explicit DOM fixtures.
 const context = { URL, console }
 try { runInNewContext(readFileSync(new URL('../extension/tiktok-dom.js', import.meta.url), 'utf8'), context) } catch (error) { if (error.code !== 'ENOENT') throw error }
-const api = () => { assert.ok(context.DhammaTikTokDom, 'TikTok DOM driver is missing'); return context.DhammaTikTokDom }
+const api = () => { assert.ok(context.PhiTikTokDom, 'TikTok DOM driver is missing'); return context.PhiTikTokDom }
 const link = (href, text = 'Profile', safe = true) => ({ href, textContent: text, getAttribute: name => name === 'href' ? href : null, matches: () => safe, closest: () => safe ? {} : null, getClientRects: () => [{}] })
 const document = (links = [], text = '') => ({ body: { innerText: text }, querySelectorAll: selector => selector.includes('a[') ? links : [], querySelector: () => null })
 
@@ -65,7 +65,7 @@ test('an attempt guard persists the publishing phase and blocks duplicate delive
   attempt.beforePublish()
   assert.equal(attempt.submitted, true)
   assert.throws(() => D.claimAttempt(storage, 'job1'), /ซ้ำ/)
-  assert.equal(JSON.parse(values.get('dhamma-tiktok-job1')).phase, 'publishing')
+  assert.equal(JSON.parse(values.get('phi-tiktok-job1')).phase, 'publishing')
 })
 
 test('read-only Studio diagnostics expose control attributes, never typed values or passwords', () => {

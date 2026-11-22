@@ -1,4 +1,4 @@
-"""สร้างไอคอนและภาพตัวละครทั้งหมดจากภาพต้นฉบับใน assets/china-raw/
+"""สร้างไอคอนและภาพตัวละครทั้งหมดจากภาพต้นฉบับใน assets/phi-raw/
 
 รัน:  python scripts/build-icons.py           สร้างใหม่ทั้งหมด (ไอคอน + ตัวละคร + GIF)
       python scripts/build-icons.py --icons   สร้างเฉพาะไอคอน (ไม่แตะภาพตัวละคร)
@@ -12,12 +12,11 @@ import sys
 from PIL import Image, ImageDraw
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-raw = os.path.join(ROOT, 'assets', 'china-raw')
+raw = os.path.join(ROOT, 'assets', 'phi-raw')
 icons = os.path.join(ROOT, 'extension', 'icons')
 agents = os.path.join(ROOT, 'extension', 'agents')
 
-# มุมมนโปร่งใสแบบ "ตัดขอบ" — ภาพต้นฉบับชุดปัจจุบัน (ธงกับกลองศึก) วาดมุมมนมาแล้วที่ ~21%
-# ถ้าใช้รัศมีเล็กกว่านี้ มุมดำของภาพต้นฉบับจะโผล่ออกมา
+# มุมมนโปร่งใสแบบ "ตัดขอบ" — ภาพต้นฉบับ ผี 1 บาท เป็นสี่เหลี่ยมเต็มภาพ (ไม่ได้ตัดมุมมา) จึงตัดมุมที่ ~21% ให้ตรงกับไอคอนแอปทั่วไป
 RADIUS = 0.211
 
 
@@ -43,19 +42,20 @@ def build_icons():
     rounded(src, 128).save(os.path.join(icons, 'icon-128.ico'),
                            sizes=[(16, 16), (32, 32), (48, 48), (128, 128)])
     # ไอคอนหมวด — ใช้ภาพเดียวกับไอคอนแอป ให้ทุกที่หน้าตาเดียวกัน
-    rounded(src, 512).save(os.path.join(icons, 'category-sanguo.png'))
-    rounded(src, 256).save(os.path.join(icons, 'category-sanguo.ico'),
+    rounded(src, 512).save(os.path.join(icons, 'category-phi.png'))
+    rounded(src, 256).save(os.path.join(icons, 'category-phi.ico'),
                            sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
-    rounded(src, 256).save(os.path.join(icons, 'category-sanguo-transparent.ico'),
+    rounded(src, 256).save(os.path.join(icons, 'category-phi-transparent.ico'),
                            sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
-    print('ไอคอน: icon-16..512.png · phi1baht.ico · icon-128.ico · category-sanguo.png/.ico')
+    print('ไอคอน: icon-16..512.png · phi1baht.ico · icon-128.ico · category-phi.png/.ico')
 
 
 def build_agents():
+    os.makedirs(agents, exist_ok=True)
     for a in ('chatgpt', 'flow', 'meta', 'voice', 'edit'):
-        Image.open(os.path.join(raw, f'agent-{a}.png')).save(os.path.join(agents, f'china-{a}.png'))
+        Image.open(os.path.join(raw, f'agent-{a}.png')).save(os.path.join(agents, f'phi-{a}.png'))
     for w in ('day', 'night'):
-        Image.open(os.path.join(raw, f'world-{w}.png')).convert('RGB').save(os.path.join(agents, f'china-{w}.png'))
+        Image.open(os.path.join(raw, f'world-{w}.png')).convert('RGB').save(os.path.join(agents, f'phi-{w}.png'))
 
     # GIF 12 เฟรม (atlas 4x3 -> 12 เฟรม)
     gifdir = os.path.join(agents, 'gif')
@@ -73,7 +73,7 @@ def build_agents():
             mask = p.getchannel('A').point(lambda v: 255 if v < 128 else 0)
             q.paste(255, mask)
             conv.append(q)
-        conv[0].save(os.path.join(gifdir, f'china-{a}.gif'), save_all=True, append_images=conv[1:],
+        conv[0].save(os.path.join(gifdir, f'phi-{a}.gif'), save_all=True, append_images=conv[1:],
                      duration=110, loop=0, transparency=255, disposal=2, optimize=False)
     print('ตัวละคร + GIF: สร้างใหม่แล้ว — อย่าลืมรัน scripts/build-sprite-registration.py')
 

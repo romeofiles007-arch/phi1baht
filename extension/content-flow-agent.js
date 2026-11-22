@@ -32,7 +32,7 @@ const errorText = (err) => {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const FLOW_PROMPT_GAP_MS = 2 * 60_000 // เว้นอย่างน้อย 2 นาทีระหว่างคำสั่งที่ส่งให้ Flow
 const FLOW_LAST_PROMPT_KEY = 'flowLastPromptAt'
-const Q = globalThis.DhammaFlowQuota
+const Q = globalThis.PhiFlowQuota
 let expectedAccount = ''
 const accountEmail = () => Q.emailOf(Q.profileLabel(document))
 /**
@@ -52,7 +52,7 @@ async function verifiedAccountEmail({ required = true } = {}) {
   // ไม่มีบัญชีที่ต้องยืนยัน → อ่านไม่ได้ก็ทำต่อ ดีกว่าหยุดทั้งคลิปเพราะปุ่มบัญชีบนหน้า Flow เปลี่ยนรูปแบบ
   // (ระหว่างทำงานยังตรวจข้อความ "โควต้าหมด" บนหน้า Flow เหมือนเดิม — ดู checkAccountQuota)
   if (!required) {
-    console.warn(`[dhamma-auto] อ่านบัญชี Google Flow ไม่ได้${detail} — ทำต่อโดยไม่ล็อกบัญชี (ถ้าใช้หลายบัญชีสลับโควต้า ให้รีเฟรชหน้า Flow แล้วเริ่มใหม่)`)
+    console.warn(`[phi1baht] อ่านบัญชี Google Flow ไม่ได้${detail} — ทำต่อโดยไม่ล็อกบัญชี (ถ้าใช้หลายบัญชีสลับโควต้า ให้รีเฟรชหน้า Flow แล้วเริ่มใหม่)`)
     return ''
   }
   // ไม่ใช่ "โควต้าหมด" — แค่อ่านบัญชีบนหน้าไม่ได้ (เช่นหน้าแก้ภาพค้างอยู่ หรือหน้ายังโหลดไม่เสร็จ)

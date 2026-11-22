@@ -1,6 +1,6 @@
 """ล็อกพื้นยืนของตัวละคร 12 เฟรม
 
-อ่าน atlas โปร่งใส 4x3 ของทุกแผนกจาก extension/agents/china-<id>.png
+อ่าน atlas โปร่งใส 4x3 ของทุกแผนกจาก extension/agents/phi-<id>.png
 วัดขอบล่างของพิกเซลที่ไม่โปร่งใสในแต่ละเฟรม (เป็น % ของความสูงช่อง)
 แล้วเขียนค่าชดเชยให้ทุกเฟรมยืนบนพื้นระดับเดียวกัน — ตัวละครจะไม่เด้งขึ้นลงเวลาเล่นแอนิเมชัน
 
@@ -46,7 +46,7 @@ def floors_of(path):
 def main():
     characters = {}
     for cid in IDS:
-        path = ROOT / 'extension' / 'agents' / f'china-{cid}.png'
+        path = ROOT / 'extension' / 'agents' / f'phi-{cid}.png'
         width, height, floors = floors_of(path)
         reference = round(sum(floors) / len(floors), 5)
         frames = []
@@ -60,7 +60,7 @@ def main():
                 'unregisteredError': round(abs(source - reference), 5),
             })
         characters[cid] = {
-            'image': f'agents/china-{cid}.png',
+            'image': f'agents/phi-{cid}.png',
             'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
             'width': width, 'height': height,
             'referenceFloor': reference,
@@ -71,7 +71,7 @@ def main():
 
     doc = {
         'version': 2,
-        'description': 'วัดพื้นยืนของตัวละครจีนทั้ง 12 เฟรมจากพิกเซลจริงใน extension/agents/china-*.png '
+        'description': 'วัดพื้นยืนของตัวละคร ผี 1 บาททั้ง 12 เฟรมจากพิกเซลจริงใน extension/agents/phi-*.png '
                        'แล้วล็อกให้พื้นอยู่ระดับเดียวกันทุกเฟรม (สร้างด้วย scripts/build-sprite-registration.py)',
         'characters': characters,
     }

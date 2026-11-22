@@ -17,7 +17,7 @@ function Show-Popup([string]$text, [string]$icon = 'Error') {
   try {
     Add-Type -AssemblyName System.Windows.Forms
     $owner = New-Object System.Windows.Forms.Form -Property @{ TopMost = $true }
-    [void][System.Windows.Forms.MessageBox]::Show($owner, $text, 'ธรรมะ Auto', 'OK', $icon)
+    [void][System.Windows.Forms.MessageBox]::Show($owner, $text, 'ผี 1 บาท', 'OK', $icon)
   } catch {}
 }
 
@@ -30,7 +30,7 @@ function Test-Node([string]$exe) {
 }
 
 try {
-  Write-Host 'ธรรมะ Auto — กำลังติดตั้ง ไม่ต้องกดอะไร รอจนขึ้นหน้าต่างสรุป'
+  Write-Host 'ผี 1 บาท — กำลังติดตั้ง ไม่ต้องกดอะไร รอจนขึ้นหน้าต่างสรุป'
   Write-Host ''
 
   # ไฟล์ที่แตกจาก zip ที่ดาวน์โหลดมามีป้าย "มาจากอินเทอร์เน็ต" — ปลดออกครั้งเดียว ไม่งั้น Windows ถามยืนยันทุกครั้งที่เปิดโปรแกรมในแพ็กเกจ

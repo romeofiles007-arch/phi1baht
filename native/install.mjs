@@ -474,7 +474,7 @@ async function machineChecklist(info) {
 // ════════════════════════ 4. shortcut ════════════════════════
 function createShortcuts() {
   const target = join(ROOT, 'เปิดโปรแกรม.bat')
-  const icon = join(EXTENSION_DIR, 'icons', 'dhamma-auto.ico')
+  const icon = join(EXTENSION_DIR, 'icons', 'phi1baht.ico')
   const dirs = option('--shortcut-dir') ? `@(${psText(resolve(option('--shortcut-dir')))})` : `@([Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('Programs'))`
   // ใช้ IShellLinkW (Unicode) ตรง ๆ แทน WScript.Shell — WScript.Shell บันทึกชื่อ/ที่อยู่ภาษาไทยไม่ได้
   // บนเครื่องที่ภาษาระบบ (non-Unicode) ไม่ใช่ไทย ("Command failed" ตอนสร้าง shortcut ในเครื่องลูกค้า ต.ค. 2026)
@@ -484,7 +484,7 @@ function createShortcuts() {
     `'@`,
     `foreach ($d in ${dirs}) {`,
     `  if (-not $d -or -not (Test-Path -LiteralPath $d)) { continue }`,
-    `  [DhammaLnk]::Save((Join-Path $d ${psText(SHORTCUT_NAME)}), ${psText(target)}, ${psText(ROOT)}, ${psText('ผี 1 บาท — เปิดโปรแกรมทำคลิปธรรมะ')}, ${existsSync(icon) ? psText(icon) : "''"}, 7)`,
+    `  [PhiLnk]::Save((Join-Path $d ${psText(SHORTCUT_NAME)}), ${psText(target)}, ${psText(ROOT)}, ${psText('ผี 1 บาท — เปิดโปรแกรมทำคลิปการ์ตูนผี')}, ${existsSync(icon) ? psText(icon) : "''"}, 7)`,
     `}`,
   ].join('\n'), { timeout: 120_000 })
 }
@@ -494,9 +494,9 @@ const SHELL_LINK_CS = `using System;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
-[ComImport, Guid("00021401-0000-0000-C000-000000000046")] class DhammaShellLink {}
+[ComImport, Guid("00021401-0000-0000-C000-000000000046")] class PhiShellLink {}
 [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("000214F9-0000-0000-C000-000000000046")]
-interface IDhammaShellLinkW {
+interface IPhiShellLinkW {
   void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder f, int c, IntPtr fd, uint fl);
   void GetIDList(out IntPtr p);
   void SetIDList(IntPtr p);
@@ -516,9 +516,9 @@ interface IDhammaShellLinkW {
   void Resolve(IntPtr h, uint f);
   void SetPath([MarshalAs(UnmanagedType.LPWStr)] string s);
 }
-public static class DhammaLnk {
+public static class PhiLnk {
   public static void Save(string lnk, string target, string dir, string desc, string icon, int show) {
-    var l = (IDhammaShellLinkW)new DhammaShellLink();
+    var l = (IPhiShellLinkW)new PhiShellLink();
     l.SetPath(target);
     l.SetWorkingDirectory(dir);
     l.SetDescription(desc);

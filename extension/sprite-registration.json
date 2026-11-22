@@ -1,589 +1,589 @@
 {
   "version": 2,
-  "description": "วัดพื้นยืนของตัวละครจีนทั้ง 12 เฟรมจากพิกเซลจริงใน extension/agents/china-*.png แล้วล็อกให้พื้นอยู่ระดับเดียวกันทุกเฟรม (สร้างด้วย scripts/build-sprite-registration.py)",
+  "description": "วัดพื้นยืนของตัวละคร ผี 1 บาททั้ง 12 เฟรมจากพิกเซลจริงใน extension/agents/phi-*.png แล้วล็อกให้พื้นอยู่ระดับเดียวกันทุกเฟรม (สร้างด้วย scripts/build-sprite-registration.py)",
   "characters": {
     "chatgpt": {
-      "image": "agents/china-chatgpt.png",
-      "sha256": "1bd5460f8545e3249c8dc128921ee626ba81dc46b27fa5af0d4de47bd3a9bf26",
+      "image": "agents/phi-chatgpt.png",
+      "sha256": "387d7154781bb5690263141517402af357dcf858980b64c4d0308f6480e01d53",
       "width": 1448,
       "height": 1086,
-      "referenceFloor": 99.93094,
+      "referenceFloor": 99.70074,
       "frames": [
         {
           "scale": 1,
           "x": 0,
-          "y": -0.06906,
+          "y": -0.29926,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.93094,
+          "registeredFloor": 99.70074,
           "error": 0.0,
-          "unregisteredError": 0.06906
+          "unregisteredError": 0.29926
         },
         {
           "scale": 1,
           "x": 0,
-          "y": 0.75967,
-          "sourceFloor": 99.17127,
-          "registeredFloor": 99.93094,
+          "y": -0.29926,
+          "sourceFloor": 100.0,
+          "registeredFloor": 99.70074,
           "error": 0.0,
-          "unregisteredError": 0.75967
+          "unregisteredError": 0.29926
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.06906,
+          "y": -0.29926,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.93094,
+          "registeredFloor": 99.70074,
           "error": 0.0,
-          "unregisteredError": 0.06906
+          "unregisteredError": 0.29926
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.06906,
+          "y": -0.29926,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.93094,
+          "registeredFloor": 99.70074,
           "error": 0.0,
-          "unregisteredError": 0.06906
+          "unregisteredError": 0.29926
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.06906,
+          "y": -0.29926,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.93094,
+          "registeredFloor": 99.70074,
           "error": 0.0,
-          "unregisteredError": 0.06906
+          "unregisteredError": 0.29926
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.06906,
+          "y": -0.29926,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.93094,
+          "registeredFloor": 99.70074,
           "error": 0.0,
-          "unregisteredError": 0.06906
+          "unregisteredError": 0.29926
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.06906,
+          "y": -0.29926,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.93094,
+          "registeredFloor": 99.70074,
           "error": 0.0,
-          "unregisteredError": 0.06906
+          "unregisteredError": 0.29926
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.06906,
+          "y": -0.29926,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.93094,
+          "registeredFloor": 99.70074,
           "error": 0.0,
-          "unregisteredError": 0.06906
+          "unregisteredError": 0.29926
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.06906,
+          "y": -0.29926,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.93094,
+          "registeredFloor": 99.70074,
           "error": 0.0,
-          "unregisteredError": 0.06906
+          "unregisteredError": 0.29926
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.06906,
+          "y": -0.29926,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.93094,
+          "registeredFloor": 99.70074,
           "error": 0.0,
-          "unregisteredError": 0.06906
+          "unregisteredError": 0.29926
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.06906,
-          "sourceFloor": 100.0,
-          "registeredFloor": 99.93094,
+          "y": 3.2919,
+          "sourceFloor": 96.40884,
+          "registeredFloor": 99.70074,
           "error": 0.0,
-          "unregisteredError": 0.06906
+          "unregisteredError": 3.2919
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.06906,
+          "y": -0.29926,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.93094,
+          "registeredFloor": 99.70074,
           "error": 0.0,
-          "unregisteredError": 0.06906
+          "unregisteredError": 0.29926
         }
       ]
     },
     "flow": {
-      "image": "agents/china-flow.png",
-      "sha256": "8497955bcd0eb03dfbfe5a10aa10d28f024126821864c51f030b16261982cd47",
+      "image": "agents/phi-flow.png",
+      "sha256": "58ec6c227cfaf770814a1d42b721f6337491b7519ec8a007550023bcc357d870",
       "width": 1448,
       "height": 1086,
-      "referenceFloor": 100.0,
-      "frames": [
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        }
-      ]
-    },
-    "meta": {
-      "image": "agents/china-meta.png",
-      "sha256": "1aeac0b07b379a2dd588c9ccd881ed21bd0d683a8686224bea3517418be4ab4d",
-      "width": 1448,
-      "height": 1086,
-      "referenceFloor": 100.0,
-      "frames": [
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
-          "error": 0.0,
-          "unregisteredError": 0.0
-        }
-      ]
-    },
-    "voice": {
-      "image": "agents/china-voice.png",
-      "sha256": "9e6f24cd304a02bc2fef7e4f61d2d5c2e51e9e3e6a03ea4c2ba05ef6b22c5d83",
-      "width": 1448,
-      "height": 1086,
-      "referenceFloor": 99.42449,
+      "referenceFloor": 99.97698,
       "frames": [
         {
           "scale": 1,
           "x": 0,
           "y": 0.25322,
-          "sourceFloor": 99.17127,
-          "registeredFloor": 99.42449,
+          "sourceFloor": 99.72376,
+          "registeredFloor": 99.97698,
           "error": 0.0,
           "unregisteredError": 0.25322
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.57551,
+          "y": -0.02302,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.42449,
+          "registeredFloor": 99.97698,
           "error": 0.0,
-          "unregisteredError": 0.57551
+          "unregisteredError": 0.02302
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.29927,
-          "sourceFloor": 99.72376,
-          "registeredFloor": 99.42449,
-          "error": 0.0,
-          "unregisteredError": 0.29927
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": -0.57551,
+          "y": -0.02302,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.42449,
+          "registeredFloor": 99.97698,
           "error": 0.0,
-          "unregisteredError": 0.57551
+          "unregisteredError": 0.02302
         },
         {
           "scale": 1,
           "x": 0,
-          "y": 1.91068,
-          "sourceFloor": 97.51381,
-          "registeredFloor": 99.42449,
-          "error": 0.0,
-          "unregisteredError": 1.91068
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": -0.29927,
-          "sourceFloor": 99.72376,
-          "registeredFloor": 99.42449,
-          "error": 0.0,
-          "unregisteredError": 0.29927
-        },
-        {
-          "scale": 1,
-          "x": 0,
-          "y": -0.57551,
+          "y": -0.02302,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.42449,
+          "registeredFloor": 99.97698,
           "error": 0.0,
-          "unregisteredError": 0.57551
+          "unregisteredError": 0.02302
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.57551,
+          "y": -0.02302,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.42449,
+          "registeredFloor": 99.97698,
           "error": 0.0,
-          "unregisteredError": 0.57551
+          "unregisteredError": 0.02302
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.57551,
+          "y": -0.02302,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.42449,
+          "registeredFloor": 99.97698,
           "error": 0.0,
-          "unregisteredError": 0.57551
+          "unregisteredError": 0.02302
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.57551,
+          "y": -0.02302,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.42449,
+          "registeredFloor": 99.97698,
           "error": 0.0,
-          "unregisteredError": 0.57551
+          "unregisteredError": 0.02302
         },
         {
           "scale": 1,
           "x": 0,
-          "y": -0.57551,
+          "y": -0.02302,
           "sourceFloor": 100.0,
-          "registeredFloor": 99.42449,
+          "registeredFloor": 99.97698,
           "error": 0.0,
-          "unregisteredError": 0.57551
+          "unregisteredError": 0.02302
         },
         {
           "scale": 1,
           "x": 0,
-          "y": 2.46316,
-          "sourceFloor": 96.96133,
-          "registeredFloor": 99.42449,
+          "y": -0.02302,
+          "sourceFloor": 100.0,
+          "registeredFloor": 99.97698,
           "error": 0.0,
-          "unregisteredError": 2.46316
+          "unregisteredError": 0.02302
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.02302,
+          "sourceFloor": 100.0,
+          "registeredFloor": 99.97698,
+          "error": 0.0,
+          "unregisteredError": 0.02302
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.02302,
+          "sourceFloor": 100.0,
+          "registeredFloor": 99.97698,
+          "error": 0.0,
+          "unregisteredError": 0.02302
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.02302,
+          "sourceFloor": 100.0,
+          "registeredFloor": 99.97698,
+          "error": 0.0,
+          "unregisteredError": 0.02302
         }
       ]
     },
-    "edit": {
-      "image": "agents/china-edit.png",
-      "sha256": "331446baa4bb41acd3f61957150389af18e50c201551236198390e125dfd6f85",
+    "meta": {
+      "image": "agents/phi-meta.png",
+      "sha256": "6bb85ef0d71b85587f81d7dcb6b1e846f8ebfccd79343e95a308acbb0237e2f0",
       "width": 1448,
       "height": 1086,
-      "referenceFloor": 100.0,
+      "referenceFloor": 99.8849,
       "frames": [
         {
           "scale": 1,
           "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
+          "y": 0.16114,
+          "sourceFloor": 99.72376,
+          "registeredFloor": 99.8849,
           "error": 0.0,
-          "unregisteredError": 0.0
+          "unregisteredError": 0.16114
         },
         {
           "scale": 1,
           "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
+          "y": 0.43739,
+          "sourceFloor": 99.44751,
+          "registeredFloor": 99.8849,
           "error": 0.0,
-          "unregisteredError": 0.0
+          "unregisteredError": 0.43739
         },
         {
           "scale": 1,
           "x": 0,
-          "y": 0.0,
-          "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
+          "y": 0.43739,
+          "sourceFloor": 99.44751,
+          "registeredFloor": 99.8849,
           "error": 0.0,
-          "unregisteredError": 0.0
+          "unregisteredError": 0.43739
         },
         {
           "scale": 1,
           "x": 0,
-          "y": 0.0,
+          "y": -0.1151,
           "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
+          "registeredFloor": 99.8849,
           "error": 0.0,
-          "unregisteredError": 0.0
+          "unregisteredError": 0.1151
         },
         {
           "scale": 1,
           "x": 0,
-          "y": 0.0,
+          "y": -0.1151,
           "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
+          "registeredFloor": 99.8849,
           "error": 0.0,
-          "unregisteredError": 0.0
+          "unregisteredError": 0.1151
         },
         {
           "scale": 1,
           "x": 0,
-          "y": 0.0,
+          "y": -0.1151,
           "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
+          "registeredFloor": 99.8849,
           "error": 0.0,
-          "unregisteredError": 0.0
+          "unregisteredError": 0.1151
         },
         {
           "scale": 1,
           "x": 0,
-          "y": 0.0,
+          "y": -0.1151,
           "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
+          "registeredFloor": 99.8849,
           "error": 0.0,
-          "unregisteredError": 0.0
+          "unregisteredError": 0.1151
         },
         {
           "scale": 1,
           "x": 0,
-          "y": 0.0,
+          "y": -0.1151,
           "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
+          "registeredFloor": 99.8849,
           "error": 0.0,
-          "unregisteredError": 0.0
+          "unregisteredError": 0.1151
         },
         {
           "scale": 1,
           "x": 0,
-          "y": 0.0,
+          "y": -0.1151,
           "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
+          "registeredFloor": 99.8849,
           "error": 0.0,
-          "unregisteredError": 0.0
+          "unregisteredError": 0.1151
         },
         {
           "scale": 1,
           "x": 0,
-          "y": 0.0,
+          "y": -0.1151,
           "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
+          "registeredFloor": 99.8849,
           "error": 0.0,
-          "unregisteredError": 0.0
+          "unregisteredError": 0.1151
         },
         {
           "scale": 1,
           "x": 0,
-          "y": 0.0,
+          "y": -0.1151,
           "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
+          "registeredFloor": 99.8849,
           "error": 0.0,
-          "unregisteredError": 0.0
+          "unregisteredError": 0.1151
         },
         {
           "scale": 1,
           "x": 0,
-          "y": 0.0,
+          "y": -0.1151,
           "sourceFloor": 100.0,
-          "registeredFloor": 100.0,
+          "registeredFloor": 99.8849,
           "error": 0.0,
-          "unregisteredError": 0.0
+          "unregisteredError": 0.1151
+        }
+      ]
+    },
+    "voice": {
+      "image": "agents/phi-voice.png",
+      "sha256": "4fca0f853d84e5b7e3caf7da32906ce332b17dad6d21d4440579ac29d0d0e8f7",
+      "width": 1448,
+      "height": 1086,
+      "referenceFloor": 98.6418,
+      "frames": [
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -1.08196,
+          "sourceFloor": 99.72376,
+          "registeredFloor": 98.6418,
+          "error": 0.0,
+          "unregisteredError": 1.08196
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.52947,
+          "sourceFloor": 99.17127,
+          "registeredFloor": 98.6418,
+          "error": 0.0,
+          "unregisteredError": 0.52947
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": 0.02302,
+          "sourceFloor": 98.61878,
+          "registeredFloor": 98.6418,
+          "error": 0.0,
+          "unregisteredError": 0.02302
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.52947,
+          "sourceFloor": 99.17127,
+          "registeredFloor": 98.6418,
+          "error": 0.0,
+          "unregisteredError": 0.52947
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": 0.5755,
+          "sourceFloor": 98.0663,
+          "registeredFloor": 98.6418,
+          "error": 0.0,
+          "unregisteredError": 0.5755
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.25323,
+          "sourceFloor": 98.89503,
+          "registeredFloor": 98.6418,
+          "error": 0.0,
+          "unregisteredError": 0.25323
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": 0.02302,
+          "sourceFloor": 98.61878,
+          "registeredFloor": 98.6418,
+          "error": 0.0,
+          "unregisteredError": 0.02302
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": 0.85174,
+          "sourceFloor": 97.79006,
+          "registeredFloor": 98.6418,
+          "error": 0.0,
+          "unregisteredError": 0.85174
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": 1.95672,
+          "sourceFloor": 96.68508,
+          "registeredFloor": 98.6418,
+          "error": 0.0,
+          "unregisteredError": 1.95672
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": 1.68047,
+          "sourceFloor": 96.96133,
+          "registeredFloor": 98.6418,
+          "error": 0.0,
+          "unregisteredError": 1.68047
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -1.3582,
+          "sourceFloor": 100.0,
+          "registeredFloor": 98.6418,
+          "error": 0.0,
+          "unregisteredError": 1.3582
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -1.3582,
+          "sourceFloor": 100.0,
+          "registeredFloor": 98.6418,
+          "error": 0.0,
+          "unregisteredError": 1.3582
+        }
+      ]
+    },
+    "edit": {
+      "image": "agents/phi-edit.png",
+      "sha256": "e0b5811c5cf6f34ec603d4a1d0d16b233402ceedf6fcba4ec4f1a5c3ee20aa07",
+      "width": 1448,
+      "height": 1086,
+      "referenceFloor": 99.95396,
+      "frames": [
+        {
+          "scale": 1,
+          "x": 0,
+          "y": 0.2302,
+          "sourceFloor": 99.72376,
+          "registeredFloor": 99.95396,
+          "error": 0.0,
+          "unregisteredError": 0.2302
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.04604,
+          "sourceFloor": 100.0,
+          "registeredFloor": 99.95396,
+          "error": 0.0,
+          "unregisteredError": 0.04604
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.04604,
+          "sourceFloor": 100.0,
+          "registeredFloor": 99.95396,
+          "error": 0.0,
+          "unregisteredError": 0.04604
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": 0.2302,
+          "sourceFloor": 99.72376,
+          "registeredFloor": 99.95396,
+          "error": 0.0,
+          "unregisteredError": 0.2302
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.04604,
+          "sourceFloor": 100.0,
+          "registeredFloor": 99.95396,
+          "error": 0.0,
+          "unregisteredError": 0.04604
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.04604,
+          "sourceFloor": 100.0,
+          "registeredFloor": 99.95396,
+          "error": 0.0,
+          "unregisteredError": 0.04604
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.04604,
+          "sourceFloor": 100.0,
+          "registeredFloor": 99.95396,
+          "error": 0.0,
+          "unregisteredError": 0.04604
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.04604,
+          "sourceFloor": 100.0,
+          "registeredFloor": 99.95396,
+          "error": 0.0,
+          "unregisteredError": 0.04604
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.04604,
+          "sourceFloor": 100.0,
+          "registeredFloor": 99.95396,
+          "error": 0.0,
+          "unregisteredError": 0.04604
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.04604,
+          "sourceFloor": 100.0,
+          "registeredFloor": 99.95396,
+          "error": 0.0,
+          "unregisteredError": 0.04604
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.04604,
+          "sourceFloor": 100.0,
+          "registeredFloor": 99.95396,
+          "error": 0.0,
+          "unregisteredError": 0.04604
+        },
+        {
+          "scale": 1,
+          "x": 0,
+          "y": -0.04604,
+          "sourceFloor": 100.0,
+          "registeredFloor": 99.95396,
+          "error": 0.0,
+          "unregisteredError": 0.04604
         }
       ]
     }

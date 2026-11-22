@@ -1,6 +1,6 @@
 import './flow-quota.js'
 import { flowHomeUrl } from './flow-navigation.js'
-const Q = globalThis.DhammaFlowQuota
+const Q = globalThis.PhiFlowQuota
 const LIMITS_KEY = 'flowAccountLimits'
 const CHOOSER = 'https://accounts.google.com/AccountChooser?continue=https%3A%2F%2Fflow.google.com%2F'
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))

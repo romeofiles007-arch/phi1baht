@@ -18,7 +18,7 @@ const test = (name, fn) => {
 }
 
 function fakeInstall({ version, manifest = '9.9.9' }) {
-  const dir = mkdtempSync(join(tmpdir(), 'dhamma-ver-'))
+  const dir = mkdtempSync(join(tmpdir(), 'phi-ver-'))
   mkdirSync(join(dir, 'extension'))
   writeFileSync(join(dir, 'extension', 'manifest.json'), JSON.stringify({ version: manifest }))
   if (version) writeFileSync(join(dir, 'VERSION.json'), JSON.stringify(version))
@@ -44,7 +44,7 @@ test('ติดตั้งจาก ZIP ยังไม่เคยอัปเ
 })
 
 test('ไม่มี VERSION.json / manifest อ่านไม่ได้: คืน null ไม่ล้ม', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'dhamma-ver-'))
+  const dir = mkdtempSync(join(tmpdir(), 'phi-ver-'))
   try {
     assert.deepEqual(installedVersion(dir), { commit: null, extension: null })
   } finally {

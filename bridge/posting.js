@@ -367,7 +367,7 @@ export function createPosting({ jobs, enqueue, json, readBody, log, port, token,
     if (changed) saveQueue(queue)
   }
 
-  // ── Facebook Story ตามรอบ: ภาพ "ไขปริศนาจีน" ของคลิป (riddle.mjs) ──
+  // ── Facebook Story ตามรอบ: ภาพ "ไขปริศนา" ของคลิป (riddle.mjs) ──
   // ผู้ใช้ (5 พ.ย. 2026): Story ให้เป็นภาพปริศนาแบบเวทีทอง แทนการตัดคลิปลงทีละตอน
   // คลิปที่ไม่มีภาพปริศนา (คลิปเก่า/ภาษาอื่น) → ข้าม ไม่นับรอบ โพสต์ถัดไปจะลองใหม่
   // คืนผลเสมอ ไม่ throw — โพสต์หน้าเพจขึ้นไปแล้ว Story พลาดต้องไม่ทำให้นับว่าโพสต์ไม่สำเร็จ
@@ -791,7 +791,7 @@ export function createPosting({ jobs, enqueue, json, readBody, log, port, token,
     const safe = String(message).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
     res.end(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>เชื่อมต่อ YouTube</title>
 <body style="font:16px/1.6 'Noto Sans Thai','Leelawadee UI',system-ui,sans-serif;background:#fbf4e2;color:#3a2a00;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px">
-<div style="max-width:440px;background:#fffaf0;border:2px solid ${color};border-radius:14px;padding:24px"><h1 style="margin:0 0 8px;font-size:20px;color:${color}">${ok ? '✓ เชื่อมต่อช่องแล้ว' : 'เชื่อมต่อไม่สำเร็จ'}</h1><p style="margin:0">${safe}</p><p style="margin:12px 0 0;color:#6b5a2a">ปิดแท็บนี้แล้วกลับไปที่แผงข้าง ธรรมะ Auto ได้เลย</p></div></body>`)
+<div style="max-width:440px;background:#fffaf0;border:2px solid ${color};border-radius:14px;padding:24px"><h1 style="margin:0 0 8px;font-size:20px;color:${color}">${ok ? '✓ เชื่อมต่อช่องแล้ว' : 'เชื่อมต่อไม่สำเร็จ'}</h1><p style="margin:0">${safe}</p><p style="margin:12px 0 0;color:#6b5a2a">ปิดแท็บนี้แล้วกลับไปที่แผงข้าง ผี 1 บาท ได้เลย</p></div></body>`)
   }
 
   async function handle(req, res, url) {
