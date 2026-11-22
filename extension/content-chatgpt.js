@@ -216,7 +216,7 @@ async function runPrompt(prompt, { newChat = true, attachments = [] } = {}) {
   const newTurns = () => assistantTurns().filter((t) => !oldTurns.has(t))
   const pathBefore = location.pathname
   const started = () =>
-    pick(S.stop) ||
+    pickVisible(S.stop) ||
     newTurns().length ||
     userTurns().some((u) => !oldUsers.has(u)) ||
     (location.pathname !== pathBefore && location.pathname.startsWith('/c/'))
@@ -257,7 +257,7 @@ async function runPrompt(prompt, { newChat = true, attachments = [] } = {}) {
         const last = newTurns().at(-1) ?? null
         const current = turnText(last)
         if (current !== lastText) errorSince = Date.now()
-        if (current !== lastText || pick(S.stop)) {
+        if (current !== lastText || pickVisible(S.stop)) {
           lastText = current
           stableSince = Date.now()
         }
@@ -275,13 +275,13 @@ async function runPrompt(prompt, { newChat = true, attachments = [] } = {}) {
           errorSince = stableSince = Date.now()
           return false
         }
-        const finished = !!last && turnFinished(last) && !pick(S.stop)
+        const finished = !!last && turnFinished(last) && !pickVisible(S.stop)
         return finished && current && Date.now() - stableSince >= STABLE_MS
       },
       { timeout: 30 * 60_000, interval: 1000, label: 'ChatGPT ตอบจบ' },
     )
     await sleep(1500)
-    if (lastTurnText() === lastText && !pick(S.stop)) break
+    if (lastTurnText() === lastText && !pickVisible(S.stop)) break
     stableSince = Date.now() // ยังพิมพ์ต่อ → รอรอบใหม่
   }
 
@@ -305,7 +305,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   // แผงข้างสั่งตรง — ส่ง prompt แล้วคืนคำตอบให้แผงเลย ไม่ผ่านโปรแกรมในเครื่อง
   if (msg.type === 'STOP') {
     stopped = true
-    pick(S.stop)?.click() // สั่ง ChatGPT หยุดพิมพ์คำตอบด้วย
+    pickVisible(S.stop)?.click() // สั่ง ChatGPT หยุดพิมพ์คำตอบด้วย
     sendResponse({ ok: true })
     return
   }
@@ -322,7 +322,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   ;(async () => {
     const stopBeat = heartbeat(job.id, () => {
       stopped = true // pipeline ไม่รอแล้ว → เลิกรอคำตอบ ปล่อยแท็บให้งานถัดไป
-      pick(S.stop)?.click()
+      pickVisible(S.stop)?.click()
     })
     try {
       if (job.kind !== 'prompt') throw new Error(`ChatGPT ไม่รู้จักงาน: ${job.kind}`)

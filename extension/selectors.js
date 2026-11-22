@@ -49,6 +49,22 @@ function pick(list, root = document) {
   return null
 }
 
+/**
+ * เหมือน pick แต่นับเฉพาะ element ที่มองเห็นได้ (มีขนาดบนจอ)
+ * 23 พ.ย. 2026: หน้า ChatGPT รุ่นใหม่เก็บปุ่ม aria-label="Stop" ขนาด 0×0 ไว้ในช่องพิมพ์หลังตอบจบ
+ * pick(S.stop) เจอปุ่มซ่อนนั้น → เข้าใจว่ายังตอบอยู่ → รอจนหมดเวลา (คลิปค้างที่ "แผนกคิดหัวข้อกำลังทำงาน")
+ */
+function pickVisible(list, root = document) {
+  const shown = (el) => el.offsetWidth > 0 || el.offsetHeight > 0 || el.getClientRects().length > 0
+  for (const sel of list) {
+    try {
+      const el = [...root.querySelectorAll(sel)].find(shown)
+      if (el) return el
+    } catch {}
+  }
+  return null
+}
+
 function pickAll(list, root = document) {
   for (const sel of list) {
     try {
