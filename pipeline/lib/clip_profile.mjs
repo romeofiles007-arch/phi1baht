@@ -77,7 +77,7 @@ export async function ensureProfile(slug, { title, genre, log = console.log } = 
   if (!profile) {
     const category = categoryOf(genre)?.id ?? detectCategory(title)
     // ระดับความสยอง: autopilot สุ่มไว้แล้วตอนคิดหัวข้อ (CLIP_SCARE) → หัวข้อ บท และภาพเป็นระดับเดียวกัน
-    profile = { category, title, ...clipStyle(), scare: resolveScare(process.env.CLIP_SCARE || loadConfig().script?.scare), inkify: loadConfig().render?.inkify !== false }
+    profile = { category, title, ...clipStyle(), scare: resolveScare(process.env.CLIP_SCARE || loadConfig().script?.scare) }
     saveProfile(slug, profile)
     log(`   หมวดของคลิป: ${profile.category}${scareApplies(profile.category) ? ` · ความสยอง${SCARE_LEVELS[profile.scare].label}` : ''}`)
   }

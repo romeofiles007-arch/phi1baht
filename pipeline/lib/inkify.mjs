@@ -9,12 +9,13 @@
  *   5) ผิวกระดาษเหลืองนวล   color + noise + vignette ผสมแบบ multiply (สร้างเอง ไม่ใช้ไฟล์ภาพ ไม่มีขอบกระดาษ)
  * เก็บต้นฉบับที่ 05_images/_original/ · ไฟล์ที่มีต้นฉบับแล้วไม่ทำซ้ำ
  */
-import { existsSync, mkdirSync, copyFileSync, renameSync, rmSync, readdirSync } from 'node:fs'
+import { existsSync, mkdirSync, copyFileSync, renameSync, rmSync, readdirSync, statSync, utimesSync } from 'node:fs'
 import { join, dirname, basename, extname } from 'node:path'
 import { run, probeSize } from './ffmpeg.mjs'
 import { CATEGORIES } from '../../extension/prompts.js'
 
 const FALLBACK_CATEGORY = 'folk' // หมวดไม่รู้จัก = ชุดสีปกเล่มละบาททั่วไป
+const PULL = 0.04 // แรงดึงสีเข้าชุดสีหมวด (0–1) — ต่ำ = ยังเป็นสีของภาพ Flow
 const HEX = /^#?([0-9a-f]{6})$/i
 
 export const paletteOf = (categoryId) => (CATEGORIES.find((c) => c.id === categoryId) ?? CATEGORIES.find((c) => c.id === FALLBACK_CATEGORY)).palette
@@ -28,19 +29,23 @@ export function inkifyFilter({ palette, width, height, seed }) {
   if (colors.length < 2) colors = paletteOf(FALLBACK_CATEGORY).map((h) => HEX.exec(h)[1])
   const swatches = colors.map((c, i) => `color=c=0x${c}:s=1x1:r=1:d=1,format=rgb32[p${i}]`)
   const pal = `${colors.map((_, i) => `[p${i}]`).join('')}hstack=inputs=${colors.length},format=rgb32,pad=256:1:0:0:color=0x${colors.at(-1)}[pal]` // paletteuse ต้องการจานสี 256 ช่องพอดี → เติมซ้ำสีสุดท้าย
-  const s = Math.abs(Math.trunc(Number(seed) || 0)) % 0x7fffffff
+  const seed32 = Math.abs(Math.trunc(Number(seed) || 0)) % 0x7fffffff
   return [
     ...swatches,
     pal,
-    // 1) เส้นหมึกดำคม: ดันโทนมืดเป็นดำสนิทก่อนลดสี (เพิ่มคอนทราสต์นิดหน่อยให้สีฉูดฉาดแบบหมึกถูก)
-    `[0:v]format=rgb32,eq=contrast=1.05:saturation=1.1,curves=all='0/0 0.1/0 1/1',format=rgb32[src]`,
-    // 2) ลดสีตามชุดสีหมวด · dither แบบตาราง = เม็ดสกรีนจาง ๆ
-    `[src][pal]paletteuse=dither=bayer:bayer_scale=5[q]`,
-    // ดำที่เหลือ (สีเข้มสุดของชุดสี) กดเป็นดำสนิท → หมึกซึมเบามาก → สีเหลื่อม 1–2px
-    `[q]format=rgb24,curves=all='0/0 0.11/0 1/1',gblur=sigma=0.5,rgbashift=rh=-1:bh=2:bv=1[ink]`,
-    // 5) ผิวกระดาษเหลืองนวล: สีพื้น + เกรนกระดาษ + ขอบหมองเล็กน้อย — เต็มเฟรม ภาพไม่มีขอบกระดาษ
-    `color=c=0xf3e6c3:s=${width}x${height}:r=1:d=1,format=rgb24,noise=alls=14:allf=u:all_seed=${s},vignette=angle=PI/8:eval=init[paper]`,
-    `[ink][paper]blend=all_mode=multiply[out]`,
+    '[0:v]format=gbrp,split=3[o1][o2][o3]',
+    // 2) ดึงสีเข้าชุดสีหมวดเพียงเบา ๆ (4%) — ไม่แทนที่สีเดิม ผิวหน้า/ท้องฟ้า/ขาวจึงยังเป็นสีธรรมชาติ
+    '[o1]format=rgb32[src]',
+    '[src][pal]paletteuse=dither=none[q]',
+    `[q]format=gbrp[qg];[o2][qg]blend=all_mode=normal:all_opacity=${(1 - PULL).toFixed(2)}[soft]`,
+    // จุดดำเบา ๆ + สีเหลื่อม 1–2px (ชั้นสีเหลื่อมจากเส้น เหมือนพิมพ์ผิดตำแหน่ง)
+    "[soft]colorlevels=rimin=0.03:gimin=0.03:bimin=0.03,rgbashift=rh=-1:bh=2:bv=1,format=gbrp[col]",
+    // 1) เส้นหมึก: จับขอบจากภาพต้นฉบับ → เส้นดำ (หมึกซึมเล็กน้อย) คูณทับเฉพาะแนวเส้น
+    '[o3]format=gray,edgedetect=low=0.1:high=0.3:mode=wires,negate,gblur=sigma=0.5,format=gbrp[lines]',
+    '[col][lines]blend=all_mode=multiply:all_opacity=0.65[inked]',
+    // 5) ผิวกระดาษเหลืองนวลอ่อน: สีพื้น + เกรนเบา + ขอบหมองนิดเดียว — เต็มเฟรม ไม่มีขอบกระดาษ · คูณแบบครึ่งแรงเพื่อไม่ให้ภาพมืด
+    `color=c=0xfffaf0:s=${width}x${height}:r=1:d=1,format=gbrp,noise=alls=5:allf=u:all_seed=${seed32},vignette=angle=PI/16:eval=init[paper]`,
+    '[inked][paper]blend=all_mode=multiply:all_opacity=0.6,format=rgb24[out]',
   ].join(';')
 }
 
@@ -53,7 +58,8 @@ const seedOf = (name) => [...name].reduce((h, ch) => (Math.imul(h, 31) + ch.code
  */
 export async function inkify(file, { categoryId, seed } = {}) {
   const keep = join(dirname(file), '_original', basename(file))
-  if (existsSync(keep)) return false
+  // ทำแล้ว = มีต้นฉบับ และไฟล์ยังเป็นไฟล์ที่เราเขียนไว้ (เวลาแก้ไขตรงกับต้นฉบับ) · ถ้าไฟล์ใหม่กว่า = Flow โหลดภาพดิบใหม่ทับ → แปลงใหม่ และใช้ภาพดิบใหม่เป็นต้นฉบับ
+  if (existsSync(keep) && statSync(file).mtimeMs <= statSync(keep).mtimeMs + 2) return false
   const { width, height } = await probeSize(file)
   if (!width || !height) throw new Error(`อ่านขนาดภาพไม่ได้: ${file}`)
   const graph = inkifyFilter({ palette: paletteOf(categoryId), width, height, seed: seed ?? seedOf(basename(file)) })
@@ -62,8 +68,11 @@ export async function inkify(file, { categoryId, seed } = {}) {
     const lossy = /\.jpe?g$/i.test(file) ? ['-q:v', '2'] : []
     await run('ffmpeg', ['-y', '-v', 'error', '-i', file, '-filter_complex', graph, '-map', '[out]', '-frames:v', '1', '-update', '1', ...lossy, tmp])
     mkdirSync(dirname(keep), { recursive: true })
-    copyFileSync(file, keep)
+    copyFileSync(file, keep) // ภาพดิบจริงของไฟล์นี้ตอนนี้ (ไม่เคยเป็นภาพที่แปลงแล้ว) · เขียนทับต้นฉบับเก่าที่ล้าสมัยเท่านั้นหลังแปลงสำเร็จ
     renameSync(tmp, file)
+    const t = new Date()
+    utimesSync(file, t, t)
+    utimesSync(keep, t, t)
   } catch (error) {
     rmSync(tmp, { force: true })
     throw error
@@ -89,3 +98,6 @@ export async function inkifyAll(dir, { categoryId, log = console.warn } = {}) {
   }
   return done
 }
+
+/** เปิดแปลงหรือไม่ ตอนรันขั้นภาพ: สวิตช์ในแผงข้าง (config.render.inkify, อ่านตอนรันจริง) และโปรไฟล์คลิปต้องไม่ปิดไว้ (profile.inkify === false = ปิดเฉพาะคลิปนี้) */
+export const inkifyEnabled = (config, profile) => config?.render?.inkify !== false && profile?.inkify !== false
