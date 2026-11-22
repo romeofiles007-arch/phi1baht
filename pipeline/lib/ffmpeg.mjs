@@ -1,10 +1,27 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { writeFileSync, renameSync, unlinkSync, existsSync, mkdirSync, rmSync } from 'node:fs'
-import { join, dirname } from 'node:path'
+import { join, dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { tmpdir, cpus } from 'node:os'
 
 const exec = promisify(execFile)
+
+/** ฟอนต์ที่แถมไปกับแอป (Mali — OFL) ให้ libass หาเจอแม้เครื่องลูกค้าไม่ได้ติดตั้งฟอนต์ */
+export const FONTS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../assets/fonts')
+
+/** ปกอยู่เป็นเฟรมแรกกี่วินาที (ทับภาพช็อตแรก — เสียง/ซับ/timecode ไม่เลื่อน) */
+export const COVER_SECONDS = 1.0
+
+/**
+ * ค่า fontsdir=... สำหรับ filter `ass` — escape สองชั้นตามไวยากรณ์ filtergraph ของ ffmpeg
+ * (ชั้นค่าของ option: \ ' : · ชั้น graph: \ ' [ ] , ;) ไดรฟ์ "E:" และพาธไทยจึงไม่ทำให้ตัวแยกพังบน Windows
+ */
+export function fontsdirOption(dir = FONTS_DIR) {
+  const esc = (v, re) => v.replace(re, '\\$&')
+  const path = dir.replace(/\\/g, '/')
+  return 'fontsdir=' + esc(esc(path, /[\\':]/g), /[\\'[\],;]/g)
+}
 
 export async function run(bin, args, { cwd } = {}) {
   try {
@@ -195,7 +212,7 @@ async function renderMotionShots({ images, totalDuration, w, h, fit, fps, amount
 /**
  * @param {Map<string, {file:string, fit:string}>} [clips]  ชื่อภาพ → คลิปขยับจาก AI ที่ใช้แทนภาพของช็อตนั้น
  */
-export async function renderVideo({ images, voiceover, bgm, outFile, totalDuration, config, resolution: size, subtitles, fit = 'contain', motion = 'off', clips, onProgress }) {
+export async function renderVideo({ images, voiceover, bgm, outFile, totalDuration, config, resolution: size, subtitles, fit = 'contain', motion = 'off', clips, cover, onProgress }) {
   const { resolution: configured = '1920x1080', fps = 30, bgmDb = -21, voiceoverDb = 0, crf = 20 } = config ?? {}
   const resolution = size ?? configured
   const [w, h] = resolution.split('x').map(Number)
@@ -222,21 +239,31 @@ export async function renderVideo({ images, voiceover, bgm, outFile, totalDurati
 
   const args = ['-y', '-f', 'concat', '-safe', '0', '-i', listFile, '-i', voiceover]
   if (bgm) args.push('-stream_loop', '-1', '-i', bgm)
+  // ปกเป็นเฟรมแรก COVER_SECONDS วินาที เต็มจอ — ทับภาพช็อตแรก ไม่เลื่อนเสียง/ซับ/timecode (คลิปยาวเท่าเดิม)
+  // ไม่มีปก → ไม่ต้องมีอะไรเพิ่ม render เหมือนเดิมทุกประการ
+  const coverIdx = cover && existsSync(cover) ? (bgm ? 3 : 2) : null
+  if (coverIdx != null) args.push('-loop', '1', '-framerate', String(fps), '-t', String(COVER_SECONDS), '-i', resolve(cover))
 
   // ซับไตเติล: ffmpeg บน Windows escape path ใน filter ยาก → รันใน โฟลเดอร์ของไฟล์ .ass แล้วอ้างชื่อไฟล์เปล่าๆ
-  const subs = subtitles ? `,ass=${subtitles.name}` : ''
+  // fontsdir ชี้ assets/fonts ให้ libass เจอฟอนต์ที่แถมมา (Mali) แม้เครื่องไม่ได้ติดตั้ง
+  const subs = subtitles ? `,ass=${subtitles.name}:${fontsdirOption()}` : ''
   const vf = `${frame}${subs},fps=${fps},format=yuv420p`
+  // ปกซ้อนทับหลังใส่ซับ — ซับไม่ทับชื่อเรื่องบนปก · fps ก่อนซ้อน: ภาพนิ่งจาก concat มีเฟรมห่างกัน ไม่งั้นเฟรมที่ซ้อนปกค้างยาวเกิน 1 วิ
+  const videoGraph = coverIdx == null
+    ? `[0:v]${vf}[v]`
+    : `[0:v]${frame}${subs},fps=${fps}[base];[${coverIdx}:v]${frameFilter(w, h, fit)},setsar=1,format=yuv420p[cv];` +
+      `[base][cv]overlay=eof_action=pass:enable='lt(t,${COVER_SECONDS})',fps=${fps},format=yuv420p[v]`
   const audio = bgm
     ? [
         '-filter_complex',
         // normalize=0: amix ปกติหารเสียงทุกช่องลงครึ่ง → เสียงพากย์เบาลง 6 dB · ปิดแล้วกันพีคด้วย limiter แทน
         // เพลงค่อยๆ ดังขึ้นตอนต้น 1 วิ และเบาลงหมดใน 2 วิสุดท้าย ไม่ตัดฉับ
-        `[0:v]${vf}[v];[1:a]volume=${voiceoverDb}dB[vo];` +
+        `${videoGraph};[1:a]volume=${voiceoverDb}dB[vo];` +
           `[2:a]volume=${bgmDb}dB,afade=t=in:d=1,afade=t=out:st=${Math.max(0, totalDuration - 2).toFixed(2)}:d=2[bg];` +
           `[vo][bg]amix=inputs=2:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.97:level=false[a]`,
         '-map', '[v]', '-map', '[a]',
       ]
-    : ['-vf', vf, '-map', '0:v', '-map', '1:a']
+    : ['-filter_complex', videoGraph, '-map', '[v]', '-map', '1:a']
 
   args.push(
     ...audio,

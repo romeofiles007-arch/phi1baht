@@ -20,6 +20,8 @@ export const SUBTITLE_STYLES = {
   'active-pop': { label: 'Active · เหลืองป๊อป ไฮไลต์ส้ม', active: true, text: 'FFE14D', hi: 'FF7A1A', outline: '111111' },
   'active-purple': { label: 'Active · ม่วงคาราโอเกะ', active: true, text: 'F4EEFF', hi: 'B964FF', outline: '1E0E30' },
   'active-green': { label: 'Active · เขียวเกม', active: true, text: '8CFF7A', hi: 'F4FF4D', outline: '0E2A12' },
+  // กล่องคำบรรยายแบบการ์ตูนละบาท: พื้นกระดาษเหลืองนวล ตัวหนังสือลายมือ (Mali — ฟอนต์ที่แถมใน assets/fonts)
+  comicbox: { label: 'กล่องคำบรรยายการ์ตูน', text: '1A1A1A', box: 'F3E3B0', font: 'Mali', outline: '1A1A1A' },
 }
 
 // สระบน/ล่าง วรรณยุกต์ ไม่กินความกว้าง
@@ -70,7 +72,7 @@ const escapeAss = (s) => s.replace(/\\/g, '\\\\').replace(/[{}]/g, (c) => (c ===
  * timeline (timecode.json) → เนื้อหาไฟล์ .ass
  * ประโยคยาวเกิน 2 บรรทัด → แบ่งเป็นหลายจอ เวลาแบ่งตามความยาวข้อความ
  */
-export function buildAss(entries, { width: W, height: H, style = 'black' }) {
+export function buildAss(entries, { width: W = 1080, height: H = 1920, style = 'black', } = {}) {
   const st = SUBTITLE_STYLES[style] ?? SUBTITLE_STYLES.black
   if (st.active) return buildActiveAss(entries, { W, H, st })
   const portrait = H > W
@@ -88,7 +90,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Leelawadee UI,${fontSize},${assColor(st.text)},${assColor(st.text)},${assColor(st.box)},${assColor(st.box)},-1,0,0,0,100,100,0,0,4,${pad},0,2,60,60,${marginV},222
+Style: Default,${st.font ?? 'Leelawadee UI'},${fontSize},${assColor(st.text)},${assColor(st.text)},${assColor(st.box)},${assColor(st.box)},${st.font ? 0 : -1},0,0,0,100,100,0,0,4,${pad},0,2,60,60,${marginV},222
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text

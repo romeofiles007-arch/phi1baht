@@ -119,9 +119,9 @@
     "orientation": "portrait",
     "_orientation": "landscape (16:9, 1920x1080) | portrait (9:16, 1080x1920) — ภาพใน Flow ใช้ตามนี้ ตอนตัดต่ออ่านจากภาพจริง",
     "subtitles": {
-      "style": "active-red"
+      "style": "comicbox"
     },
-    "_subtitles": "style: off | black | white | yellow (มีกล่องพื้นทึบ) | active-yellow | active-red | active-cyan | active-pop | active-purple | active-green (คาราโอเกะ ไฮไลต์คำที่พูด)"
+    "_subtitles": "style: off | comicbox (กล่องคำบรรยายการ์ตูน ลายมือ Mali) | black | white | yellow (มีกล่องพื้นทึบ) | active-yellow | active-red | active-cyan | active-pop | active-purple | active-green (คาราโอเกะ ไฮไลต์คำที่พูด)"
   },
   "autoPost": {
     "dir": "",

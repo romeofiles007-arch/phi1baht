@@ -32,6 +32,9 @@ if (bgm.warning) console.warn(bgm.warning)
 const imagesDir = projectDir(slug, 'images')
 const voiceover = join(projectDir(slug, 'audio'), 'voiceover.wav')
 const outFile = join(projectDir(slug, 'render'), `${slug}.mp4`)
+// ภาพปก — เป็นเฟรมแรก 1 วินาที · ไม่มีปก = render เหมือนเดิม
+const coverFile = join(imagesDir, 'cover.png')
+const cover = existsSync(coverFile) ? coverFile : null
 
 if (!existsSync(voiceover)) {
   console.error(`ไม่พบไฟล์เสียง: ${voiceover}\nรันขั้นที่ 2 (TTS) ก่อน`)
@@ -124,7 +127,7 @@ if (clips.size) {
   if (timeline.length < images.length) console.log(`คลิป AI เล่นต่อเนื่องแทนภาพนิ่งในฉากเดียวกัน ${images.length - timeline.length} ช็อต`)
 }
 
-console.log(`ภาพ ${images.length} ใบ · เสียง ${hhmmss(totalDuration)} · ${portrait ? 'แนวตั้ง 9:16' : 'แนวนอน 16:9'} · ซับไตเติล${SUBTITLE_STYLES[subStyle].label} · ${MOTION_PRESETS[motion].label}${clips.size ? ` · คลิป AI ${clips.size} ช็อต` : ''}${bgm.file ? ` · เพลง ${basename(bgm.file)} (${BGM_LEVELS[bgmLevel(config)].label} ${bgmDb(config)} dB)` : ''} · กำลัง render...`)
+console.log(`ภาพ ${images.length} ใบ · เสียง ${hhmmss(totalDuration)} · ${portrait ? 'แนวตั้ง 9:16' : 'แนวนอน 16:9'} · ซับไตเติล${SUBTITLE_STYLES[subStyle].label}${cover ? ' · ปกเฟรมแรก' : ''} · ${MOTION_PRESETS[motion].label}${clips.size ? ` · คลิป AI ${clips.size} ช็อต` : ''}${bgm.file ? ` · เพลง ${basename(bgm.file)} (${BGM_LEVELS[bgmLevel(config)].label} ${bgmDb(config)} dB)` : ''} · กำลัง render...`)
 await renderVideo({
   images: timeline,
   voiceover,
@@ -134,13 +137,14 @@ await renderVideo({
   config: { ...config.render, bgmDb: bgmDb(config) },
   resolution,
   subtitles,
+  cover,
   fit,
   motion,
   clips,
   onProgress: (done, total) => process.stdout.write(`\rขยับภาพ ${done}/${total} ช็อต${done === total ? ' · กำลังรวมเป็นวิดีโอ...\n' : ''}`),
 })
 // ค่าที่ใช้ตัดต่อ — ทำคลิปอัตโนมัติใช้ตัดสินว่าต้องตัดต่อใหม่ไหมเมื่อเปลี่ยนตั้งค่า
-writeFileSync(join(projectDir(slug, 'render'), 'render.json'), JSON.stringify({ resolution, subtitles: subStyle, motion, clips: clips.size, bgm: bgm.file ? basename(bgm.file) : null, bgmDb: bgm.file ? bgmDb(config) : null, renderedAt: Date.now() }, null, 2))
+writeFileSync(join(projectDir(slug, 'render'), 'render.json'), JSON.stringify({ resolution, subtitles: subStyle, cover: !!cover, motion, clips: clips.size, bgm: bgm.file ? basename(bgm.file) : null, bgmDb: bgm.file ? bgmDb(config) : null, renderedAt: Date.now() }, null, 2))
 
 const mb = (statSync(outFile).size / 1024 / 1024).toFixed(1)
 console.log(`เสร็จ: ${outFile} (${mb} MB)`)
