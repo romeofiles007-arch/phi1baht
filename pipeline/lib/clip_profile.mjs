@@ -28,8 +28,8 @@ export function readProfile(slug) {
   if (!slug) return null
   try {
     const profile = migrateProfile(existsSync(profileFile(slug)) ? JSON.parse(readFileSync(profileFile(slug), 'utf8')) : null)
-    // ลายเส้นที่เลิกใช้แล้ว → อ่านเป็นลายเส้นที่มาแทน ไม่แก้ไฟล์ของคลิป
-    if (profile && RETIRED_ART_STYLES[profile.artStyle]) profile.artStyle = RETIRED_ART_STYLES[profile.artStyle]
+    // ลายเส้นที่เลิกใช้แล้ว (doodle/inkwash/...) หรือไม่มีค่า → อ่านเป็น lemlabaht ไม่แก้ไฟล์ของคลิป
+    if (profile && !ART_STYLES[profile.artStyle]) profile.artStyle = RETIRED_ART_STYLES[profile.artStyle] ?? 'lemlabaht'
     return profile
   } catch {
     return null
@@ -55,16 +55,10 @@ const CATEGORY_WORDS = [
 ]
 
 /**
- * ลายเส้นของคลิป ตามตั้งค่าคลิปตอนเริ่มทำ ("สุ่ม" = เลือกตอนนี้แล้วบันทึกไว้ ใช้ลายเส้นเดียวทั้งคลิป)
+ * ลายเส้นของคลิป — ผี 1 บาทมีลายเส้นเดียว (lemlabaht) ไม่มีตัวเลือก/สุ่ม · ค่าตั้งเก่า (config.art.style, CLIP_ART_STYLE) ไม่มีผล
  */
 function clipStyle() {
-  const config = loadConfig()
-  const pick = (list) => list[Math.floor(Math.random() * list.length)]
-  // ผลิตต่อเนื่องส่ง CLIP_ART_STYLE มาแทนตั้งค่าคลิป (สุ่มต่อคลิปโดยไม่แก้ค่าที่ผู้ใช้ตั้งไว้)
-  const chosen = process.env.CLIP_ART_STYLE || config.art?.style
-  const art = RETIRED_ART_STYLES[chosen] ?? chosen
-  const artStyle = ART_STYLES[art] && art !== 'random' ? art : art === 'random' ? pick(Object.keys(ART_STYLES).filter((k) => k !== 'random')) : 'doodle'
-  return { artStyle }
+  return { artStyle: 'lemlabaht' }
 }
 
 /** เดาหมวดจากชื่อเรื่อง */

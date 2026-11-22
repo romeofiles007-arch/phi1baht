@@ -12,7 +12,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, readdirSync } from 'node:fs'
 import { join, extname } from 'node:path'
 import { ROOT } from './config.mjs'
-import { ART_STYLES } from '../../extension/prompts.js'
+import { artStyleOf } from '../../extension/prompts.js'
 
 export const CHARACTER_DIR = join(ROOT, 'characters', 'current')
 const FILE = join(CHARACTER_DIR, 'character.json')
@@ -74,9 +74,6 @@ export function activeCharacter() {
   return c.enabled && (c.images.length || c.description) ? c : null
 }
 
-/** แนบรูปตัวละคร = การ์ตูนเต็มตัวตามรูป */
-const fullBodyOf = (c) => !!c?.images.length
-
 /** รูปสำหรับแนบไปกับงาน (ChatGPT / Flow) */
 export function characterAttachments(c = activeCharacter()) {
   if (!c) return []
@@ -97,23 +94,17 @@ export function characterRule(c = activeCharacter(), profile = null) {
   return lines.join('\n')
 }
 
-/** แบบตัวละคร: แนบรูปอ้างอิง = การ์ตูนเต็มตัว · ไม่แนบ = การ์ตูน doodle หัวโต แขนขาเป็นหลอดมีความหนา (ไม่ใช่ตัวก้าง) — Blueprint มีทั้ง 2 แบบ ระบบบอกว่าคลิปนี้ใช้แบบไหน */
+/**
+ * แบบตัวละครสำหรับ ChatGPT — ตามลายเส้นของคลิป (lemlabaht: การ์ตูนเล่มละบาทยุค 2520 สัดส่วนสมจริง)
+ * แนบรูปตัวละครหรือไม่ก็ใช้แบบเดียวกัน (แบบ doodle หัวโต/ตัวก้างของแอปต้นแบบเลิกใช้)
+ */
 export function bodyStyleRule(c = activeCharacter(), profile = null) {
-  // ลายเส้นที่มีแบบตัวละครของตัวเอง (body ใน ART_STYLES): สัดส่วนสมจริง ไม่ใช่การ์ตูน (รายละเอียดอยู่ใน ART_STYLES ที่ต่อท้าย prompt)
-  const painted = ART_STYLES[profile?.artStyle]?.body
-  if (painted) return painted
-  return fullBodyOf(c, profile)
-    ? '- แบบตัวละคร: FULL-BODY MODE — ตัวละครทุกตัวเป็นการ์ตูนเต็มตัว มีลำตัว แขนขาหนา มือ รองเท้า เสื้อผ้าชัด ห้ามวาดเป็นตัวก้าง (stick figure) ห้ามแขนขาเป็นเส้นขีดเดียว · เขียนแบบนี้ใน Character Bible ด้วย'
-    : '- แบบตัวละคร: SIMPLE MODE (ไม่มีรูปตัวละครแนบ) — ตัวละครทุกตัวเป็นการ์ตูน doodle หัวกลมโต ลำตัวเล็กทรงมน แขนขาเป็นทรงหลอดมีความหนา มีเส้นขอบสองข้างและลงสีเต็ม มือกลมแบบถุงมือ · ห้ามวาดเป็นตัวก้าง (stick figure) ห้ามแขนขาเป็นเส้นขีดเดียว · เขียนแบบนี้ใน Character Bible ด้วย'
+  return artStyleOf(profile).body
 }
 
 /** บรรทัดแบบตัวละครสำหรับคำสั่ง Flow */
 export function bodyStyleFlowNote(c = activeCharacter(), profile = null) {
-  const painted = ART_STYLES[profile?.artStyle]?.bodyFlow
-  if (painted) return painted
-  return fullBodyOf(c, profile)
-    ? 'ตัวละครทุกตัวเป็นการ์ตูนเต็มตัว (ลำตัว แขนขามีความหนา มีเสื้อผ้า) ห้ามวาดเป็นตัวก้าง ห้ามแขนขาเป็นเส้นขีดเดียว'
-    : 'ตัวละครทุกตัวเป็นการ์ตูน doodle หัวกลมโต แขนขาเป็นทรงหลอดมีความหนา มีเส้นขอบและลงสีเต็ม ห้ามวาดเป็นตัวก้าง ห้ามแขนขาเป็นเส้นขีดเดียว'
+  return artStyleOf(profile).bodyFlow
 }
 
 /** ข้อความต่อท้ายคำสั่ง Flow เมื่อแนบรูปตัวละคร (ตัวละครหลักตามลายเส้นของคลิป) */

@@ -85,7 +85,7 @@ const slotLine = (s) =>
 const outputRules = (language) => `- ตอบเป็นข้อความล้วนในแชต ห้ามใส่ code block ครอบคำตอบ อย่าสร้างไฟล์
 - ทุก shot ขึ้นต้นด้วยชื่อไฟล์ที่ให้มาเป๊ะๆ ที่ต้นบรรทัด (ห้ามใส่เลขข้อ ตัวหนา หรือ bullet หน้าชื่อไฟล์) ตามด้วย | คั่นแต่ละ field
 - รูปแบบ field: SHOT NN | Chars: @TAG | Env: ... | Action: ... | Frame: ...
-- Env ต้องเป็นฉากที่มีรายละเอียดตาม BACKGROUNDS ใน Style Bible: สถานที่ + ของประกอบฉาก 3–6 ชิ้นที่เข้ากับเรื่อง + แสง/เวลา/บรรยากาศ + โทนสีหลักตาม COLOR MOOD ของ Style Bible ให้ตรงอารมณ์ของบรรทัดนั้น (โทนหลักเย็นสบายตา ห้ามแสงทอง/โทนเหลืองทั้งภาพ · ห้ามเขียนแค่ "พื้นหลังสีเรียบ") — ฉากสีเดียวล้วนใช้เฉพาะช็อต pattern interrupt / reveal
+- Env ต้องเป็นฉากที่มีรายละเอียดตาม BACKGROUNDS ใน Style Bible: สถานที่ + ของประกอบฉาก 3–6 ชิ้นที่เข้ากับเรื่อง + แสง/เวลา/บรรยากาศ + โทนสีหลักตาม COLOR MOOD ของ Style Bible ให้ตรงอารมณ์ของบรรทัดนั้น (ใช้ชุดสีของหมวดคลิปตาม COLOR PALETTE · ห้ามเขียนแค่ "พื้นหลังสีเรียบ") — ฉากสีเดียวล้วนใช้เฉพาะช็อต pattern interrupt / reveal
 - ช็อตต่อเนื่องในสถานที่เดิม ใช้ของประกอบฉากชุดเดิมให้ต่อเนื่อง แต่เปลี่ยนมุมกล้องให้เห็นส่วนอื่นของฉาก
 - เว้น 1 บรรทัดว่างระหว่าง shot
 - ช็อตที่กำกับว่า "ภาพต่อเนื่อง" ให้เป็น mini-sequence ของช็อตก่อนหน้า ไม่ใช่ฉากใหม่
@@ -144,7 +144,7 @@ ${batch.map(slotLine).join('\n')}
 - ส่วน 5.3 ต้องขึ้นต้นด้วยบรรทัด "=== SHOT LIST ===" แล้วตามด้วย shot
 ${OUTPUT_RULES}${orientationRule(config) ? `\n${orientationRule(config)}` : ''}
 ${bodyStyleRule(character, profile)}${charRule ? `\n${charRule}` : ''}${catRule ? `\n${catRule}` : ''}
-${coverRequest(orientationOf(config) === 'portrait', language)}${riddleRequest(language, themeOf(slug)) ? `\n${riddleRequest(language, themeOf(slug))}` : ''}`,
+${coverRequest(orientationOf(config) === 'portrait', language, profile?.category)}${riddleRequest(language, themeOf(slug)) ? `\n${riddleRequest(language, themeOf(slug))}` : ''}`,
     }
   }
 

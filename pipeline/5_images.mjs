@@ -20,7 +20,8 @@ import { riddleShot, riddleBriefLines, hasRiddleImage, RIDDLE_NAME } from './lib
 import { probeSize } from './lib/ffmpeg.mjs'
 import { collectImages } from './lib/shotfile.mjs'
 import { generateWithFailover } from './lib/flow-failover.mjs'
-import { neutralizePaper } from './lib/paper-tone.mjs'
+import { sanitizeShotPrompt } from './lib/shot-safety.mjs'
+import { styleKitAttachments } from './lib/style-kit.mjs'
 
 const slug = process.argv[2]
 if (!slug) {
@@ -41,9 +42,20 @@ if (!existsSync(briefFile)) {
   process.exit(1)
 }
 
+/**
+ * กันคำรุนแรง/เปลือยในคำบรรยายช็อตก่อนส่ง Flow (ไส้ ศพ เลือดสาด เปลือย ฯลฯ — lib/shot-safety.mjs) แล้ว log คำที่ตัด
+ * ใช้กับทุกช็อตที่ส่ง Flow: ช็อตในเรื่อง ปก และภาพปริศนา (ทุกทางส่งไป Flow ใช้ prompt จากตรงนี้)
+ */
+function safeShot(s) {
+  if (!s?.prompt) return s
+  const { text, removed } = sanitizeShotPrompt(s.prompt)
+  if (removed.length) console.log(`ตัดคำรุนแรงออกจาก ${s.filename}: ${removed.join(', ')}`)
+  return { ...s, prompt: text }
+}
+
 const allShots = JSON.parse(readFileSync(join(shotDir, 'shots.json'), 'utf8'))
   .filter((s) => s.prompt)
-  .map((s) => ({ ...s, prompt: stripSafeArea(s.prompt).trim() })) // ไม่ให้ Flow เว้นแถบว่างในภาพ
+  .map((s) => safeShot({ ...s, prompt: stripSafeArea(s.prompt).trim() })) // ไม่ให้ Flow เว้นแถบว่างในภาพ
 const imagesDir = projectDir(slug, 'images')
 
 const existing = collectImages(imagesDir).images
@@ -57,10 +69,10 @@ if (hasRiddleImage(slug)) have.add(RIDDLE_NAME)
 const titleFile = join(projectDir(slug, 'script'), 'title.txt')
 const title = existsSync(titleFile) ? readFileSync(titleFile, 'utf8').trim() : slug
 // ปกคลิปเป็นภาพสุดท้ายเสมอ — มีอยู่แล้วก็ไม่สร้างซ้ำ (ยกเว้นสั่ง --cover-only)
-const cover = coverOnly || !have.has(COVER_NAME) ? coverShot(slug, title) : null
+const cover = coverOnly || !have.has(COVER_NAME) ? safeShot(coverShot(slug, title)) : null
 const timeline = coverOnly ? [] : onlyMissing ? allShots.filter((s) => !have.has(s.filename)) : allShots
 // ภาพปริศนาสำหรับ Story — มีโจทย์จาก ChatGPT แล้วแต่ยังไม่มีภาพ (คลิปเก่า/ภาษาอื่นไม่มีโจทย์ = ไม่ทำ)
-const riddle = !coverOnly && !have.has(RIDDLE_NAME) ? riddleShot(slug) : null
+const riddle = !coverOnly && !have.has(RIDDLE_NAME) ? safeShot(riddleShot(slug)) : null
 const shots = [...timeline, ...(cover ? [cover] : []), ...(riddle ? [riddle] : [])]
 if (coverOnly) console.log('สร้างภาพปกคลิป')
 if (onlyMissing) console.log(`มีภาพแล้ว ${existing.length} ใบ · สร้างเฉพาะที่ขาด ${shots.length} ช็อต`)
@@ -115,7 +127,8 @@ const result = await generateWithFailover({
     model: 'Nano Banana 2 Lite', // ใช้ 0 credits — extension ตรวจตัวเลข credit ก่อนสั่ง agent ทุกครั้ง
     aspect, // 16:9 แนวนอน | 9:16 แนวตั้ง
     projectTitle: title, // ตั้งชื่อ project ใน Flow เป็นชื่อเรื่อง แทนชื่อวันที่ของ Flow
-    attachments: characterAttachments(activeCharacter(slug)), // รูปตัวละครของฉัน (ถ้ามี) — แนบเป็น ingredient กับ prompt แรก
+    // รูปตัวละครของฉัน (ถ้ามี) + ภาพ Style Kit ของหมวด 1–2 ภาพ (kit ว่าง = ไม่มี) — แนบเป็น ingredient กับ prompt แรก
+    attachments: [...characterAttachments(activeCharacter(slug)), ...styleKitAttachments(profile?.category)],
     outDir: imagesDir,
     newProject: !savedProject?.url,
     projectUrl: savedProject?.url ?? null,
@@ -150,19 +163,6 @@ if (result.meta && result.meta.generated !== result.meta.expected) {
 }
 
 const { images } = collectImages(imagesDir)
-// ลายเส้นจีนโบราณ: Flow ชอบวาดบนกระดาษเหลือง แม้ prompt ห้ามแล้ว → ปรับพื้นกระดาษเป็นขาวกลาง (เก็บต้นฉบับใน _original/)
-if (profile?.artStyle === 'inkwash') {
-  let fixed = 0
-  for (const file of [...images.map((i) => i.file), join(imagesDir, COVER_NAME)]) {
-    if (!existsSync(file)) continue
-    try {
-      if (await neutralizePaper(file)) fixed++
-    } catch (err) {
-      console.warn(`ปรับสีพื้นภาพ ${file} ไม่ได้: ${err.message}`)
-    }
-  }
-  if (fixed) console.log(`ปรับพื้นกระดาษเหลืองเป็นขาว ${fixed} ภาพ (ต้นฉบับอยู่ใน 05_images/_original/)`)
-}
 const got = new Set(images.map((i) => i.name))
 if (hasCover(slug)) got.add(COVER_NAME)
 if (hasRiddleImage(slug)) got.add(RIDDLE_NAME)

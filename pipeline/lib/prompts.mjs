@@ -5,6 +5,7 @@ import { recentThemes, themeOf } from './topics.mjs'
 import { characterFlowNote, bodyStyleRule, bodyStyleFlowNote, activeCharacter } from './character.mjs'
 import { SHOT_VARIETY_RULE } from './continuity.mjs'
 import { readProfile } from './clip_profile.mjs'
+import { styleKitFiles } from './style-kit.mjs'
 
 import * as shared from '../../extension/prompts.js'
 
@@ -70,7 +71,7 @@ ${table}
 ${SHOT_VARIETY_RULE}
 ${bodyStyleRule(activeCharacter(slug), readProfile(slug))}${shared.categoryRule(readProfile(slug), 'image') ? `\n${shared.categoryRule(readProfile(slug), 'image')}` : ''}
 - Env ต้องเป็นฉากที่มีรายละเอียดตาม BACKGROUNDS ใน Style Bible (สถานที่ + ของประกอบฉาก 3–6 ชิ้น + แสง/บรรยากาศ + โทนสี) ห้ามเขียนแค่ "พื้นหลังสีเรียบ"
-- แสงและโทนสีของ Env เลือกตาม COLOR MOOD ใน Style Bible ให้ตรงอารมณ์ของบรรทัดนั้น — โทนหลักเย็นสบายตา ห้ามบรรยายฉากเป็นแสงทอง/โทนเหลืองทั้งภาพ
+- แสงและโทนสีของ Env เลือกตาม COLOR MOOD ใน Style Bible ให้ตรงอารมณ์ของบรรทัดนั้น โดยใช้ชุดสีของหมวดคลิป (COLOR PALETTE) — ทุกภาพลงสีเต็ม
 ${imageLanguageRule(clipLanguage(config, slug))}`
 }
 
@@ -123,25 +124,39 @@ export function orientationRule(config = loadConfig()) {
 - ห้ามเว้นพื้นที่ว่าง แถบสี ขอบขาว หรือโซน subtitle-safe ในภาพ และห้ามเขียนคำพวกนี้ลงใน prompt (ซับไตเติลมีกล่องพื้นทึบของตัวเองอยู่แล้ว)`
 }
 
+/**
+ * ภาพ Style Kit ที่แนบให้ Flow (5_images.mjs แนบต่อท้ายรูปตัวละคร) — บอก agent ว่าเป็นแบบลายเส้น ไม่ใช่ตัวละคร
+ * kit ว่าง = ไม่มีบรรทัดนี้
+ */
+export function styleKitFlowNote(categoryId) {
+  const files = styleKitFiles(categoryId)
+  if (!files.length) return ''
+  const names = files.map((f) => f.file.split(/[\\/]/).pop()).join(', ')
+  return `ภาพอ้างอิงลายเส้น ${files.length} ภาพที่แนบท้าย (Style Kit: ${names}) เป็นแบบเส้นหมึก การแรเงา การลงสี และเนื้อกระดาษ — วาดทุกภาพด้วยเทคนิคเดียวกับภาพนี้ แต่ห้ามลอกตัวละคร ฉาก หรือองค์ประกอบจากภาพนั้น`
+}
+
 /** ข้อความที่วางลง Flow — คำกำกับข้างบนตามที่ผู้ใช้ระบุในข้อ 5 ของสเปก */
 export function flowPrompt(agentBrief, config = loadConfig(), slug = null) {
   const portrait = orientationOf(config) === 'portrait'
   const character = activeCharacter(slug)
-  const charNote = characterFlowNote(character, readProfile(slug))
+  const profile = readProfile(slug)
+  const charNote = characterFlowNote(character, profile)
+  const kitNote = styleKitFlowNote(profile?.category)
   return `สร้างรูป ตามนี้ อย่าลืม lock ตัวละครต่างๆ ด้วยนะ
 เริ่มสร้างภาพทุกช็อตทันทีจนครบ ไม่ต้องสรุปแผน Storyboard และไม่ต้องถามยืนยันก่อน
-${bodyStyleFlowNote(character, readProfile(slug))}${shared.ART_STYLES[readProfile(slug)?.artStyle]?.flow ? `\n${shared.ART_STYLES[readProfile(slug).artStyle].flow}` : ''}${charNote ? `\n${charNote}` : ''}${portrait ? '\nทุกภาพเป็นแนวตั้ง 9:16 จัดองค์ประกอบแนวตั้ง ตัวละครอยู่กลางภาพ' : ''}
+${bodyStyleFlowNote(character, profile)}
+${shared.artStyleOf(profile).flow}${charNote ? `\n${charNote}` : ''}${kitNote ? `\n${kitNote}` : ''}${portrait ? '\nทุกภาพเป็นแนวตั้ง 9:16 จัดองค์ประกอบแนวตั้ง ตัวละครอยู่กลางภาพ' : ''}
 ทุกภาพต้องเต็มเฟรม ฉากหลังยาวถึงขอบทุกด้าน ห้ามมีแถบว่าง ขอบขาว หรือพื้นที่เปล่าด้านบน/ล่าง
 ${shared.FULL_BLEED_RULE}
-${shared.COLOR_MOOD_RULE}
-ทุกภาพลงสีเต็มทั้งภาพ สีอิ่มแต่สบายตา ทั้งตัวละครและฉากหลัง — ห้ามภาพขาวดำ โทนเทา ซีเปีย สีซีด หรือลายเส้นไม่ลงสีเด็ดขาด
+${shared.categoryColorRule(profile?.category)}
+ทุกภาพเป็นภาพสี ลงสีเต็มทั้งตัวละครและฉากหลัง — ห้ามภาพขาวดำ โทนเทา หมึกสีเดียว หรือลายเส้นไม่ลงสีเด็ดขาด
 ตั้งชื่อแต่ละภาพเป็นชื่อไฟล์ที่อยู่หน้าบรรทัดของ shot นั้นเป๊ะๆ เช่น "00_00_00.png SHOT 01"
 ชื่อไฟล์ เลข SHOT และ @TAG ใช้ตั้งชื่อภาพเท่านั้น ห้ามเขียนลงในภาพ
 @TAG (เช่น @main @crowd1) เป็นชื่อเรียกตัวละครในคำสั่งเท่านั้น ห้ามวาดป้ายชื่อ ตัวอักษร @ หรือชื่อตัวละครลอยเหนือหัว/บนตัวละครเด็ดขาด
 
 ${agentBrief}
 
-ย้ำ: ทุกภาพลงสีเต็ม ห้ามขาวดำ/โทนเทา · ห้ามมีป้ายชื่อ @TAG หรือชื่อตัวละครในภาพ — ตัวอักษรในภาพมีได้เฉพาะข้อความที่ shot สั่งไว้ในเครื่องหมายคำพูดเท่านั้น`
+ย้ำ: ทุกภาพลงสีเต็ม ห้ามขาวดำ/โทนเทา · ภาพในเรื่อง (SHOT LIST) ห้ามมีตัวหนังสือ ลูกโป่งคำพูด คำเสียงประกอบ ป้าย ป้ายชื่อ @TAG หรือชื่อตัวละครในภาพเด็ดขาด (ซับไตเติลใส่ตอนตัดต่อ) — ตัวหนังสือมีได้เฉพาะภาพปก (COVER) ตามที่ปกสั่งไว้เท่านั้น`
 }
 
 /** แยก shot list ออกจาก OUTPUT 5 แล้วจับคู่กับช่อง shot ที่เราคำนวณไว้ */

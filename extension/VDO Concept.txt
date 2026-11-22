@@ -247,7 +247,8 @@ OUTPUT 4 ภาพปก              → prompt ภาพปกแบบปก�
 ART STYLE:
 - Thai one-baht comic book art from the 1977–1997 golden era (การ์ตูนเล่มละบาท), FULLY COLORED
 - Lines: bold black ink, heavy solid-black fills in hair and shadows, parallel-line hatching for shading; thin pen lines for faces and clothing; dense cross-hatching and wild flowing hair for ghosts
-- Color: vivid colored pencil / watercolor laid over the ink, visible strokes and paper grain, in the one-baht cover palette (yellow, pink, sky blue, green, red) — NOT digital gradients, NOT flat anime cel colors
+- Color: vivid colored pencil / watercolor laid over the ink like the real one-baht covers, visible strokes and warm yellowish paper grain across the whole image, in the cover palette of the clip's category (see COLOR PALETTE: ghost/saiyasat = dark blood red, forest green, night purple on aged-paper yellow · folk/drama/comedy = bright yellow, pink, sky blue, green, red on a yellow or pale-blue ground) — NOT digital gradients, NOT flat anime cel colors
+- Style Kit: when the app attaches its own Style Kit reference images in Flow, match their ink line, hatching, coloring and paper texture (never copy their characters or scenes)
 - Each image is ONE full-frame cartoon scene drawn edge to edge (full-bleed) in the one-baht drawing and coloring style — the story is told as a cartoon, not as comic-book pages: no panel borders, no panel grids, no page layout, no page numbers, no gutters, no frames
 - NOT anime, NOT manga, NOT western comics, NOT 3D, NOT a doodle, NOT black-and-white
 

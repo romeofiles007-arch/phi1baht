@@ -1560,24 +1560,7 @@ let clip = null
 function renderClipSettings() {
   if (!clip) return
   for (const b of $('clipOrientation').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.value === clip.orientation))
-  // ลายเส้น — โปรแกรมในเครื่องรุ่นเก่าไม่ส่งมา → ซ่อน
-  for (const [id, key] of [['clipArtStyle', 'artStyle']]) {
-    const box = $(id)
-    const opts = clip.options[key] ?? []
-    box.parentElement.hidden = !opts.length
-    if (!box.childElementCount) {
-      for (const o of opts) {
-        const b = Object.assign(document.createElement('button'), { type: 'button', textContent: o.label })
-        b.dataset.value = o.id
-        box.append(b)
-      }
-    }
-    for (const b of box.querySelectorAll('button')) {
-      b.setAttribute('aria-pressed', String(b.dataset.value === clip[key]))
-      b.disabled = localBusy()
-    }
-  }
-  showRandomOverride(prod?.settings?.random)
+  // ลายเส้น: ผี 1 บาทมีลายเส้นเดียว (การ์ตูนเล่มละบาทลงสี) — ไม่มีตัวเลือกในแผงนี้
   const sel = $('clipSubtitles')
   if (!sel.options.length) for (const o of clip.options.subtitles) sel.append(new Option(o.label, o.id))
   sel.value = clip.subtitles
@@ -1727,10 +1710,9 @@ function renderClipSettings() {
   const motionLabel = motionOptions.find((o) => o.id === clip.motion)?.label
   const subLabel = clip.options.subtitles.find((o) => o.id === clip.subtitles)?.label
   const pauseLabel = clip.options.pause.find((o) => o.id === clip.pause)?.label
-  const artLabel = (clip.options.artStyle ?? []).find((o) => o.id === clip.artStyle)?.label
   const levelLabel = bgmLevelOptions.find((o) => o.id === clip.bgmLevel)?.label
   const bgmLabel = !bgmOptions.length ? '' : clip.bgm === 'off' ? 'ไม่มีเพลง' : `${clip.bgm === 'random' ? 'สุ่มเพลง' : `เพลง ${String(clip.bgm).replace(/\.[^.]+$/, '')}`}${levelLabel ? ` (${levelLabel})` : ''}`
-  const summary = `${clip.orientation === 'portrait' ? 'แนวตั้ง 9:16' : 'แนวนอน 16:9'}${artLabel ? ` · ${artLabel}` : ''} · ซับไตเติล${subLabel}${motionLabel ? ` · ${motionLabel}` : ''}${bgmLabel ? ` · ${bgmLabel}` : ''} · เงียบ${pauseLabel}`
+  const summary = `${clip.orientation === 'portrait' ? 'แนวตั้ง 9:16' : 'แนวนอน 16:9'} · ซับไตเติล${subLabel}${motionLabel ? ` · ${motionLabel}` : ''}${bgmLabel ? ` · ${bgmLabel}` : ''} · เงียบ${pauseLabel}`
   $('clipSettingsSummary').textContent = `ตั้งค่าคลิป: ${summary}${character?.active ? ' · ตัวละครของฉัน' : ''}`
   $('renderSettingsHint').textContent = `ซับไตเติล: ${subLabel}${motionLabel ? ` · ${motionLabel}` : ''} · แนวภาพตามภาพที่สร้างไว้ (เปลี่ยนได้ที่ ⚡ ตั้งค่าคลิป)`
   for (const el of [...$('clipOrientation').querySelectorAll('button'), sel, bgm, ...pause.querySelectorAll('button'), ...motion.querySelectorAll('button'), ...ai.querySelectorAll('button')]) el.disabled = localBusy()
@@ -1815,10 +1797,6 @@ async function saveClipSettings(change) {
 $('clipOrientation').addEventListener('click', (e) => {
   const b = e.target.closest('button')
   if (b && !localBusy()) saveClipSettings({ orientation: b.dataset.value })
-})
-$('clipArtStyle').addEventListener('click', (e) => {
-  const b = e.target.closest('button')
-  if (b && !localBusy()) saveClipSettings({ artStyle: b.dataset.value })
 })
 $('clipPause').addEventListener('click', (e) => {
   const b = e.target.closest('button')
@@ -3602,16 +3580,6 @@ setInterval(() => creditsCall(), 60_000)
 // ── 🏭 ผลิตต่อเนื่อง — โปรแกรมในเครื่องเป็นคนคุมเวลา (ปิดแผงนี้ได้) แผงนี้แค่ตั้งค่า/ดูสถานะ ──
 let prod = null
 let prodFilled = false
-/**
- * คำเตือนในตั้งค่าคลิป: ติ๊ก "สุ่ม" ข้อไหนไว้ที่ 🏭 ผลิตต่อเนื่อง ข้อนั้นจะถูกสุ่มใหม่ทุกคลิป
- * ทับค่าที่เลือกไว้ในตั้งค่าคลิป — ไม่บอกไว้จะงงว่าเลือกสีน้ำแล้วทำไมได้ภาพยนตร์สมจริง
- */
-function showRandomOverride(random) {
-  for (const [id, key] of [['clipArtOverride', 'art']]) {
-    const el = $(id)
-    if (el) el.hidden = !random?.[key]
-  }
-}
 let prodResumeTimeSet = false // ช่องเวลาทำต่อ: ใส่เวลาเริ่มผลิตที่ตั้งไว้ให้ครั้งแรกครั้งเดียว ไม่ทับค่าที่ผู้ใช้เลือก
 const PROD_LANG = { th: 'ไทย', en: 'อังกฤษ' }
 const prodTime = (t) => new Date(t).toLocaleString('th-TH', { hour: '2-digit', minute: '2-digit', day: new Date(t).toDateString() === new Date().toDateString() ? undefined : 'numeric', month: new Date(t).toDateString() === new Date().toDateString() ? undefined : 'short' })
@@ -3619,7 +3587,7 @@ const prodTime = (t) => new Date(t).toLocaleString('th-TH', { hour: '2-digit', m
 function prodOptions() {
   return {
     count: $('prodUnlimited').checked ? 0 : Number($('prodCount').value),
-    random: { genre: $('prodRandGenre').checked, art: $('prodRandArt').checked, language: $('prodRandLang').checked },
+    random: { genre: $('prodRandGenre').checked, language: $('prodRandLang').checked }, // ลายเส้นมีแบบเดียว ไม่มีให้สุ่ม
     languages: [...$('prodLangs').querySelectorAll('input:checked')].map((i) => i.value),
     autoPost: $('prodAutoPost').querySelector('[aria-pressed="true"]')?.dataset.value ?? 'now',
     postPages: $('prodPages').querySelector('[aria-pressed="true"]')?.dataset.value ?? 'all',
@@ -3741,7 +3709,6 @@ function renderProdPages(s) {
 function renderProd() {
   if (!prod) return
   const { settings: s, state: st } = prod
-  showRandomOverride(s.random) // ตั้งค่าคลิปต้องรู้ว่าข้อไหนถูกสุ่มทับ
   if (!prodFilled) {
     prodFilled = true
     const f = scheduleFields(s)
@@ -3753,7 +3720,6 @@ function renderProd() {
     $('prodDelayMin').value = f.min
     $('prodDelayMax').value = f.max
     $('prodRandGenre').checked = s.random.genre
-    $('prodRandArt').checked = s.random.art
     $('prodRandLang').checked = s.random.language
     for (const i of $('prodLangs').querySelectorAll('input')) i.checked = s.languages.includes(i.value)
     for (const b of $('prodAutoPost').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.value === s.autoPost))
@@ -3950,7 +3916,7 @@ $('prodPages').addEventListener('click', (e) => {
   for (const x of $('prodPages').querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b))
   prodSave()
 })
-for (const id of ['prodStart', 'prodUnlimited', 'prodPauseMode', 'prodRandGenre', 'prodRandArt', 'prodRandLang']) {
+for (const id of ['prodStart', 'prodUnlimited', 'prodPauseMode', 'prodRandGenre', 'prodRandLang']) {
   $(id).addEventListener('change', prodSave)
 }
 for (const id of ['prodCount', 'prodTime', 'prodDelayMin', 'prodDelayMax']) $(id).addEventListener('input', prodSave)

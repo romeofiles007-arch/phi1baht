@@ -31,7 +31,7 @@ export const DEFAULT_SETTINGS = {
   time: '22:00',
   delayMin: 20,
   delayMax: 40,
-  random: { genre: true, art: true, language: false },
+  random: { genre: true, language: false }, // ลายเส้นมีแบบเดียว (lemlabaht) ไม่มีให้สุ่ม
   languages: ['th'], // ภาษาที่สุ่มได้ (ใช้เมื่อ random.language)
   // off = เก็บในคลัง | now = เข้าคิวแล้วตั้งเวลาโพสต์ทันที · ไม่มีขั้น AI ตรวจแล้ว (ผู้ใช้ 16 พ.ย. 2026) — ค่าเก่า 'ai' นับเป็น 'now'
   autoPost: 'now',
@@ -154,8 +154,8 @@ export function pickClip(s, config, rand = Math.random, made = {}) {
     // ชื่อเรื่องภาษาเดียวกับเสียงพากย์เมื่อสุ่มภาษา
     titleLanguage: s.random.language ? language : config.script.titleLanguage ?? language,
     minutes: config.script.targetMinutes,
-    // clip_profile.mjs อ่านตัวแปรนี้แทน config — สุ่มต่อคลิปโดยไม่แตะตั้งค่าคลิปของผู้ใช้
-    env: { ...(s.random.art && { CLIP_ART_STYLE: 'random' }) },
+    // ตัวแปรเพิ่มของคลิปนี้ (เดิมใช้สุ่มลายเส้น — ผี 1 บาทมีลายเส้นเดียวแล้ว)
+    env: {},
   }
 }
 

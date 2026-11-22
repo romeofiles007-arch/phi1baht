@@ -14,7 +14,7 @@ import { pipeline as pipeStreams } from 'node:stream/promises'
 import { join, resolve, sep, extname } from 'node:path'
 import { ROOT, loadConfig, updateConfig, slugify } from '../pipeline/lib/config.mjs'
 import { topicsPrompt, scriptPrompt, parseTopics, cleanScript, GENRES } from '../pipeline/lib/prompts.mjs'
-import { ART_STYLES, RETIRED_ART_STYLES, SCARE_LEVELS } from '../extension/prompts.js'
+import { SCARE_LEVELS } from '../extension/prompts.js'
 import { createProduction } from './production.js'
 import { saveScript, loadScript } from '../pipeline/lib/stage2.mjs'
 import { createRunner } from './runner.js'
@@ -924,8 +924,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
           const body = await readBody(req)
           updateConfig((c) => {
             if (['landscape', 'portrait'].includes(body.orientation)) c.render.orientation = body.orientation
-            // ลายเส้น + วิธีเล่าหมวด 1 — ใช้กับคลิปใหม่ (คลิปเดิมจำแบบที่ใช้ไว้ใน 00_ref/profile.json)
-            if (ART_STYLES[body.artStyle]) c.art = { ...(c.art ?? {}), style: body.artStyle }
+            // ลายเส้น: ผี 1 บาทมีแบบเดียว (lemlabaht) ไม่มีให้เลือก — ค่า artStyle จากแผงรุ่นเก่าไม่มีผล
             // หมวดเนื้อหาที่เลือกในแผงข้าง — ผลิตต่อเนื่องใช้ค่านี้ (เดิมแผงข้างไม่ได้บันทึก ผลิตต่อเนื่องเลยไม่รู้หมวดที่เลือก)
             if (body.genre === 'mix' || GENRES.includes(body.genre)) c.script.genre = body.genre
             if (MOTION_PRESETS[body.motion]) c.render.motion = body.motion
@@ -973,7 +972,6 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
         ]
         return json(res, 200, {
           orientation: c.render.orientation === 'portrait' ? 'portrait' : 'landscape',
-          artStyle: ART_STYLES[RETIRED_ART_STYLES[c.art?.style] ?? c.art?.style] ? RETIRED_ART_STYLES[c.art.style] ?? c.art.style : 'doodle',
           subtitles: SUBTITLE_STYLES[c.render.subtitles?.style] ? c.render.subtitles.style : 'off',
           pause: PAUSE_PRESETS[c.tts.pause] ? c.tts.pause : 'normal',
           motion: MOTION_PRESETS[c.render.motion] ? c.render.motion : 'off',
@@ -991,7 +989,6 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
           kieTier: clips.tier,
           kie: { hasKey: hasKey('KIE_API_KEY'), ...kieTier(clips.tier) },
           options: {
-            artStyle: Object.entries(ART_STYLES).map(([id, s]) => ({ id, label: s.label })),
             aiCoverage: aiCoverageOptions,
             aiClips: aiCoverageOptions,
             kieTier: Object.entries(KIE_TIERS).map(([id, t]) => ({ id, label: t.label, name: t.name, credits: t.credits, detail: t.detail })),
