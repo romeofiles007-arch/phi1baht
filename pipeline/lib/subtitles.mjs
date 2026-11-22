@@ -21,7 +21,9 @@ export const SUBTITLE_STYLES = {
   'active-purple': { label: 'Active · ม่วงคาราโอเกะ', active: true, text: 'F4EEFF', hi: 'B964FF', outline: '1E0E30' },
   'active-green': { label: 'Active · เขียวเกม', active: true, text: '8CFF7A', hi: 'F4FF4D', outline: '0E2A12' },
   // กล่องคำบรรยายแบบการ์ตูนละบาท: พื้นกระดาษเหลืองนวล ตัวหนังสือลายมือ (Mali — ฟอนต์ที่แถมใน assets/fonts)
-  comicbox: { label: 'กล่องคำบรรยายการ์ตูน', text: '1A1A1A', box: 'F3E3B0', font: 'Mali', outline: '1A1A1A' },
+  // ชื่อต้องเป็น 'Mali Medium' (family name ID 1 ในไฟล์ Mali-Medium.ttf) — libass ไม่รู้จัก 'Mali' (typographic family ID 16)
+  // แล้วแอบใช้ Arial/Leelawadee แทนโดยไม่ error · test-cartoon-render ตรวจ log fontselect ของ libass จริง
+  comicbox: { label: 'กล่องคำบรรยายการ์ตูน', text: '1A1A1A', box: 'F3E3B0', font: 'Mali Medium', outline: '1A1A1A' },
 }
 
 // สระบน/ล่าง วรรณยุกต์ ไม่กินความกว้าง

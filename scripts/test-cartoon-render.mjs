@@ -14,12 +14,28 @@ const hasFfmpeg = spawnSync('ffmpeg', ['-version']).status === 0
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 
 test('comicbox: สไตล์ลายมือ Mali กล่องเหลืองกระดาษ', () => {
-  assert.deepEqual(SUBTITLE_STYLES.comicbox, { label: 'กล่องคำบรรยายการ์ตูน', text: '1A1A1A', box: 'F3E3B0', font: 'Mali', outline: '1A1A1A' })
+  assert.deepEqual(SUBTITLE_STYLES.comicbox, { label: 'กล่องคำบรรยายการ์ตูน', text: '1A1A1A', box: 'F3E3B0', font: 'Mali Medium', outline: '1A1A1A' })
   const ass = buildAss([{ start: 0, end: 2, text: 'คืนนั้นฝนตกหนัก' }], { style: 'comicbox' })
-  assert.ok(ass.includes('Mali'))
+  assert.match(ass, /^Style: Default,Mali Medium,/m)
   assert.ok(ass.includes('&H00B0E3F3'))
   // สไตล์เดิมยังใช้ฟอนต์เดิม
   assert.ok(buildAss([{ start: 0, end: 2, text: 'สวัสดี' }], { style: 'black' }).includes('Leelawadee UI'))
+})
+
+// ตรวจจาก log ของ libass จริง (ไม่ใช่แค่ข้อความใน .ass) — ชื่อฟอนต์ผิด libass จะเงียบแล้วใช้ Arial/Leelawadee แทน
+// filter เดียวกับ renderVideo: ass=<ชื่อไฟล์>:fontsdir=<assets/fonts> รันในโฟลเดอร์ของ .ass
+test('libass เลือก Mali-Medium ที่แถมมาจริง (ไม่ fallback ไป Leelawadee/Arial)', { skip: !hasFfmpeg }, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'cartoon-font-'))
+  try {
+    writeFileSync(join(dir, 's.ass'), buildAss([{ start: 0, end: 2, text: 'คืนนั้นฝนตกหนัก ไม่มีใครกล้าออกจากบ้าน' }], { style: 'comicbox' }), 'utf8')
+    const r = spawnSync('ffmpeg', ['-v', 'verbose', '-f', 'lavfi', '-i', 'color=c=white:s=1080x1920:d=1',
+      '-vf', `ass=s.ass:${fontsdirOption()}`, '-frames:v', '1', '-f', 'null', '-'], { cwd: dir, encoding: 'utf8' })
+    assert.equal(r.status, 0, r.stderr.slice(-800))
+    const picks = r.stderr.split('\n').filter((l) => /fontselect:/.test(l))
+    assert.ok(picks.length > 0, 'ไม่พบบรรทัด fontselect ใน log ของ libass')
+    for (const l of picks) assert.match(l, /fontselect: \(Mali Medium,.*-> Mali-Medium/, `libass เลือกฟอนต์อื่น: ${l}`)
+    assert.ok(!/Glyph 0x[0-9A-F]+ not found/i.test(r.stderr), 'Mali ขาดตัวอักษรไทยบางตัว → libass ไปใช้ฟอนต์อื่นแทน')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
 test('ffmpeg.mjs: ไม่มีกรอบช่อง/เลขหน้า (drawbox)', () => {
