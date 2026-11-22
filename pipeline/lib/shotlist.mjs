@@ -144,7 +144,7 @@ ${batch.map(slotLine).join('\n')}
 - ส่วน 5.3 ต้องขึ้นต้นด้วยบรรทัด "=== SHOT LIST ===" แล้วตามด้วย shot
 ${OUTPUT_RULES}${orientationRule(config) ? `\n${orientationRule(config)}` : ''}
 ${bodyStyleRule(character, profile)}${charRule ? `\n${charRule}` : ''}${catRule ? `\n${catRule}` : ''}
-${coverRequest(orientationOf(config) === 'portrait', language, profile?.category)}${riddleRequest(language, themeOf(slug)) ? `\n${riddleRequest(language, themeOf(slug))}` : ''}`,
+${coverRequest(orientationOf(config) === 'portrait', language, profile?.category, profile?.issue)}${riddleRequest(language, themeOf(slug)) ? `\n${riddleRequest(language, themeOf(slug))}` : ''}`,
     }
   }
 

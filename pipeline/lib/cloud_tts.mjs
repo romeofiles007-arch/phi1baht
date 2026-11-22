@@ -219,16 +219,17 @@ const EMOTION_STYLE = {
   serious: 'in a serious, weighty documentary voice',
   soft: 'in a soft, gentle voice',
   // นักเล่าเรื่องผียามดึก — ช้า ทุ้ม เรียบ ไม่ขึ้นลงมาก (PACE.calm ใน extension/prompts.js)
-  storyteller: 'in a slow, low, steady voice, like an old Thai ghost-story narrator on late-night radio, with very little rise and fall',
+  storyteller: 'in a deep, low male voice, slow and eerie, like a chilling old Thai ghost-story narrator on late-night radio, with very little rise and fall',
 }
 
 /** ความเร็ว 1.1 → "+10%" ตามรูปแบบของ edge-tts */
-const edgeRate = (speed = 1) => {
+export const edgeRate = (speed = 1, rate = null) => {
+  if (rate) return rate // ค่าที่ตั้งไว้ตรงๆ (เช่น '-10%') ชนะความเร็วทั่วไป
   const pct = Math.round((Number(speed) - 1) * 100)
   return `${pct >= 0 ? '+' : ''}${pct}%`
 }
 
-function geminiPrompt(text, { emotion = 'calm', speed = 1 }) {
+export function geminiPrompt(text, { emotion = 'calm', speed = 1 }) {
   const pace = speed >= 1.08 ? ' at a brisk pace' : speed <= 0.92 ? ' at a slow, unhurried pace' : ''
   return `Read aloud ${EMOTION_STYLE[emotion] ?? EMOTION_STYLE.calm}${pace}, exactly as written:\n${text}`
 }
@@ -295,7 +296,7 @@ async function geminiOne(text, { model, voice, emotion, speed, key }) {
  * @param {'edge'|'gemini'|'elevenlabs'} engine  elevenlabs: voice = Voice ID ของเสียงในบัญชี
  * @param {(msg: object) => void} onEvent  event รูปแบบเดียวกับ worker python (loading/loaded/segment/done/error)
  */
-export async function synthCloud(engine, segments, { voice, model, emotion, speed, sampleRate = 24000, tag, settings, pitch }, onEvent) {
+export async function synthCloud(engine, segments, { voice, model, emotion, speed, sampleRate = 24000, tag, settings, pitch, rate }, onEvent) {
   const started = Date.now()
   const total = segments.length
   onEvent({ event: 'loading', engine })
@@ -328,7 +329,7 @@ export async function synthCloud(engine, segments, { voice, model, emotion, spee
     const jobs = segments.map((s) => ({ index: s.index, text: s.text, out: s.out.replace(/\.wav$/i, '.mp3') }))
     mkdirSync(dirname(segments[0].out), { recursive: true })
     const jobFile = join(dirname(segments[0].out), '.edge_job.json')
-    writeFileSync(jobFile, JSON.stringify({ voice, rate: edgeRate(speed), ...(pitch && { pitch }), segments: jobs }, null, 2))
+    writeFileSync(jobFile, JSON.stringify({ voice, rate: edgeRate(speed, rate), ...(pitch && { pitch }), segments: jobs }, null, 2))
     let error = await edgeRun(jobFile, onEvent)
     // 403 ทุกคำขอ = Microsoft เลิกรับ edge-tts รุ่นเก่า (เจอจริง ต.ค. 2026: 7.2.8 โดนปฏิเสธ 7.3.1 ผ่าน) → อัปเดตเองแล้วลองอีกรอบ
     if (error && /\b403\b/.test(error)) {

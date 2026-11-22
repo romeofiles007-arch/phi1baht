@@ -547,10 +547,10 @@ export const PACE = {
     charsPerSec: 7.7, speed: 0.85, segmentGapMs: 500, paragraphGapMs: 900,
     // ElevenLabs: เสียงเรียบ ทุ้ม ช้า — v4 Turbo + tag กำกับน้ำเสียง (v4 ธรรมดาไม่สนใจ stability)
     // วัดจริง ต.ค. 2026: ความต่างของระดับเสียงลดจาก 4.8 → 3.3 semitone · เสียงทุ้มลง 115 → 96 Hz · ~8.3 ตัวอักษร/วิ ขณะพูด
-    eleven: { model: 'eleven_v4_turbo', tag: '[calm, steady storyteller voice]', settings: { stability: 0.9, style: 0 } },
+    eleven: { model: 'eleven_v4_turbo', tag: '[deep male voice, slow and eerie, steady ghost storyteller]', settings: { stability: 0.9, style: 0 } },
     // engine อื่น — ทำให้เรียบ สงบ ทุ้มเท่าที่แต่ละตัวปรับได้
-    gemini: { emotion: 'storyteller' }, // คำสั่งน้ำเสียงแบบนักเล่าเรื่องผียามดึก (EMOTION_STYLE.storyteller ใน cloud_tts.mjs)
-    edge: { pitch: '-20Hz' }, // ช้าตาม speed + ทุ้มลง (วัดจริง: -6Hz ไม่ต่าง · -20Hz ทุ้มลงและเรียบขึ้น เพราะพูดช้าแล้วเสียงสูงขึ้นเอง)
+    gemini: { emotion: 'storyteller' }, // คำสั่งน้ำเสียงผู้ชายทุ้ม ช้า ชวนขนลุก แบบนักเล่าเรื่องผียามดึก (EMOTION_STYLE.storyteller ใน cloud_tts.mjs)
+    edge: { rate: '-10%', pitch: '-8Hz' }, // ผู้ชายเสียงทุ้ม ช้า ชวนขนลุก (spec 5.6) — ช้าลง 10% ทุ้มลง 8Hz
     local: { emotion: 'calm' }, // เสียงของเรา / VoxCPM: ใช้คลิปต้นแบบอารมณ์สงบ + speed
     chatterbox: { exaggeration: 0.3, cfgWeight: 0.3 }, // ลดการใส่อารมณ์ (เรียบ) + พูดช้าลง
   },

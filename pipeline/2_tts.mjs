@@ -154,7 +154,7 @@ if (cloud) {
     await synthCloud(
       config.tts.engine,
       segments.map((s) => ({ index: s.index, text: s.text, out: join(partsDir, `${String(s.index).padStart(4, '0')}.wav`) })),
-      { voice: cloud.voice, model: cloud.model, emotion: cloud.emotion ?? shared.emotion, speed: shared.speed, sampleRate: config.tts.sampleRate, tag: cloud.tag, settings: cloud.settings, pitch: cloud.pitch },
+      { voice: cloud.voice, model: cloud.model, emotion: cloud.emotion ?? shared.emotion, speed: shared.speed, sampleRate: config.tts.sampleRate, tag: cloud.tag, settings: cloud.settings, pitch: cloud.pitch, rate: cloud.rate },
       printEvent,
     )
   } catch (err) {

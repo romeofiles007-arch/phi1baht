@@ -1,7 +1,7 @@
 // Facebook Story ตามรอบ (ทุก N โพสต์ต่อเพจ) — ไม่ยิง Facebook จริง
 //   node scripts/test-facebook-story.mjs
 // ผู้ใช้ (พ.ย. 2026): อยากแบ่งไปลง Story บ้าง เช่น 10 โพสต์ไป Story 1
-// 5 พ.ย. 2026: Story เปลี่ยนเป็นภาพ "ไขปริศนาจีน" ของคลิป (riddle.mjs) — ตัวตัดคลิปเป็นตอนยังอยู่ใน delivery-ledger
+// 5 พ.ย. 2026: Story เปลี่ยนเป็นภาพ "ทายสิ ผีอะไร?" ของคลิป (riddle.mjs · ผี 1 บาท ตัดปริศนาจีนออก) — ตัวตัดคลิปเป็นตอนยังอยู่ใน delivery-ledger
 import assert from 'node:assert/strict'
 import { test, beforeEach, after } from 'node:test'
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs'
@@ -82,7 +82,7 @@ test('Story: URL อัปโหลดที่ไม่ใช่ของ Faceb
   await assert.rejects(S.facebookStory({ pageId: '42', token: 'tok', file: sample }, { fetchImpl: async () => (++n === 1 ? reply(200, { video_id: 'v', upload_url: 'https://rupload.facebook.com/x' }) : n === 2 ? reply(200, { success: true }) : reply(500, { error: { message: 'publish broke' } })) }), (e) => e.needsVerification === true)
 })
 
-// ── Story ภาพปริศนาธรรม (5 พ.ย. 2026: แทนการตัดคลิปลง Story) ──
+// ── Story ภาพเงาผีให้ทาย (แทนการตัดคลิปลง Story) ──
 const R = await import('../pipeline/lib/riddle.mjs')
 const jpg = join(dir, 'story.jpg'); writeFileSync(jpg, Buffer.alloc(500, 1))
 test('Story ภาพ: อัปภาพแบบยังไม่เผยแพร่ → ลง photo_stories ด้วยเลขภาพ · อัปภาพพลาด = รู้ว่ายังไม่ขึ้น · สั่งลงแล้วพลาด = ไม่รู้ผล', async () => {
@@ -100,19 +100,19 @@ test('Story ภาพ: อัปภาพแบบยังไม่เผยแ
   let n = 0
   await assert.rejects(S.facebookPhotoStory({ pageId: '42', token: 'tok', file: jpg }, { fetchImpl: async () => (++n === 1 ? reply(200, { id: 'ph' }) : reply(500, { error: { message: 'story broke' } })) }), (e) => e.needsVerification === true)
 })
-test('โจทย์ปริศนา: อ่านบรรทัด riddle.png จาก ChatGPT · ชิ้นภาพ 2–3 ชิ้นเท่านั้น · ข้อความบนภาพมีหัวข้อและเฉลยมุมล่าง · คลิปภาษาอื่นไม่ขอโจทย์', () => {
-  const r = R.parseRiddle('=== RIDDLE ===\nriddle.png | RIDDLE | ANSWER: "ขันติ" | PIECES: ขันน้ำ = ขัน + นิ้วชี้ = ติ | MEANING: ความอดทน')
-  assert.deepEqual(r, { answer: 'ขันติ', pieces: [{ picture: 'ขันน้ำ', sound: 'ขัน' }, { picture: 'นิ้วชี้', sound: 'ติ' }], meaning: 'ความอดทน' })
-  assert.equal(R.parseRiddle('riddle.png | RIDDLE | ANSWER: สติ | PIECES: ส้ม = ส | MEANING: x'), null, 'ชิ้นเดียวไม่ใช่ปริศนา')
+test('โจทย์ทายสิ ผีอะไร?: อ่านบรรทัด riddle.png จาก ChatGPT · ต้องมีเฉลยกับคำใบ้ · ข้อความบนภาพมีหัวข้อและเฉลยมุมล่าง · คลิปภาษาอื่นไม่ขอโจทย์', () => {
+  const r = R.parseRiddle('=== RIDDLE ===\nriddle.png | RIDDLE | ANSWER: "กระสือ" | HINT: ตกดึกมีแสงลอยตามหาคน | SHAPE: หญิงผมยาวลอยเหนือพื้น')
+  assert.deepEqual(r, { answer: 'กระสือ', hint: 'ตกดึกมีแสงลอยตามหาคน', shape: 'หญิงผมยาวลอยเหนือพื้น' })
+  assert.equal(R.parseRiddle('riddle.png | RIDDLE | ANSWER: ปอบ | SHAPE: เงา'), null, 'ไม่มีคำใบ้ไม่ใช่โจทย์')
   assert.equal(R.parseRiddle('ไม่มีโจทย์'), null)
   const ass = R.riddleAss(r)
-  assert.match(ass, /ไขปริศนาจีน/)
+  assert.match(ass, /ทายสิ ผีอะไร?/)
+  assert.ok(!/จีน/.test(ass))
   assert.match(ass, /Style: Ans,[^\n]*,3,36,36,40,222/, 'เฉลยชิดมุมขวาล่าง')
-  // เฉลยกับความหมายคนละกล่อง (เดิมกล่องเดียว 2 บรรทัด พื้นทับกัน) — เฉลยยกขึ้นเหนือความหมาย
-  assert.match(ass, /,Ans,,0,0,102,,เฉลย: ขันติ \(ขัน \+ ติ\)\n/)
-  assert.match(ass, /,Mean,,0,0,0,,ความอดทน\n/)
+  assert.match(ass, /,Ans,,0,0,0,,เฉลย: กระสือ\n/)
+  assert.match(ass, /,Hint,,0,0,0,,คำใบ้: ตกดึกมีแสงลอยตามหาคน\n/)
   assert.equal(R.riddleRequest('en'), '')
-  assert.match(R.riddleRequest('th', { dhamma: 'ขันติ (ความอดทนอดกลั้น)' }), /riddle\.png \| RIDDLE/)
+  assert.match(R.riddleRequest('th', { subject: 'กระสือ' }), /riddle\.png \| RIDDLE/)
 })
 
 // ── ทั้งระบบ (คิวจริง ไม่ยิงเน็ต) ──
@@ -139,7 +139,7 @@ function harness({ story = async () => ({ postId: 's' }), riddle = true } = {}) 
     facebookUpload: async () => { calls.feed++; return { postId: `f${calls.feed}`, url: `https://www.facebook.com/123/videos/f${calls.feed}` } },
     facebookStory: async () => { calls.videoStory++; return { postId: 'v' } },
     facebookPhotoStory: async (x) => { calls.story.push(x.file); return story(x) },
-    prepareRiddleStory: async (s) => (riddle ? { file: `${s}/story.jpg`, riddle: { answer: 'ขันติ' }, remove: async () => {} } : null),
+    prepareRiddleStory: async (s) => (riddle ? { file: `${s}/story.jpg`, riddle: { answer: 'กระสือ' }, remove: async () => {} } : null),
     stageCover: async () => null,
   } })
   return { posting, calls, request: async (path, data) => { body = data; await posting.handle({ method: data ? 'POST' : 'GET', headers: { host: '127.0.0.1:1', 'x-bridge-token': 'test' } }, {}, new URL(path, 'http://127.0.0.1:1')); return response } }
@@ -154,8 +154,8 @@ test('โพสต์ที่ถึงรอบ ลง Story ภาพปริ
   assert.deepEqual(h.calls.story, [`${slug}/story.jpg`])
   assert.equal(h.calls.videoStory, 0)
   assert.equal(item.results['fb:fb'].story.ok, true)
-  assert.equal(item.results['fb:fb'].story.riddle, 'ขันติ')
-  assert.ok(item.history.some((x) => /ลง Story ปริศนาแล้ว \(เฉลย: ขันติ\)/.test(x.text)))
+  assert.equal(item.results['fb:fb'].story.riddle, 'กระสือ')
+  assert.ok(item.history.some((x) => /ลง Story ปริศนาแล้ว \(เฉลย: กระสือ\)/.test(x.text)))
   const next = newClip()
   P.saveQueue([...P.loadQueue().map((q) => ({ ...q, ...(q.postedAt ? { postedAt: q.postedAt - 3600_000 } : {}), results: Object.fromEntries(Object.entries(q.results ?? {}).map(([k, r]) => [k, { ...r, at: r.at - 3600_000, ...(r.story ? { story: { ...r.story, at: r.story.at - 3600_000 } } : {}) }])) })), scheduled(next)])
   const h2 = harness(); await h2.posting.tick()

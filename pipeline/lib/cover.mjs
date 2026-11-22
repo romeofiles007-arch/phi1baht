@@ -32,7 +32,7 @@ function coverPalette(category) {
  * สูตรปกแบบปกการ์ตูนเล่มละบาท — ใช้ทั้งตอนขอ prompt จาก ChatGPT และตอนสั่ง Flow วาด
  * (ปกเก่าที่ prompt เขียนว่า "ไม่มีตัวอักษร" ก็ได้สูตรนี้ตอนสร้างปกใหม่)
  */
-function coverRules(language, category) {
+function coverRules(language, category, issue = null) {
   const th = language !== 'en'
   return [
     'วาดแบบปกการ์ตูนเล่มละบาทไทยยุค 2520: เส้นหมึกดำแล้วลงสีไม้หรือสีน้ำสีสด เห็นรอยสีและเนื้อกระดาษ ลายเส้นและตัวละครเดียวกับ Style Bible และ Character Bible',
@@ -41,6 +41,7 @@ function coverRules(language, category) {
     `โลโก้ "${COVER_LOGO}" อยู่มุมซ้ายบนใต้แถบลายเฉียง เป็นกรอบป้ายเล็กสีสดเขียนว่า "${COVER_LOGO}" ตัวหนา — เป็นโลโก้ของเราเอง ห้ามเลียนโลโก้สำนักพิมพ์จริง ห้ามมีตัว "N" หรือชื่อสำนักพิมพ์ใดๆ`,
     `ชื่อเรื่อง${th ? 'ภาษาไทย สะกดถูกต้องทุกตัว' : 'ภาษาอังกฤษ'} ตัวหนาใหญ่สีแดง (หรือม่วง/เขียว) แบบตัวเขียนมือ ตัดขอบเข้ม วางช่วงบนของภาพถัดจากโลโก้ ใส่ข้อความในเครื่องหมายคำพูด`,
     'ป้ายสี่เหลี่ยมเล็ก "1 บาท" อยู่มุมขวาล่าง (เลข 1 ตัวใหญ่ คำว่า บาท ตัวเล็กใต้เลข)',
+    ...(issue ? [`เลขเล่มเขียนว่า "${th ? 'เล่มที่' : 'Issue No.'} ${issue}" ตัวหนาในกรอบวงรีหรือสี่เหลี่ยมเล็กข้างโลโก้ "${COVER_LOGO}" (มุมซ้ายบน) แบบเลขเล่มของการ์ตูนเล่มละบาทจริง อ่านชัดแม้ภาพเล็ก — ต้องเป็นเลข ${issue} เท่านั้น`] : []),
     `ลูกโป่งคำพูดเขียนมือได้ 1 อัน คำสั้นๆ ${th ? 'ภาษาไทย' : 'ภาษาอังกฤษ'} ที่ชวนสงสัย (ไม่บังคับ)`,
     'ตัวหนังสือทุกตัวอยู่ในภาพครบ เว้นจากขอบภาพ ไม่ล้นหรือถูกตัดขอบ และไม่ทับหน้าตัวละคร',
     coverPalette(category),
@@ -53,10 +54,10 @@ export const coverPath = (slug) => join(projectDir(slug, 'images'), COVER_NAME)
 const promptFile = (slug) => join(projectDir(slug, 'shotlist'), 'cover.txt')
 
 /** กฎสำหรับ ChatGPT รอบแรก — ขอ prompt ปกต่อท้าย Shot List */
-export function coverRequest(portrait, language = 'th', category = null) {
+export function coverRequest(portrait, language = 'th', category = null, issue = null) {
   return `- ท้ายคำตอบ เพิ่มบรรทัดว่าง แล้วบรรทัด "=== COVER ===" ตามด้วย prompt ภาพปกคลิป 1 บรรทัด ขึ้นต้นด้วย "cover.png | COVER |" (Thumbnail ตาม OUTPUT 4 — เลือกคอนเซปต์ที่ดีที่สุดแบบเดียว)
 - ภาพปก = ปกการ์ตูนเล่มละบาท ${portrait ? 'แนวตั้ง 9:16' : 'แนวนอน 16:9'} ใช้เป็นภาพแรกของคลิปและภาพตัวอย่างบน TikTok — ภาพปกเป็นภาพเดียวที่มีตัวหนังสือได้:
-${coverRules(language, category).map((r) => `  · ${r}`).join('\n')}
+${coverRules(language, category, issue).map((r) => `  · ${r}`).join('\n')}
 - รูปแบบ field ของปก: Chars: @TAG | Env: ... | Action: ... | Frame: ... (คำอธิบายเป็น${language === 'en' ? 'ภาษาอังกฤษ' : 'ภาษาไทย'} คงชื่อ field และ @TAG ตามเดิม)`
 }
 
@@ -84,13 +85,13 @@ export function coverShot(slug, title) {
     `COVER | ภาพปกคลิปแบบปกการ์ตูนเล่มละบาท ของเรื่อง "${title}" — ออกแบบเองจากเนื้อเรื่องและ Character Bible`
   // prompt ปกรุ่นก่อนห้ามตัวอักษร — ตัดออก ปกแบบเล่มละบาทมีชื่อเรื่อง โลโก้ และป้ายราคา
   const cleaned = prompt.replace(/[,;·]?\s*(?:ไม่มีตัวอักษรในภาพ|ไม่มีตัวหนังสือ(?:ในภาพ)?|no (?:text|letters|words)(?: in (?:the )?image)?)/gi, '').trim()
-  return { filename: COVER_NAME, shot: 'COVER', prompt: cleaned, language: clipLanguage(loadConfig(), slug), title, category: readProfile(slug)?.category ?? null }
+  return { filename: COVER_NAME, shot: 'COVER', prompt: cleaned, language: clipLanguage(loadConfig(), slug), title, category: readProfile(slug)?.category ?? null, issue: readProfile(slug)?.issue ?? null }
 }
 
 /** ส่วนท้ายของ brief ที่ส่งให้ Flow */
 export function coverBriefLines(shot, portrait) {
   return [
     `=== COVER (สร้างเป็นภาพสุดท้าย หลังครบทุกช็อต) ===`,
-    `${shot.filename} ${shot.prompt} | ภาพปกคลิปแบบปกการ์ตูนเล่มละบาท ${portrait ? 'แนวตั้ง 9:16' : 'แนวนอน 16:9'} ของเรื่อง "${shot.title ?? ''}" — ภาพนี้ภาพเดียวที่มีตัวหนังสือได้ · ${coverRules(shot.language, shot.category).join(' · ')} · ตั้งชื่อภาพ "cover.png COVER" (ชื่อไฟล์ไม่ต้องเขียนลงในภาพ)`,
+    `${shot.filename} ${shot.prompt} | ภาพปกคลิปแบบปกการ์ตูนเล่มละบาท ${portrait ? 'แนวตั้ง 9:16' : 'แนวนอน 16:9'} ของเรื่อง "${shot.title ?? ''}" — ภาพนี้ภาพเดียวที่มีตัวหนังสือได้ · ${coverRules(shot.language, shot.category, shot.issue).join(' · ')} · ตั้งชื่อภาพ "cover.png COVER" (ชื่อไฟล์ไม่ต้องเขียนลงในภาพ)`,
   ]
 }

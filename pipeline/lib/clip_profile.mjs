@@ -1,13 +1,14 @@
 /**
  * โปรไฟล์ของคลิป — หมวดเนื้อหา + ลายเส้น + ระดับความสยอง
  *
- * เก็บที่ projects/<slug>/00_ref/profile.json   { category, title, artStyle, scare, inkify }
+ * เก็บที่ projects/<slug>/00_ref/profile.json   { category, title, artStyle, scare, inkify, issue }
  *
  * หมวดมาจาก: แนวที่เลือก/คอลัมน์ Genre ของหัวข้อ → ถ้าไม่รู้ ดูจากชื่อเรื่อง
  */
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { ROOT, loadConfig } from './config.mjs'
+import { nextIssueNumber } from './issue-number.mjs'
 import { CATEGORIES, categoryOf, ART_STYLES, RETIRED_ART_STYLES, resolveScare, scareApplies, SCARE_LEVELS } from '../../extension/prompts.js'
 
 export const refDir = (slug) => join(ROOT, 'projects', slug, '00_ref')
@@ -77,9 +78,13 @@ export async function ensureProfile(slug, { title, genre, log = console.log } = 
   if (!profile) {
     const category = categoryOf(genre)?.id ?? detectCategory(title)
     // ระดับความสยอง: autopilot สุ่มไว้แล้วตอนคิดหัวข้อ (CLIP_SCARE) → หัวข้อ บท และภาพเป็นระดับเดียวกัน
-    profile = { category, title, ...clipStyle(), scare: resolveScare(process.env.CLIP_SCARE || loadConfig().script?.scare) }
+    profile = { category, title, ...clipStyle(), scare: resolveScare(process.env.CLIP_SCARE || loadConfig().script?.scare), issue: nextIssueNumber() }
     saveProfile(slug, profile)
-    log(`   หมวดของคลิป: ${profile.category}${scareApplies(profile.category) ? ` · ความสยอง${SCARE_LEVELS[profile.scare].label}` : ''}`)
+    log(`   หมวดของคลิป: ${profile.category}${scareApplies(profile.category) ? ` · ความสยอง${SCARE_LEVELS[profile.scare].label}` : ''} · เล่มที่ ${profile.issue}`)
+  } else if (!Number.isInteger(profile.issue) || profile.issue < 1) {
+    // คลิปเก่าที่ยังไม่มีเลขเล่ม — ให้เลขถัดไปครั้งเดียวแล้วจำไว้ (สั่งซ้ำได้เลขเดิม)
+    profile.issue = nextIssueNumber()
+    saveProfile(slug, profile)
   }
   return profile
 }
