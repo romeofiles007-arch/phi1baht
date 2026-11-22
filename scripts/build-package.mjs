@@ -80,9 +80,11 @@ copyFileSync(join(ROOT, 'setup.exe'), join(OUT, 'setup.exe'))
 // ลูกค้าวางแพ็กเกจรุ่นใหม่ทับโฟลเดอร์เดิม ค่าที่ตั้งไว้จึงไม่ถูกทับ (ดู loadConfig ใน pipeline/lib/config.mjs)
 // ใช้ค่าปัจจุบันของเราเป็นค่าเริ่มต้น แต่ล้างสิ่งที่ผูกกับบัญชี/เครื่องของเรา
 {
-  const userFile = join(OUT, USER_CONFIG)
-  const config = JSON.parse(readFileSync(userFile, 'utf8'))
-  rmSync(userFile)
+  // project.config.json ไม่ขึ้น git (ค่าเครื่องเจ้าของ) — มีก็ใช้เป็นฐาน ไม่มี (เช่น clone ใหม่) ก็ใช้ default.config.json ที่ติดตามอยู่
+  const userFile = join(ROOT, USER_CONFIG)
+  const baseFile = existsSync(userFile) ? userFile : join(OUT, DEFAULT_CONFIG)
+  const config = JSON.parse(readFileSync(baseFile, 'utf8'))
+  rmSync(join(OUT, USER_CONFIG), { force: true })
   writeFileSync(join(OUT, DEFAULT_CONFIG), JSON.stringify(customerDefaults(config), null, 2) + '\n')
 }
 
@@ -153,6 +155,10 @@ try {
   const [remoteName, ...branchParts] = upstream.split('/')
   branch = branchParts.join('/') || 'main'
   repo = githubRepoUrl(execFileSync('git', ['remote', 'get-url', remoteName], { cwd: ROOT, encoding: 'utf8' }))
+} catch {}
+// ยังไม่ได้ตั้ง remote (เช่น ก่อน push ครั้งแรก) → ใช้ repo ที่ประกาศใน package.json (ห้ามชี้ repo ของแอปอื่น)
+try {
+  repo ??= githubRepoUrl(JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).repository?.url)
 } catch {}
 if (!repo) console.warn('  ⚠️ ไม่พบ repo GitHub ที่ push ขึ้นไป — แพ็กเกจนี้อัปเดตเองไม่ได้')
 if (dirty) console.warn('  ⚠️ มีงานที่ยังไม่ commit — ลูกค้าอัปเดตเองได้เฉพาะของที่ push ขึ้น GitHub แล้ว')
