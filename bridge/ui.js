@@ -34,7 +34,7 @@ import { clipSource, postPrompt, parsePost, savePost } from '../pipeline/lib/pos
 import { checklist } from './checklist.js'
 import { autopilotProgress } from '../pipeline/lib/progress.mjs'
 import { ensureProfile, readProfile } from '../pipeline/lib/clip_profile.mjs'
-import { inkifyAll, inkifyEnabled } from '../pipeline/lib/inkify.mjs'
+import { inkifyAll, inkifyEnabled, trimBordersAll } from '../pipeline/lib/inkify.mjs'
 import { readCharacter, updateCharacter, addCharacterImage, removeCharacterImage, clearCharacter, characterAttachments, activeCharacter, CHARACTER_DIR } from '../pipeline/lib/character.mjs'
 import { PAUSE_PRESETS, MOTION_PRESETS } from '../pipeline/lib/ffmpeg.mjs'
 import { SUBTITLE_STYLES } from '../pipeline/lib/subtitles.mjs'
@@ -698,12 +698,14 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
         const slug = selectedSlug()
         if (!slug) return json(res, 400, { error: 'ยังไม่ได้เลือกหัวข้อ' }), true
         const profile = readProfile(slug)
-        if (!inkifyEnabled(loadConfig(), profile)) return json(res, 200, { inkified: 0, enabled: false }), true
         const dir = join(ROOT, 'projects', slug, '05_images')
-        if (!existsSync(dir)) return json(res, 200, { inkified: 0, enabled: true }), true
         const warnings = []
+        // ตัดขอบกระดาษ/กรอบขาวทุกครั้ง ไม่ขึ้นกับสวิตช์งานพิมพ์ (ผู้ใช้: "ไม่เอาขอบ")
+        const trimmed = existsSync(dir) ? await trimBordersAll(dir, { log: (m) => warnings.push(m) }) : 0
+        if (!inkifyEnabled(loadConfig(), profile)) return json(res, 200, { inkified: 0, trimmed, enabled: false, warnings }), true
+        if (!existsSync(dir)) return json(res, 200, { inkified: 0, trimmed, enabled: true }), true
         const inkified = await inkifyAll(dir, { categoryId: profile?.category, log: (m) => warnings.push(m) })
-        return json(res, 200, { inkified, enabled: true, warnings }), true
+        return json(res, 200, { inkified, trimmed, enabled: true, warnings }), true
       }
 
       // รูปที่แนบไปกับคำสั่ง Flow ของแผงข้าง — ชุดเดียวกับ autopilot (ตัวละครของฉัน + Style Kit ฉากของหมวด)

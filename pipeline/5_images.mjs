@@ -20,7 +20,7 @@ import { probeSize } from './lib/ffmpeg.mjs'
 import { collectImages } from './lib/shotfile.mjs'
 import { generateWithFailover } from './lib/flow-failover.mjs'
 import { sanitizeShotPrompt } from './lib/shot-safety.mjs'
-import { inkifyAll, inkifyEnabled } from './lib/inkify.mjs'
+import { inkifyAll, inkifyEnabled, trimBordersAll } from './lib/inkify.mjs'
 
 const slug = process.argv[2]
 if (!slug) {
@@ -160,6 +160,12 @@ const result = await generateWithFailover({
 console.log(`\nเซฟแล้ว ${result.files.length} ไฟล์`)
 if (result.meta && result.meta.generated !== result.meta.expected) {
   console.warn(`เตือน: Flow gen มา ${result.meta.generated} ใบ แต่สั่งไป ${result.meta.expected} ช็อต`)
+}
+
+// ตัดขอบกระดาษ/กรอบขาวที่ Flow วาดมาเอง (ผู้ใช้: "ไม่เอาขอบ") — ทุกครั้ง ไม่ขึ้นกับสวิตช์งานพิมพ์ · ภาพก่อนตัดอยู่ใน 05_images/_original/_bordered/
+{
+  const trimmed = await trimBordersAll(imagesDir)
+  if (trimmed) console.log(`ตัดขอบกระดาษออก ${trimmed} ภาพ`)
 }
 
 // แปลงภาพเป็นงานพิมพ์เล่มละบาท (inkify) — ทุกช็อต + ปก ยกเว้นภาพปริศนา · ปิดได้ที่โปรไฟล์ของคลิป (inkify: false)

@@ -270,3 +270,102 @@ export async function inkifyAll(dir, { categoryId, log = console.warn } = {}) {
 
 /** เปิดแปลงหรือไม่ ตอนรันขั้นภาพ: สวิตช์ในแผงข้าง (config.render.inkify, อ่านตอนรันจริง) และโปรไฟล์คลิปต้องไม่ปิดไว้ (profile.inkify === false = ปิดเฉพาะคลิปนี้) */
 export const inkifyEnabled = (config, profile) => config?.render?.inkify !== false && profile?.inkify !== false
+
+// ── ตัดขอบกระดาษ/กรอบสีขาว (ผู้ใช้ 23 พ.ย. 2026: "ไม่เอาขอบ") ──
+// คำสั่งภาพบอก full-bleed แล้ว แต่ Flow ยังวาดเป็น "ภาพบนแผ่นกระดาษ" บางใบ (คลิปแรก 10 จาก 29 ช็อต)
+// ขอบ = แถบสว่าง สีจืด (ขาว ครีม เทาอ่อน) และเรียบ ติดขอบภาพ · ท้องฟ้าสีฟ้าสดเกินเกณฑ์สี จึงไม่นับ
+const EDGE_BRIGHT = 150 // กระดาษในเงายังสว่างอย่างน้อยเท่านี้
+const EDGE_PALE = 0.2 // (max-min)/max — ขาว/ครีม/เทา · ฟ้า (150,200,240) = .375 ไม่นับ
+const EDGE_SHARE = 0.9 // แถว/คอลัมน์ต้องเป็นพิกเซลกระดาษอย่างน้อย 90%
+const EDGE_FLAT = 22 // ส่วนเบี่ยงเบนความสว่างในแถว — กระดาษเรียบ เนื้อภาพไม่เรียบ
+const EDGE_MIN = 0.01 // แถบบางกว่า 1% ไม่นับ
+const EDGE_MAX = 0.4 // ด้านไหนกินเกิน 40% = ฉากสว่าง (หมอก หิมะ) ไม่ใช่ขอบ → ไม่ตัดทั้งภาพ
+const EDGE_INSET = 0.012 // ตัดเผื่ออีกนิด กันมุมมนและขอบจางที่เหลือ
+
+/**
+ * กรอบเนื้อภาพเมื่อมีขอบกระดาษ — { top, bottom, left, right } เป็นสัดส่วนที่ต้องตัดแต่ละด้าน · ไม่มีขอบ = null
+ * @param {Buffer|Uint8Array} rgb พิกเซล rgb24 (ภาพย่อก็พอ) · w, h ขนาดภาพย่อ
+ */
+export function borderBox(rgb, w, h) {
+  const at = (x, y) => (y * w + x) * 3
+  const edgeLine = (points) => {
+    let paper = 0
+    let sum = 0
+    let sq = 0
+    for (const [x, y] of points) {
+      const i = at(x, y)
+      const r = rgb[i], g = rgb[i + 1], b = rgb[i + 2]
+      const max = Math.max(r, g, b)
+      if (max >= EDGE_BRIGHT && (max - Math.min(r, g, b)) / max <= EDGE_PALE) paper++
+      const l = LUMA[0] * r + LUMA[1] * g + LUMA[2] * b
+      sum += l
+      sq += l * l
+    }
+    const n = points.length
+    const sd = Math.sqrt(Math.max(0, sq / n - (sum / n) ** 2))
+    return paper / n >= EDGE_SHARE && sd <= EDGE_FLAT
+  }
+  const row = (y) => edgeLine(Array.from({ length: w }, (_, x) => [x, y]))
+  const col = (x) => edgeLine(Array.from({ length: h }, (_, y) => [x, y]))
+  const scan = (count, test) => { let n = 0; while (n < count && test(n)) n++; return n }
+  const sides = {
+    top: scan(h, (n) => row(n)) / h,
+    bottom: scan(h, (n) => row(h - 1 - n)) / h,
+    left: scan(w, (n) => col(n)) / w,
+    right: scan(w, (n) => col(w - 1 - n)) / w,
+  }
+  if (Object.values(sides).some((v) => v > EDGE_MAX)) return null
+  for (const k of Object.keys(sides)) sides[k] = sides[k] < EDGE_MIN ? 0 : Math.min(EDGE_MAX, sides[k] + EDGE_INSET)
+  return Object.values(sides).some(Boolean) ? sides : null
+}
+
+/** ขนาดภาพย่อที่ thumbRgb ส่งมา (กว้าง 160) */
+const thumbSize = (rgb) => ({ w: 160, h: Math.round(rgb.length / 3 / 160) })
+
+/**
+ * ตัดขอบกระดาษของภาพไฟล์เดียว (แก้ไฟล์เดิม ขนาดเท่าเดิม: ตัดแล้วขยายเต็มเฟรม ตัดส่วนเกินตรงกลาง)
+ * เก็บภาพก่อนตัดที่ _original/_bordered/ · ภาพที่บันทึกว่าแปลงเป็นงานพิมพ์แล้ว ยังนับว่าแปลงแล้ว (ไม่แปลงซ้ำ)
+ * คืน true ถ้าตัด, false ถ้าไม่มีขอบ
+ */
+export async function trimBorder(file) {
+  const rgb = await thumbRgb(file)
+  const { w, h } = thumbSize(rgb)
+  const box = borderBox(rgb, w, h)
+  if (!box) return false
+  const { width, height } = await probeSize(file)
+  if (!width || !height) throw new Error(`อ่านขนาดภาพไม่ได้: ${file}`)
+  const dir = dirname(file)
+  const name = basename(file)
+  const done = readInkified(dir)
+  const wasInkified = done[name] === sha1(file)
+  const keepW = (1 - box.left - box.right).toFixed(4)
+  const keepH = (1 - box.top - box.bottom).toFixed(4)
+  const vf = `crop=iw*${keepW}:ih*${keepH}:iw*${box.left.toFixed(4)}:ih*${box.top.toFixed(4)},scale=${width}:${height}:force_original_aspect_ratio=increase:flags=lanczos,crop=${width}:${height}`
+  const tmp = `${file}.trim${extname(file)}`
+  try {
+    const lossy = /\.jpe?g$/i.test(file) ? ['-q:v', '2'] : []
+    await run('ffmpeg', ['-y', '-v', 'error', '-i', file, '-vf', vf, '-frames:v', '1', '-update', '1', ...lossy, tmp])
+    const keep = join(dir, '_original', '_bordered', name)
+    mkdirSync(dirname(keep), { recursive: true })
+    copyFileSync(file, keep)
+    if (wasInkified) writeInkified(dir, { ...done, [name]: sha1(tmp) })
+    renameSync(tmp, file)
+  } catch (error) {
+    rmSync(tmp, { force: true })
+    throw error
+  }
+  return true
+}
+
+/** ตัดขอบทุกภาพในโฟลเดอร์ 05_images (ยกเว้น riddle) — ภาพที่พังเตือนแล้วข้าม · คืนจำนวนภาพที่ตัด */
+export async function trimBordersAll(dir, { log = console.warn } = {}) {
+  let n = 0
+  for (const name of readdirSync(dir).filter((f) => IMAGE.test(f) && !SKIP.test(f)).sort()) {
+    try {
+      if (await trimBorder(join(dir, name))) n++
+    } catch (err) {
+      log(`เตือน: ตัดขอบภาพ ${name} ไม่สำเร็จ ใช้ภาพเดิม — ${String(err.message).split('\n').filter(Boolean).slice(-1)[0]}`)
+    }
+  }
+  return n
+}
