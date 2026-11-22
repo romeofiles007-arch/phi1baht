@@ -165,7 +165,7 @@ if (result.meta && result.meta.generated !== result.meta.expected) {
 
 // แปลงภาพเป็นงานพิมพ์เล่มละบาท (inkify) — ทุกช็อต + ปก ยกเว้นภาพปริศนา · ปิดได้ที่โปรไฟล์ของคลิป (inkify: false)
 if (inkifyEnabled(loadConfig(), profile)) {
-  // ภาพที่โหลดใหม่ทับชื่อเดิม inkify ตรวจจากเวลาแก้ไขเอง — ไม่ลบต้นฉบับ
+  // ภาพที่แปลงแล้ว (และสำเนาของมัน) จำด้วย hash ใน _original/_inkified.json — ไม่แปลงซ้ำ · ภาพดิบที่โหลดทับใหม่ถูกแปลงใหม่ · ไม่ลบต้นฉบับ
   const n = await inkifyAll(imagesDir, { categoryId: profile?.category })
   if (n) console.log(`แปลงเป็นงานพิมพ์เล่มละบาท ${n} ภาพ (ต้นฉบับอยู่ใน 05_images/_original/)`)
 }

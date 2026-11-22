@@ -19,6 +19,7 @@ import { probeDuration, concatAudio, trimSilence, eachLimit, PAUSE_PRESETS } fro
 import { buildTimeline, timecodeFilename, hhmmss } from './lib/timecode.mjs'
 import { readAsrTimeline } from './lib/asr.mjs'
 import { shotlistFiles, readRounds, mergeRounds } from './lib/shotlist.mjs'
+import { renameInkified } from './lib/inkify.mjs'
 
 const [slug, ...rest] = process.argv.slice(2)
 if (!slug) {
@@ -121,6 +122,8 @@ writeFileSync(sf.slots, JSON.stringify(newSlots, null, 2))
 // ภาพ: เปลี่ยนชื่อสองจังหวะ (ชื่อใหม่อาจชนกับชื่อเก่าของช็อตอื่น)
 const imagesDir = projectDir(slug, 'images')
 const images = readdirSync(imagesDir).filter((f) => rename.has(f))
+// ต้นฉบับใน _original/ + บันทึกภาพที่แปลงแล้ว ต้องย้ายชื่อตามภาพ — ไม่งั้นภาพที่ย้ายไปถูกเทียบกับต้นฉบับของภาพอื่น แล้วโดนแปลงซ้ำ
+const originals = renameInkified(imagesDir, rename)
 for (const f of images) renameSync(join(imagesDir, f), join(imagesDir, `__retime__${f}`))
 for (const f of images) renameSync(join(imagesDir, `__retime__${f}`), join(imagesDir, rename.get(f)))
 const filledFile = join(imagesDir, '_filled.json')
@@ -140,6 +143,6 @@ if (existsSync(roundsDir)) {
 }
 
 const moved = [...rename].filter(([a, b]) => a !== b).length
-console.log(`ย้ายเวลา ${moved}/${newSlots.length} ช็อต · เปลี่ยนชื่อภาพ ${images.length} ใบ`)
+console.log(`ย้ายเวลา ${moved}/${newSlots.length} ช็อต · เปลี่ยนชื่อภาพ ${images.length} ใบ${originals ? ` (+ ต้นฉบับ ${originals} ใบ)` : ''}`)
 console.log(`สำรองของเดิมไว้ที่ ${backup}`)
 console.log('ขั้นต่อไป: ตัดต่อวิดีโอใหม่')

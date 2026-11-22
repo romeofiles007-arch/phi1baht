@@ -10,9 +10,10 @@
  *   3) หมึกซึม   gblur เบามาก
  *   4) สีเหลื่อม 1–2px   rgbashift
  *   5) เกรนกระดาษขาวเป็นกลาง   ขาว + noise สีเทา ผสมแบบ multiply เบา ๆ (ไม่มีสีครีม ไม่มีขอบหมอง ไม่มีขอบกระดาษ)
- * เก็บต้นฉบับที่ 05_images/_original/ · ไฟล์ที่มีต้นฉบับแล้วไม่ทำซ้ำ
+ * เก็บต้นฉบับที่ 05_images/_original/ · ภาพที่แปลงแล้ว (จำด้วย sha1 ใน _original/_inkified.json) ไม่ทำซ้ำ แม้ถูกคัดลอก/เปลี่ยนชื่อ
  */
-import { existsSync, mkdirSync, copyFileSync, renameSync, rmSync, readdirSync, statSync, utimesSync } from 'node:fs'
+import { existsSync, mkdirSync, copyFileSync, renameSync, rmSync, readdirSync, statSync, readFileSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { join, dirname, basename, extname } from 'node:path'
 import { execFile } from 'node:child_process'
 import { run, probeSize } from './ffmpeg.mjs'
@@ -156,28 +157,89 @@ export function inkifyFilter({ palette, width, height, seed, gains = null }) {
 /** เลข seed คงที่จากชื่อไฟล์ — ไฟล์เดิมได้เกรนเดิมเสมอ */
 const seedOf = (name) => [...name].reduce((h, ch) => (Math.imul(h, 31) + ch.codePointAt(0)) >>> 0, 7) % 1_000_000
 
+// ── สถานะ "แปลงแล้ว" จำจากเนื้อไฟล์ (sha1 ของภาพที่แปลงเสร็จ) ไม่ใช่เวลาแก้ไข ──
+// 05_images/_original/_inkified.json = { "<ชื่อไฟล์>": "<sha1 ของภาพที่แปลงแล้ว>" }
+//   เนื้อไฟล์ตรงกับที่จดไว้ = แปลงแล้ว (แตะไฟล์/คัดลอกเวลาเปลี่ยนก็ไม่ทำซ้ำ)
+//   เนื้อไฟล์ตรงกับภาพแปลงแล้วของอีกชื่อ = สำเนา (autopilot เติมช็อตที่ขาดด้วยภาพข้างเคียง) → ไม่แปลงซ้ำ จดชื่อใหม่ + ต้นฉบับของภาพต้นทาง
+//   ไม่ตรงอะไรเลย = ภาพดิบ (ใหม่ หรือ Flow โหลดทับ) → แปลง และภาพดิบนี้เป็นต้นฉบับ
+export const INKIFIED = '_inkified.json'
+const sha1 = (file) => createHash('sha1').update(readFileSync(file)).digest('hex')
+const manifestOf = (dir) => join(dir, '_original', INKIFIED)
+
+/** { ชื่อไฟล์: sha1 } ของภาพที่แปลงแล้วในโฟลเดอร์ · โฟลเดอร์รุ่นก่อนมีบันทึกนี้ → อนุมานจากต้นฉบับ + เวลาแก้ไขครั้งเดียว */
+export function readInkified(dir) {
+  try {
+    const m = JSON.parse(readFileSync(manifestOf(dir), 'utf8'))
+    if (m && typeof m === 'object' && !Array.isArray(m)) return m
+  } catch {}
+  // ไม่มีบันทึก (หรือไฟล์เสีย): ภาพที่มีต้นฉบับและไม่ใหม่กว่าต้นฉบับ = แปลงแล้ว (กติกาเดิม) — จดเป็น hash ตั้งแต่ครั้งถัดไป
+  const legacy = {}
+  if (!existsSync(join(dir, '_original'))) return legacy
+  for (const name of readdirSync(dir).filter((n) => IMAGE.test(n) && !SKIP.test(n))) {
+    const keep = join(dir, '_original', name)
+    if (existsSync(keep) && statSync(join(dir, name)).mtimeMs <= statSync(keep).mtimeMs + 2) legacy[name] = sha1(join(dir, name))
+  }
+  return legacy
+}
+
+function writeInkified(dir, map) {
+  const file = manifestOf(dir)
+  mkdirSync(dirname(file), { recursive: true })
+  writeFileSync(`${file}.tmp`, JSON.stringify(map, null, 2))
+  renameSync(`${file}.tmp`, file)
+}
+
 /**
- * แปลงภาพไฟล์เดียว (แก้ไฟล์เดิม) · คืน true ถ้าแปลงแล้ว, false ถ้ามีต้นฉบับใน _original อยู่แล้ว (ทำแล้ว)
+ * ภาพในโฟลเดอร์ถูกเปลี่ยนชื่อ (retime_audio ย้ายเวลาช็อต) → เปลี่ยนชื่อต้นฉบับใน _original และบันทึก hash ตามไปด้วย
+ * เรียกก่อนเปลี่ยนชื่อภาพ (โฟลเดอร์รุ่นเก่าที่ยังไม่มีบันทึกต้องอนุมานจากชื่อเดิม) · คืนจำนวนต้นฉบับที่เปลี่ยนชื่อ
+ * @param {Map<string,string>} rename ชื่อเดิม → ชื่อใหม่
+ */
+export function renameInkified(dir, rename) {
+  const orig = join(dir, '_original')
+  if (!existsSync(orig)) return 0
+  const done = readInkified(dir)
+  const files = readdirSync(orig).filter((f) => rename.has(f) && rename.get(f) !== f)
+  // สองจังหวะ: ชื่อใหม่อาจชนกับชื่อเก่าของช็อตอื่น
+  for (const f of files) renameSync(join(orig, f), join(orig, `__retime__${f}`))
+  for (const f of files) renameSync(join(orig, `__retime__${f}`), join(orig, rename.get(f)))
+  const next = {}
+  for (const [n, h] of Object.entries(done)) if (!rename.has(n)) next[n] = h
+  for (const [n, h] of Object.entries(done)) if (rename.has(n)) next[rename.get(n)] = h
+  writeInkified(dir, next)
+  return files.length
+}
+
+/**
+ * แปลงภาพไฟล์เดียว (แก้ไฟล์เดิม) · คืน true ถ้าแปลงแล้ว, false ถ้าเป็นภาพที่แปลงแล้ว (หรือสำเนาของภาพที่แปลงแล้ว)
  * ffmpeg ล้มเหลว = ไฟล์เดิมไม่ถูกแตะ แล้วโยนข้อผิดพลาด
  */
 export async function inkify(file, { categoryId, seed } = {}) {
-  const keep = join(dirname(file), '_original', basename(file))
-  // ทำแล้ว = มีต้นฉบับ และไฟล์ยังเป็นไฟล์ที่เราเขียนไว้ (เวลาแก้ไขตรงกับต้นฉบับ) · ถ้าไฟล์ใหม่กว่า = Flow โหลดภาพดิบใหม่ทับ → แปลงใหม่ และใช้ภาพดิบใหม่เป็นต้นฉบับ
-  if (existsSync(keep) && statSync(file).mtimeMs <= statSync(keep).mtimeMs + 2) return false
+  const dir = dirname(file)
+  const name = basename(file)
+  const keep = join(dir, '_original', name)
+  const done = readInkified(dir)
+  const hash = sha1(file)
+  if (done[name] === hash) return false
+  const twin = Object.keys(done).find((n) => n !== name && done[n] === hash)
+  if (twin) {
+    const twinKeep = join(dir, '_original', twin)
+    if (existsSync(twinKeep)) copyFileSync(twinKeep, keep) // ต้นฉบับของสำเนา = ต้นฉบับของภาพต้นทาง (ไม่ใช่ภาพที่แปลงแล้ว)
+    writeInkified(dir, { ...done, [name]: hash })
+    return false
+  }
   const { width, height } = await probeSize(file)
   if (!width || !height) throw new Error(`อ่านขนาดภาพไม่ได้: ${file}`)
   const gains = await paperGainsOf(file) // วัดจากภาพดิบของ Flow ทุกครั้ง (พื้นเหลือง → ขาวกลาง · ไม่มีพื้นกระดาษ = null)
-  const graph = inkifyFilter({ palette: paletteOf(categoryId), width, height, seed: seed ?? seedOf(basename(file)), gains })
+  const graph = inkifyFilter({ palette: paletteOf(categoryId), width, height, seed: seed ?? seedOf(name), gains })
   const tmp = `${file}.ink${extname(file)}`
   try {
     const lossy = /\.jpe?g$/i.test(file) ? ['-q:v', '2'] : []
     await run('ffmpeg', ['-y', '-v', 'error', '-i', file, '-filter_complex', graph, '-map', '[out]', '-frames:v', '1', '-update', '1', ...lossy, tmp])
     mkdirSync(dirname(keep), { recursive: true })
     copyFileSync(file, keep) // ภาพดิบจริงของไฟล์นี้ตอนนี้ (ไม่เคยเป็นภาพที่แปลงแล้ว) · เขียนทับต้นฉบับเก่าที่ล้าสมัยเท่านั้นหลังแปลงสำเร็จ
+    // จด hash ก่อนย้ายไฟล์: ดับกลางทาง = ไฟล์ยังเป็นภาพดิบ hash ไม่ตรง → รอบหน้าแปลงใหม่ถูกต้อง · ย้ายแล้ว = hash ตรง ไม่ทำซ้ำ
+    writeInkified(dir, { ...done, [name]: sha1(tmp) })
     renameSync(tmp, file)
-    const t = new Date()
-    utimesSync(file, t, t)
-    utimesSync(keep, t, t)
   } catch (error) {
     rmSync(tmp, { force: true })
     throw error
@@ -194,6 +256,8 @@ const SKIP = /^riddle\./i // ภาพปริศนา = ภาพเงาส
  */
 export async function inkifyAll(dir, { categoryId, log = console.warn } = {}) {
   let done = 0
+  // โฟลเดอร์รุ่นก่อนมีบันทึก hash → จดสิ่งที่อนุมานได้ไว้ก่อนแตะไฟล์ใด (หลังจากนี้ไม่พึ่งเวลาแก้ไขอีก)
+  if (existsSync(join(dir, '_original')) && !existsSync(manifestOf(dir))) writeInkified(dir, readInkified(dir))
   for (const name of readdirSync(dir).filter((n) => IMAGE.test(n) && !SKIP.test(n)).sort()) {
     try {
       if (await inkify(join(dir, name), { categoryId })) done++

@@ -3,10 +3,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync, execFileSync } from 'node:child_process'
-import { mkdtempSync, existsSync, rmSync, readFileSync, writeFileSync, utimesSync } from 'node:fs'
+import { mkdtempSync, existsSync, rmSync, readFileSync, writeFileSync, utimesSync, copyFileSync, renameSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { inkifyFilter, inkify, inkifyAll, inkifyEnabled, paletteOf, paperGains, paperGainsOf, colorMatrix, SATURATION, isPaper, colorCorrectFilter, correctColour, thumbRgb } from '../pipeline/lib/inkify.mjs'
+import { inkifyFilter, inkify, inkifyAll, inkifyEnabled, readInkified, renameInkified, INKIFIED, paletteOf, paperGains, paperGainsOf, colorMatrix, SATURATION, isPaper, colorCorrectFilter, correctColour, thumbRgb } from '../pipeline/lib/inkify.mjs'
 import { CATEGORIES } from '../extension/prompts.js'
 
 const hasFfmpeg = spawnSync('ffmpeg', ['-version']).status === 0
@@ -161,6 +161,103 @@ test('inkify: ภาพดิบที่ Flow โหลดทับใหม่
     const raw = readFileSync(f)
     assert.equal(await inkify(f, { categoryId: 'folk' }), true)
     assert.deepEqual(readFileSync(keep), raw)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+// ── ไม่แปลงซ้ำ (final review I2): สถานะ "แปลงแล้ว" จำด้วย hash ของเนื้อไฟล์ ไม่ใช่เวลาแก้ไข ──
+const mkImg = (f, c) => execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', `color=c=${c}:s=64x64`, '-vf', 'drawbox=x=8:y=8:w=30:h=30:color=white:t=fill', '-frames:v', '1', f])
+const sameBytes = (a, b) => readFileSync(a).equals(readFileSync(b))
+
+test('inkify: สำเนาของภาพที่แปลงแล้ว (autopilot เติมช็อตที่ขาด) ไม่ถูกแปลงซ้ำ · ต้นฉบับของสำเนา = ต้นฉบับภาพต้นทาง', { skip: !hasFfmpeg && 'ไม่มี ffmpeg' }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inkify-'))
+  try {
+    const a = join(dir, '00_00_01.png')
+    mkImg(a, 'red')
+    assert.equal(await inkifyAll(dir, { categoryId: 'ghost' }), 1)
+    const processed = readFileSync(a)
+    copyFileSync(a, join(dir, '00_00_05.png')) // fillMissingImages
+    assert.equal(await inkifyAll(dir, { categoryId: 'ghost' }), 0, 'สำเนาต้องไม่ถูกแปลงซ้ำ')
+    assert.deepEqual(readFileSync(join(dir, '00_00_05.png')), processed)
+    assert.ok(sameBytes(join(dir, '_original', '00_00_05.png'), join(dir, '_original', '00_00_01.png')), 'ต้นฉบับของสำเนาต้องเป็นภาพดิบ ไม่ใช่ภาพที่แปลงแล้ว')
+    assert.ok(!readFileSync(join(dir, '_original', '00_00_05.png')).equals(processed))
+    const m = readInkified(dir)
+    assert.equal(m['00_00_05.png'], m['00_00_01.png'])
+    assert.ok(existsSync(join(dir, '_original', INKIFIED)))
+    assert.equal(await inkifyAll(dir, { categoryId: 'ghost' }), 0) // รอบที่ 3 (--cover-only / ปุ่มสร้างปก) ก็ไม่ทำซ้ำ
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('inkify: แตะไฟล์ (เวลาแก้ไขใหม่กว่าต้นฉบับ) แต่เนื้อไฟล์เดิม → ไม่แปลงซ้ำ (เคสดับระหว่าง rename กับ utimes ของแบบเดิม)', { skip: !hasFfmpeg && 'ไม่มี ffmpeg' }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inkify-'))
+  try {
+    const f = join(dir, '00_00_01.png')
+    mkImg(f, 'green')
+    assert.equal(await inkify(f, { categoryId: 'folk' }), true)
+    const processed = readFileSync(f)
+    const later = new Date(Date.now() + 60_000)
+    utimesSync(f, later, later)
+    assert.equal(await inkify(f, { categoryId: 'folk' }), false)
+    assert.deepEqual(readFileSync(f), processed)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('inkify: ดับหลังจด hash แต่ก่อนย้ายไฟล์ (ไฟล์ยังเป็นภาพดิบ) → รอบหน้าแปลงใหม่ และต้นฉบับยังเป็นภาพดิบ', { skip: !hasFfmpeg && 'ไม่มี ffmpeg' }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inkify-'))
+  try {
+    const f = join(dir, '00_00_01.png')
+    mkImg(f, 'blue')
+    const raw = readFileSync(f)
+    assert.equal(await inkify(f, { categoryId: 'drama' }), true)
+    writeFileSync(f, raw) // จำลอง: บันทึก hash ของภาพแปลงแล้วไปแล้ว แต่ไฟล์บนดิสก์ยังเป็นภาพดิบ
+    const old = new Date(Date.now() - 60_000)
+    utimesSync(f, old, old) // เวลาเก่ากว่าต้นฉบับ — กติกาเดิมจะเข้าใจว่าแปลงแล้ว
+    assert.equal(await inkify(f, { categoryId: 'drama' }), true)
+    assert.deepEqual(readFileSync(join(dir, '_original', '00_00_01.png')), raw)
+    assert.ok(!readFileSync(f).equals(raw))
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('renameInkified (retime_audio): ต้นฉบับ + hash ย้ายชื่อตามภาพ · สลับชื่อกันก็ไม่แปลงซ้ำ ต้นฉบับยังคู่ภาพเดิม', { skip: !hasFfmpeg && 'ไม่มี ffmpeg' }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inkify-'))
+  try {
+    const names = ['00_00_01.png', '00_00_04.png', '00_00_09.png']
+    names.forEach((n, i) => mkImg(join(dir, n), ['red', 'green', 'blue'][i]))
+    const raws = names.map((n) => readFileSync(join(dir, n)))
+    assert.equal(await inkifyAll(dir, { categoryId: 'comedy' }), 3)
+    const processed = names.map((n) => readFileSync(join(dir, n)))
+    // ช็อตถูกบีบ: 01→01 (ไม่ย้าย) · 04→09 · 09→12 (ชื่อใหม่ของ 04 ชนกับชื่อเก่าของ 09)
+    const rename = new Map([['00_00_01.png', '00_00_01.png'], ['00_00_04.png', '00_00_09.png'], ['00_00_09.png', '00_00_12.png']])
+    assert.equal(renameInkified(dir, rename), 2)
+    const moving = names.filter((n) => rename.get(n) !== n)
+    for (const n of moving) renameSync(join(dir, n), join(dir, `__retime__${n}`))
+    for (const n of moving) renameSync(join(dir, `__retime__${n}`), join(dir, rename.get(n)))
+    assert.equal(await inkifyAll(dir, { categoryId: 'comedy' }), 0, 'ภาพที่ย้ายชื่อต้องไม่ถูกแปลงซ้ำ')
+    names.forEach((n, i) => {
+      const to = rename.get(n)
+      assert.deepEqual(readFileSync(join(dir, to)), processed[i])
+      assert.deepEqual(readFileSync(join(dir, '_original', to)), raws[i], `ต้นฉบับของ ${to} ต้องเป็นภาพดิบของ ${n}`)
+    })
+    assert.deepEqual(Object.keys(readInkified(dir)).sort(), ['00_00_01.png', '00_00_09.png', '00_00_12.png'])
+    assert.match(read('pipeline/retime_audio.mjs'), /renameInkified\(imagesDir, rename\)[\s\S]*renameSync\(join\(imagesDir, f\)/) // เรียกก่อนเปลี่ยนชื่อภาพ
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('readInkified: โฟลเดอร์รุ่นก่อน (ยังไม่มีบันทึก hash) อนุมานจากต้นฉบับ + เวลาแก้ไขครั้งเดียว แล้วจดลงบันทึก', { skip: !hasFfmpeg && 'ไม่มี ffmpeg' }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inkify-'))
+  try {
+    const f = join(dir, '00_00_01.png')
+    mkImg(f, 'red')
+    assert.equal(await inkify(f, { categoryId: 'ghost' }), true)
+    rmSync(join(dir, '_original', INKIFIED)) // แบบที่แปลงด้วยรุ่นก่อน: มีแต่ต้นฉบับ
+    const t = new Date()
+    utimesSync(join(dir, '_original', '00_00_01.png'), t, t)
+    utimesSync(f, t, t)
+    const processed = readFileSync(f)
+    assert.equal(await inkifyAll(dir, { categoryId: 'ghost' }), 0)
+    assert.deepEqual(readFileSync(f), processed)
+    assert.ok(existsSync(join(dir, '_original', INKIFIED)))
+    utimesSync(f, new Date(Date.now() + 60_000), new Date(Date.now() + 60_000)) // จดแล้ว → เวลาไม่มีผลอีก
+    assert.equal(await inkifyAll(dir, { categoryId: 'ghost' }), 0)
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
