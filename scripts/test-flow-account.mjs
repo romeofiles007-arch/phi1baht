@@ -3,15 +3,10 @@ import { test } from 'node:test'
 let F
 try { F = await import('../extension/flow-navigation.js') } catch (error) { if (error.code !== 'ERR_MODULE_NOT_FOUND') throw error }
 const api = () => { assert.ok(F, 'Flow account routing is missing'); return F }
-test('the actively selected Flow tab takes precedence over the remembered old account tab', () => {
+test('only the remembered Flow tab is used; a Flow tab the user opened is never borrowed', () => {
   const tabs = [{ id: 1, url: 'https://flow.google.com/project/old', lastAccessed: 10 }, { id: 2, url: 'https://flow.google.com/?authuser=1', active: true, lastAccessed: 20 }]
-  assert.equal(api().preferredFlowTab(tabs, 1).id, 2)
-  tabs[1].active = false
-  assert.equal(api().preferredFlowTab(tabs, 1).id, 2)
-})
-test('an active Flow tab in an older window cannot beat the more recently chosen account', () => {
-  const tabs = [{ id: 1, url: 'https://flow.google.com/project/old', active: true, lastAccessed: 10 }, { id: 2, url: 'https://flow.google.com/?authuser=1', active: false, lastAccessed: 20 }]
-  assert.equal(api().preferredFlowTab(tabs, 1).id, 2)
+  assert.equal(api().preferredFlowTab(tabs, 1).id, 1)
+  assert.equal(api().preferredFlowTab(tabs, 3), null)
 })
 test('Flow home keeps account routing query parameters and path prefixes', () => {
   const F = api()

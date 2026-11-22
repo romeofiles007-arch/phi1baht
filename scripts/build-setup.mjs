@@ -30,7 +30,7 @@ execFileSync(csc, [
   '/platform:anycpu',
   '/optimize+',
   '/codepage:65001',
-  `/win32icon:${join(ROOT, 'extension', 'icons', 'china-auto.ico')}`,
+  `/win32icon:${join(ROOT, 'extension', 'icons', 'phi1baht.ico')}`,
   `/win32manifest:${join(ROOT, 'native', 'setup.manifest')}`,
   '/r:System.IO.Compression.dll',
   '/r:System.IO.Compression.FileSystem.dll',

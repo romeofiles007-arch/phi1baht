@@ -3,7 +3,7 @@ import { loadEnv } from './env.mjs'
 
 loadEnv()
 
-const PORT = Number(process.env.BRIDGE_PORT || 8786)
+const PORT = Number(process.env.BRIDGE_PORT || 8787)
 const BASE = `http://127.0.0.1:${PORT}`
 
 function headers() {

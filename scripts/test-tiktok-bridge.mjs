@@ -22,7 +22,7 @@ const request = async (path, body) => {
 }
 async function start() {
   // The app deliberately lets .env override shell variables. Load it first, then
-  // set isolated test parameters before importing the server (never bind 8786).
+  // set isolated test parameters before importing the server (never bind 8787).
   const boot = `import {loadEnv} from './pipeline/lib/env.mjs'; loadEnv(); Object.assign(process.env,${JSON.stringify({ BRIDGE_PORT: String(port), BRIDGE_TOKEN: token, POSTING_DIR: temp })}); await import('./bridge/server.js');`
   child = spawn(process.execPath, ['--input-type=module', '-e', boot], { cwd: root, stdio: 'ignore', windowsHide: true })
   for (let i = 0; i < 100; i++) {

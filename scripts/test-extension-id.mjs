@@ -1,7 +1,7 @@
 // extension ID ต้องตรงกันทุกที่ — ไม่ตรง Chrome ปฏิเสธ native host ("forbidden") แผงข้างเชื่อมโปรแกรมไม่ได้
 //   node --test scripts/test-extension-id.mjs
 // เจอจริง 20 พ.ย. 2026 เครื่อง 24hrs: native/extension-id.txt ค้าง ID ของแอปเดิม (ojcbjifg…)
-// ตัวติดตั้งเขียน ID นั้นลงไฟล์ลงทะเบียน native host แต่ extension จริง (คำนวณจาก key ใน manifest) คือ nobgolck…
+// ตัวติดตั้งเขียน ID นั้นลงไฟล์ลงทะเบียน native host แต่ extension จริง (คำนวณจาก key ใน manifest) คือ cpehcglc… (ID ใหม่ของ ผี 1 บาท)
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -16,12 +16,12 @@ const manifest = JSON.parse(read('extension/manifest.json'))
 const ID = idFromKey(manifest.key)
 
 test('extension-id.txt ตรงกับ ID ที่ Chrome คำนวณจาก key ใน manifest', () => {
-  assert.equal(ID, 'nobgolckkkcjokecfhdmejfamdbghaoa')
+  assert.equal(ID, 'cpehcglcaappemnbeebdjfkidngddlih')
   assert.equal(read('native/extension-id.txt').trim(), ID)
 })
 
 test('ไฟล์ลงทะเบียน native host ใน repo อนุญาต ID นี้', () => {
-  const host = JSON.parse(read('native/com.china_auto.bridge.json'))
+  const host = JSON.parse(read('native/com.phi1baht.bridge.json'))
   assert.deepEqual(host.allowed_origins, [`chrome-extension://${ID}/`])
 })
 

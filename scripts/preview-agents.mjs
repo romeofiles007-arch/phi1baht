@@ -162,7 +162,7 @@ createServer((req, res) => {
   if (!file.startsWith(base + sep) || !types[extname(file)] || !existsSync(file)) {res.writeHead(404);return res.end()}
   let content = readFileSync(file)
   if (extname(file) === '.html') {
-    content = content.toString().replace('<title>ตำนานจีน Auto</title>', '<title>ตัวอย่างสถานะแผนก AI</title><script src="/fixture-stub.js"></script>')
+    content = content.toString().replace('<title>ผี 1 บาท</title>', '<title>ตัวอย่างสถานะแผนก AI</title><script src="/fixture-stub.js"></script>')
     // ใช้กฎธีมจริง โดยบังคับเงื่อนไขในหน้า fixture เท่านั้น
     content = content.replace('@media (prefers-color-scheme: dark)', url.searchParams.get('theme') === 'light' ? '@media not all' : '@media all')
   }

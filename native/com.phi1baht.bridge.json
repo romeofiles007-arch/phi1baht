@@ -1,0 +1,9 @@
+{
+  "name": "com.phi1baht.bridge",
+  "description": "ผี 1 บาท — เปิดโปรแกรมเมื่อกดไอคอน extension",
+  "path": "E:\\การ์ตูนไทย๑บาท\\native\\host.bat",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://cpehcglcaappemnbeebdjfkidngddlih/"
+  ]
+}

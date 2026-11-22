@@ -22,7 +22,7 @@ export const YOUTUBE_SCOPES = ['https://www.googleapis.com/auth/youtube.upload',
 export const DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.file']
 const DRIVE_API = 'https://www.googleapis.com/drive/v3'
 const DRIVE_UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files'
-export const DRIVE_FOLDER_NAME = 'ตำนานจีน Auto · รอโพสต์'
+export const DRIVE_FOLDER_NAME = 'ผี 1 บาท · รอโพสต์'
 
 /** อ่าน error ของ Facebook/Google ให้เป็นประโยคเดียวที่ผู้ใช้เข้าใจ */
 async function failure(res, service) {

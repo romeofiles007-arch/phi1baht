@@ -16,7 +16,7 @@ import { ROOT, loadConfig } from './config.mjs'
 import { categoryOf, figureInTitle, figuresOf, ART_STYLES, RETIRED_ART_STYLES, NARRATIONS, resolveMood } from '../../extension/prompts.js'
 import { readSelfNarrator, selfNarratorReady, SELF_NOT_READY } from './self_narrator.mjs'
 
-const UA = { 'user-agent': 'ChinaAuto/1.0 (personal storytelling video tool; Wikimedia API)' }
+const UA = { 'user-agent': 'Phi1Baht/1.0 (personal storytelling video tool; Wikimedia API)' }
 const WIKI_API = 'https://th.wikipedia.org/w/api.php'
 const MAX_REF_IMAGES = 3
 

@@ -4,7 +4,7 @@ import { projectDir } from '../pipeline/lib/config.mjs'
 import { readdirSync, rmSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 
-const PORT = process.env.BRIDGE_PORT || 8786
+const PORT = process.env.BRIDGE_PORT || 8787
 const BASE = `http://127.0.0.1:${PORT}`
 const TOKEN = process.env.BRIDGE_TOKEN
 const outDir = projectDir('_bridgetest', 'images')

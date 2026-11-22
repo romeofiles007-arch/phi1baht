@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * สร้างไฟล์ติดตั้งสำหรับลูกค้า: dist/ChinaAuto-Setup-<version>.exe
+ * สร้างไฟล์ติดตั้งสำหรับลูกค้า: dist/Phi1Baht-Setup-<version>.exe
  *
  *   node scripts/build-installer.mjs
  *
  * 1. สร้างแพ็กเกจด้วย build-package.mjs (โค้ด + node + ffmpeg + Python/เสียง Edge · ตรวจว่าไม่มี key ของเราติดไป)
- * 2. ห่อเป็น Setup.exe ด้วย Inno Setup (installer/ChinaAuto.iss)
+ * 2. ห่อเป็น Setup.exe ด้วย Inno Setup (installer/Phi1Baht.iss)
  * เลขรุ่นมาจาก extension/manifest.json
  *
  * ต้องมี Inno Setup 6: winget install --id JRSoftware.InnoSetup -e --scope user
@@ -28,8 +28,8 @@ console.log('▸ สร้างแพ็กเกจ')
 execFileSync(process.execPath, [join(ROOT, 'scripts', 'build-package.mjs')], { cwd: ROOT, stdio: 'inherit' })
 
 console.log(`\n▸ ห่อเป็น Setup.exe (รุ่น ${version}) — บีบอัดนานหลายนาที`)
-execFileSync(iscc, [`/DAppVer=${version}`, '/Q', join(ROOT, 'installer', 'ChinaAuto.iss')], { cwd: join(ROOT, 'installer'), stdio: 'inherit' })
+execFileSync(iscc, [`/DAppVer=${version}`, '/Q', join(ROOT, 'installer', 'Phi1Baht.iss')], { cwd: join(ROOT, 'installer'), stdio: 'inherit' })
 
-const out = join(ROOT, 'dist', `ChinaAuto-Setup-${version}.exe`)
+const out = join(ROOT, 'dist', `Phi1Baht-Setup-${version}.exe`)
 console.log(`\n✅ ${out} (${(statSync(out).size / 1048576).toFixed(0)} MB)`)
 console.log('ส่งไฟล์นี้ไฟล์เดียวให้ลูกค้า — ดับเบิลคลิก ถัดไป → ติดตั้ง แล้วทำ Load unpacked ใน Chrome ตามหน้าจบ')

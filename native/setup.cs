@@ -26,9 +26,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("China Auto Setup")]
-[assembly: AssemblyProduct("China Auto")]
-[assembly: AssemblyDescription("China Auto installer")]
+[assembly: AssemblyTitle("ผี 1 บาท Setup")]
+[assembly: AssemblyProduct("ผี 1 บาท")]
+[assembly: AssemblyDescription("ผี 1 บาท installer")]
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
 
@@ -98,7 +98,7 @@ static class Setup
     static void BuildWindow()
     {
         Win = new Form();
-        Win.Text = "ตำนานจีน Auto — ติดตั้ง";
+        Win.Text = "ผี 1 บาท — ติดตั้ง";
         Win.StartPosition = FormStartPosition.CenterScreen;
         Win.ClientSize = new Size(820, 540);
         Win.MinimumSize = new Size(560, 360);
@@ -170,7 +170,7 @@ static class Setup
         Win.FormClosing += delegate (object s, FormClosingEventArgs e)
         {
             if (!Running) return;
-            var ok = MessageBox.Show(Win, "ยังติดตั้งไม่เสร็จ — ปิดตอนนี้เลยไหม?\n(ดับเบิลคลิก setup.exe ใหม่ได้ภายหลัง ระบบทำต่อให้)", "ตำนานจีน Auto", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            var ok = MessageBox.Show(Win, "ยังติดตั้งไม่เสร็จ — ปิดตอนนี้เลยไหม?\n(ดับเบิลคลิก setup.exe ใหม่ได้ภายหลัง ระบบทำต่อให้)", "ผี 1 บาท", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
             if (ok != DialogResult.Yes) { e.Cancel = true; return; }
             try { if (Child != null && !Child.HasExited) Child.Kill(); } catch { }
         };
@@ -244,7 +244,7 @@ static class Setup
         try
         {
             Directory.SetCurrentDirectory(Root);
-            Log("ตำนานจีน Auto — กำลังติดตั้ง ไม่ต้องกดอะไร รอจนขึ้นหน้าต่างสรุป");
+            Log("ผี 1 บาท — กำลังติดตั้ง ไม่ต้องกดอะไร รอจนขึ้นหน้าต่างสรุป");
             Log("");
 
             Unblock();
@@ -435,7 +435,7 @@ static class Setup
     static void Download(string url, string dest)
     {
         var req = (HttpWebRequest)WebRequest.Create(url);
-        req.UserAgent = "ChinaAuto-Setup";
+        req.UserAgent = "Phi1Baht-Setup";
         using (var res = (HttpWebResponse)req.GetResponse())
         using (Stream src = res.GetResponseStream())
         using (var dst = File.Create(dest))
@@ -499,7 +499,7 @@ static class Setup
         try
         {
             using (var owner = new Form { TopMost = true })
-                MessageBox.Show(owner, text, "ตำนานจีน Auto", MessageBoxButtons.OK, icon);
+                MessageBox.Show(owner, text, "ผี 1 บาท", MessageBoxButtons.OK, icon);
         }
         catch { }
     }

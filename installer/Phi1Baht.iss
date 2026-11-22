@@ -1,4 +1,4 @@
-﻿; ตัวติดตั้ง ตำนานจีน Auto — สร้างด้วย: node scripts/build-installer.mjs (สร้างแพ็กเกจก่อนแล้วเรียก ISCC)
+﻿; ตัวติดตั้ง ผี 1 บาท — สร้างด้วย: node scripts/build-installer.mjs (สร้างแพ็กเกจก่อนแล้วเรียก ISCC)
 ;
 ; ลูกค้าดับเบิลคลิก Setup.exe → ได้ครบ: โปรแกรม + node + ffmpeg + Python/เสียง Edge + ลงทะเบียนกับ Chrome
 ;   - ไม่มี Chrome → ดาวน์โหลดและติดตั้งให้
@@ -9,23 +9,23 @@
 #ifndef AppVer
   #define AppVer "1.0.0"
 #endif
-#define AppName "ตำนานจีน Auto"
-#define Src "..\dist\ChinaAuto"
+#define AppName "ผี 1 บาท"
+#define Src "..\dist\Phi1Baht"
 
 [Setup]
-AppId={{8C1B2E7A-5D3F-4F6B-9A21-DA11A5D0A001}
+AppId={{22DF7A07-A68C-4215-A2E6-A96516D8C1B4}
 AppName={#AppName}
 AppVersion={#AppVer}
 AppVerName={#AppName} {#AppVer}
 AppPublisher={#AppName}
-DefaultDirName={userpf}\ChinaAuto
+DefaultDirName={userpf}\Phi1Baht
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir=..\dist
-OutputBaseFilename=ChinaAuto-Setup-{#AppVer}
-SetupIconFile=..\extension\icons\china-auto.ico
-UninstallDisplayIcon={app}\extension\icons\china-auto.ico
+OutputBaseFilename=Phi1Baht-Setup-{#AppVer}
+SetupIconFile=..\extension\icons\phi1baht.ico
+UninstallDisplayIcon={app}\extension\icons\phi1baht.ico
 UninstallDisplayName={#AppName}
 Compression=lzma2/max
 SolidCompression=yes
@@ -54,15 +54,15 @@ Source: "{#Src}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs create
 Name: "{app}\projects"
 
 [Icons]
-Name: "{autoprograms}\{#AppName}\เปิด {#AppName}"; Filename: "{app}\เปิดโปรแกรม.bat"; WorkingDir: "{app}"; IconFilename: "{app}\extension\icons\china-auto.ico"
-Name: "{autoprograms}\{#AppName}\ตั้งค่า Chrome extension อีกครั้ง"; Filename: "{app}\ติดตั้งครั้งแรก.bat"; WorkingDir: "{app}"; IconFilename: "{app}\extension\icons\china-auto.ico"
+Name: "{autoprograms}\{#AppName}\เปิด {#AppName}"; Filename: "{app}\เปิดโปรแกรม.bat"; WorkingDir: "{app}"; IconFilename: "{app}\extension\icons\phi1baht.ico"
+Name: "{autoprograms}\{#AppName}\ตั้งค่า Chrome extension อีกครั้ง"; Filename: "{app}\ติดตั้งครั้งแรก.bat"; WorkingDir: "{app}"; IconFilename: "{app}\extension\icons\phi1baht.ico"
 Name: "{autoprograms}\{#AppName}\ปิดโปรแกรม"; Filename: "{app}\ปิดโปรแกรม.bat"; WorkingDir: "{app}"
 Name: "{autoprograms}\{#AppName}\โฟลเดอร์งานคลิป"; Filename: "{app}\projects"
 Name: "{autoprograms}\{#AppName}\อ่านก่อนใช้งาน"; Filename: "{app}\อ่านก่อนใช้งาน.txt"
 Name: "{autoprograms}\{#AppName}\ถอนการติดตั้ง {#AppName}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\เปิดโปรแกรม.bat"; WorkingDir: "{app}"; IconFilename: "{app}\extension\icons\china-auto.ico"; Tasks: desktopicon
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\เปิดโปรแกรม.bat"; WorkingDir: "{app}"; IconFilename: "{app}\extension\icons\phi1baht.ico"; Tasks: desktopicon
 ; ไว้บนเดสก์ท็อปด้วย ให้ลูกค้าหาเจอง่ายเวลา Chrome หลุดการเชื่อม / ยังไม่ได้ทำ Load unpacked
-Name: "{autodesktop}\{#AppName} - ตั้งค่า Chrome"; Filename: "{app}\ติดตั้งครั้งแรก.bat"; WorkingDir: "{app}"; IconFilename: "{app}\extension\icons\china-auto.ico"; Tasks: desktopicon
+Name: "{autodesktop}\{#AppName} - ตั้งค่า Chrome"; Filename: "{app}\ติดตั้งครั้งแรก.bat"; WorkingDir: "{app}"; IconFilename: "{app}\extension\icons\phi1baht.ico"; Tasks: desktopicon
 
 [Run]
 ; ลงทะเบียน native host + เปิดหน้า chrome://extensions + คัดลอกที่อยู่โฟลเดอร์ extension ลงคลิปบอร์ด
@@ -78,7 +78,7 @@ Filename: "{app}\runtime\node\node.exe"; Parameters: """{app}\native\install.mjs
 ; ไฟล์ที่โปรแกรมสร้างเองตอนใช้งาน — ลบได้ · งานคลิป (projects) ตัวละคร การตั้งค่า และ .env (API key) เก็บไว้ให้ลูกค้า
 [UninstallDelete]
 Type: files; Name: "{app}\native\host.bat"
-Type: files; Name: "{app}\native\com.china_auto.bridge.json"
+Type: files; Name: "{app}\native\com.phi1baht.bridge.json"
 Type: files; Name: "{app}\bridge\bridge.log"
 Type: files; Name: "{app}\bridge\jobs*.json"
 Type: filesandordirs; Name: "{app}\tts\.venv"

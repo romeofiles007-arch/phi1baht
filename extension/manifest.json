@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "ตำนานจีน Auto Bridge",
-  "version": "1.0.71",
-  "description": "ขับ ChatGPT และ Google Flow พร้อม Kie API ในเครื่องเพื่อทำคลิปการ์ตูนเล่าเรื่องจีนโบราณอัตโนมัติ",
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAphTcgBF+oYA7lW1WaVfXHvlkPHG25H+/3uwwOu0UhPDAK+ngqF2fho8UIYCPRqF/CvL+ssAQytxYhpg4hbaPc2yBSZn25fnCE7E8poXDzg7uE7VoHF6zxAKWbfiddY+4bnBZ9QxoEFdegSD5k+Hj3ZqmsjSe15Aevcg/D0PvQ8oAEoEkjFuWrDOsxEgzh2tE7u+9T1qE3p9gGcCqBeMXpeLyWT2B1JrKU2ThgcgK7sa+CnND1RfOwE75q6hn6QHbqHyNUcnHykPWr/ouSel0weJyWxQy/O5REU03mZAuIXI4xag/TF0Aj3lXf/FiyDqSMrVJXR55nxDvBUEp5LBZywIDAQAB",
+  "name": "ผี 1 บาท",
+  "version": "0.1.0",
+  "description": "ขับ ChatGPT และ Google Flow พร้อม Kie API ในเครื่องเพื่อทำคลิปการ์ตูนผีไทยอัตโนมัติ",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAg+KghFPOR1TqJe+HoXDVWB9keqmfLSADqHxRSjfgYYAb4/QKdvxh0NMyujvj557rfNclixE2VFbhYvwlu+3bcZORuXuXuwWZF6JBBw67W61JnkhTOq4wJ4mz3QlPSL+rmuE5QnsmeBdv5snPnmAqLlfE7JrUsqiQgl6SRWtv8h8HeBbE6PHulo7neLsM+g00Wbaxv0e6OMCDLrB/l0sdYX+K5djpbFt3pK+OtpbEbF5ecja4FvGDwvo5Dk/9NCUcx3kSFVgPtEkpCguaWHUTmJZblJJwe3e1pWp4T2/kMjtjOgAm6rrl98Ir43g3tPj5jSuLrljdopi0GOyYtfrJ9QIDAQAB",
   "permissions": [
     "storage",
     "tabs",
@@ -88,7 +88,7 @@
     }
   ],
   "action": {
-    "default_title": "ตำนานจีน Auto — เปิดแผงทำคลิป",
+    "default_title": "ผี 1 บาท — เปิดแผงทำคลิป",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png",

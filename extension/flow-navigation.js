@@ -4,17 +4,9 @@ const HOME = 'https://flow.google.com/?hl=en'
 const flowUrl = value => {
   try { const url = new URL(value); return url.origin === 'https://flow.google.com' ? url : null } catch { return null }
 }
+// Only the tab this app opened (remembered id) is ever used — never a Flow tab the user opened themselves.
 export function preferredFlowTab(tabs, savedId) {
-  const available = tabs.filter(tab => flowUrl(tab.url) && !tab.discarded)
-  const recent = list => [...list].sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0))[0]
-  const latest = recent(available)
-  // Chrome has an active tab in every window. Recency must win even after the
-  // user returns to ChatGPT in the window where they selected the new account.
-  if (latest?.lastAccessed) return latest
-  const active = recent(available.filter(tab => tab.active))
-  if (active) return active
-  const saved = available.find(tab => tab.id === savedId)
-  return saved ?? latest ?? null
+  return tabs.find(tab => tab.id === savedId && flowUrl(tab.url) && !tab.discarded) ?? null
 }
 export function flowHomeUrl(value) {
   const url = flowUrl(value)

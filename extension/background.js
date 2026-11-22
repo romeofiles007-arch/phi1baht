@@ -6,7 +6,7 @@
  * เพื่อให้จบก่อนถูกฆ่า
  */
 
-const NATIVE_HOST = 'com.china_auto.bridge'
+const NATIVE_HOST = 'com.phi1baht.bridge'
 import { preferredFlowTab, flowHomeUrl, flowJobNavigation } from './flow-navigation.js'
 import { switchFlowAccount, inspectFlowAccounts, flowIdentity } from './flow-account-switch.js'
 import { insertTikTokCaption } from './tiktok-caption.js'
@@ -28,7 +28,7 @@ const CONTENT_FILES = {
 }
 
 async function settings() {
-  const { port = 8786, token = '', enabled = false } = await chrome.storage.local.get(['port', 'token', 'enabled'])
+  const { port = 8787, token = '', enabled = false } = await chrome.storage.local.get(['port', 'token', 'enabled'])
   return { base: `http://127.0.0.1:${port}`, token, enabled }
 }
 
@@ -63,7 +63,7 @@ async function setStatus(text) {
 }
 
 /**
- * หา tab ของเว็บเป้าหมาย — ใช้แท็บที่เปิดอยู่แล้วเสมอ (แท็บเดียวกับที่แผงข้างใช้) มีไม่มีจริงๆ ค่อยเปิดใหม่
+ * หา tab ของเว็บเป้าหมาย — ใช้เฉพาะแท็บที่แอปเปิดเอง (เลขที่จำไว้ ร่วมกับแผงข้าง) ไม่ยืมแท็บของผู้ใช้ ไม่มีก็เปิดใหม่
  * เลขแท็บเก็บใน storage.session ร่วมกับแผงข้าง (chatTabId / flowTabId)
  */
 const opening = {} // agent → Promise ระหว่างเปิดแท็บใหม่ กันเปิดซ้อนสองแท็บ
@@ -72,7 +72,7 @@ async function ensureTab(agent) {
   const tabs = await chrome.tabs.query({ url: pattern })
   const { [key]: savedId } = await chrome.storage.session.get(key)
   // TikTok uses its own tab so navigating for a job never discards a user's upload draft.
-  const existing = agent === 'flow' ? preferredFlowTab(tabs, savedId) : tabs.find((t) => t.id === savedId) ?? (agent === 'tiktok' ? null : tabs.find((t) => !t.discarded) ?? tabs[0])
+  const existing = agent === 'flow' ? preferredFlowTab(tabs, savedId) : tabs.find((t) => t.id === savedId)
   if (existing) {
     if (existing.id !== savedId) await chrome.storage.session.set({ [key]: existing.id })
     if (agent === 'flow') await chrome.storage.local.set({ flowAccountHome: flowHomeUrl(existing.url) })

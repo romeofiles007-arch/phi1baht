@@ -1,10 +1,10 @@
 {
-  "name": "china-auto",
+  "name": "phi-1-baht",
   "version": "0.1.0",
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/romeofiles007-arch/china"
+    "url": "https://github.com/romeofiles007-arch/phi1baht"
   },
   "type": "module",
   "scripts": {

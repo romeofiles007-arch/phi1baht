@@ -29,7 +29,7 @@ const halt = createHalt(join(ROOT, 'runtime', 'halt.json'))
 
 loadEnv()
 
-const PORT = Number(process.env.BRIDGE_PORT || 8786)
+const PORT = Number(process.env.BRIDGE_PORT || 8787)
 const TOKEN = process.env.BRIDGE_TOKEN || randomBytes(16).toString('hex')
 if (!process.env.BRIDGE_TOKEN) {
   console.warn(`BRIDGE_TOKEN ยังไม่ได้ตั้งใน .env — ใช้ค่าชั่วคราวรอบนี้:\n  BRIDGE_TOKEN=${TOKEN}\nใส่ลง .env แล้วกรอกใน popup ของ extension ให้ตรงกัน`)
@@ -40,7 +40,7 @@ const jobs = new Map()
 
 // ── คิวงานเก็บลงดิสก์ — ปิดเปิด bridge ระหว่างที่ ChatGPT/Flow ยังทำงานอยู่ ผลลัพธ์ต้องไม่หาย ──
 // bridge ทดสอบ (port อื่น) ใช้ไฟล์คิวแยก ไม่ปนกับตัวจริง
-const JOBS_FILE = join(ROOT, 'bridge', PORT === 8786 ? 'jobs.json' : `jobs-${PORT}.json`)
+const JOBS_FILE = join(ROOT, 'bridge', PORT === 8787 ? 'jobs.json' : `jobs-${PORT}.json`)
 const KEEP_MS = 24 * 60 * 60_000
 let saveTimer = null
 function saveJobs() {
@@ -201,9 +201,9 @@ function enqueue(agent, kind, payload) {
 
 // อัปเดตจาก GitHub — ห้ามดึงโค้ดใหม่ระหว่างมีงานค้าง (workInProgress ประกาศด้านล่าง เรียกตอนใช้งานจริงเท่านั้น)
 const updater = createUpdater({ log, busy: () => busyReason() })
-const ui = createUi({ jobs, enqueue, lastPoll, token: TOKEN, port: PORT, json, readBody, log, recentLog: () => recentLog, updater, scheduler: PORT === 8786, halt })
+const ui = createUi({ jobs, enqueue, lastPoll, token: TOKEN, port: PORT, json, readBody, log, recentLog: () => recentLog, updater, scheduler: PORT === 8787, halt })
 // โหมดโพสต์อัตโนมัติ (แผนกนกนางนวล) — ตัวตั้งเวลาโพสต์วนเฉพาะ bridge ตัวจริง
-const posting = createPosting({ jobs, enqueue, json, readBody, log, port: PORT, token: TOKEN, pipelineBusy: () => ui.busy(), scheduler: PORT === 8786, halted: () => halt.on() })
+const posting = createPosting({ jobs, enqueue, json, readBody, log, port: PORT, token: TOKEN, pipelineBusy: () => ui.busy(), scheduler: PORT === 8787, halted: () => halt.on() })
 // 🏭 ผลิตต่อเนื่อง: คลิปเสร็จ → จ่อคิวโพสต์ทันที
 ui.production.onClipReady = (slug, mode, pages) => posting.enqueueAuto(slug, mode, pages)
 
@@ -388,11 +388,11 @@ function busyReason() {
   return job.agent === 'tiktok' ? 'TikTok กำลังทำงานอยู่' : job.agent === 'flow' ? 'Google Flow กำลังทำงานอยู่' : job.agent === 'meta' ? 'Meta AI กำลังทำงานอยู่' : job.agent === 'gemini' ? 'Gemini กำลังเขียนหัวข้อหรือบท' : 'ChatGPT กำลังทำงานอยู่'
 }
 
-// โค้ดของโปรแกรมเปลี่ยน → รีสตาร์ทตัวเองเมื่อว่าง (เฉพาะตัวจริงที่ port 8786 — ตัวทดสอบไม่ต้อง)
-if (PORT === 8786) watchBridgeCode({ busy: workInProgress, server, log })
+// โค้ดของโปรแกรมเปลี่ยน → รีสตาร์ทตัวเองเมื่อว่าง (เฉพาะตัวจริงที่ port 8787 — ตัวทดสอบไม่ต้อง)
+if (PORT === 8787) watchBridgeCode({ busy: workInProgress, server, log })
 
 // กันเครื่องหลับเองระหว่างมีงาน หรือเปิดโหมดผลิตต่อเนื่องไว้ (รอคลิปถัดไป) — เฉพาะตัวจริง
-if (PORT === 8786) createKeepAwake({ busy: () => workInProgress() || ui.production.active(), log })
+if (PORT === 8787) createKeepAwake({ busy: () => workInProgress() || ui.production.active(), log })
 
 // ตอนรีสตาร์ทตัวเอง ตัวเก่าอาจยังไม่ปล่อย port — ลองใหม่ทุกครึ่งวินาทีสูงสุด 15 วิ
 let listenTries = 0

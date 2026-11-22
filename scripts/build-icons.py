@@ -11,7 +11,7 @@ import sys
 
 from PIL import Image, ImageDraw
 
-ROOT = r'E:\China'
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 raw = os.path.join(ROOT, 'assets', 'china-raw')
 icons = os.path.join(ROOT, 'extension', 'icons')
 agents = os.path.join(ROOT, 'extension', 'agents')
@@ -38,7 +38,7 @@ def build_icons():
     src = Image.open(os.path.join(raw, 'app-icon.png')).convert('RGBA')
     for s in (16, 24, 32, 48, 64, 128, 256, 512):
         rounded(src, s).save(os.path.join(icons, f'icon-{s}.png'))
-    rounded(src, 256).save(os.path.join(icons, 'china-auto.ico'),
+    rounded(src, 256).save(os.path.join(icons, 'phi1baht.ico'),
                            sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
     rounded(src, 128).save(os.path.join(icons, 'icon-128.ico'),
                            sizes=[(16, 16), (32, 32), (48, 48), (128, 128)])
@@ -48,7 +48,7 @@ def build_icons():
                            sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
     rounded(src, 256).save(os.path.join(icons, 'category-sanguo-transparent.ico'),
                            sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
-    print('ไอคอน: icon-16..512.png · china-auto.ico · icon-128.ico · category-sanguo.png/.ico')
+    print('ไอคอน: icon-16..512.png · phi1baht.ico · icon-128.ico · category-sanguo.png/.ico')
 
 
 def build_agents():

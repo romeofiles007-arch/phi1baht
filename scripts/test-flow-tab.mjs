@@ -135,16 +135,15 @@ await test('งานสร้างภาพ: ปิดแผงข้างก
   assert.equal(calls.find((c) => c[0] === 'tabs.sendMessage')[1], 7)
 })
 
-await test('ทำต่อ: ใช้แท็บบัญชีใหม่ที่เลือก ไม่กลับแท็บหรือโปรเจกต์ของบัญชีเก่า', async () => {
+await test('ทำต่อ: ใช้เฉพาะแท็บที่แอปเปิดเอง (savedId) ไม่ยืมแท็บ Flow อื่นของผู้ใช้', async () => {
   const tabs = [
     { id: 7, windowId: 1, url: 'https://flow.google.com/project/old?authuser=0', lastAccessed: 10 },
     { id: 8, windowId: 1, url: 'https://flow.google.com/?authuser=1', active: true, lastAccessed: 20 },
   ]
   const { ctx, calls } = loadBackground({ tabs, windows: [{ id: 1 }], focused: 1, session: { flowTabId: 7 } })
   await ctx.handleJob({ id: 'resume', agent: 'flow', kind: 'generate-images', payload: { projectUrl: tabs[0].url } })
-  assert.equal(calls.find(c => c[0] === 'tabs.sendMessage')[1], 8)
-  assert.ok(!calls.some(c => c[0] === 'tabs.update' && c[2]?.url))
-  assert.ok(calls.some(c => c[0] === 'storage.session.set' && c[1]?.flowTabId === 8))
+  assert.equal(calls.find(c => c[0] === 'tabs.sendMessage')[1], 7)
+  assert.ok(!calls.some(c => c[0] === 'storage.session.set' && c[1]?.flowTabId === 8))
 })
 await test('ทำต่อบนหน้าที่แปลอยู่: หยุดพร้อมเหตุผลแทนโหลดบัญชีเก่ากลับมาหรือสั่งสร้างภาพ', async () => {
   const tabs = [{ id: 7, windowId: 1, url: 'https://flow.google.com/?authuser=1', active: true }]
@@ -225,5 +224,17 @@ await test('ตัวขับ Flow: ไม่เจอปุ่ม Agent ตอ
   assert.match(driver, /sendMessage\(\{ type: 'FLOW_WIDEN' \}\)/)
   assert.match(bgSource, /msg\.type === 'FLOW_WIDEN'[\s\S]{0,200}flow\\\.google\\\.com/, 'รับคำขอจากแท็บ Flow เท่านั้น')
 })
+
+// แท็บของตัวเองเท่านั้น: preferredFlowTab คืนเฉพาะแท็บที่จำเลขไว้
+await test('preferredFlowTab คืน null เมื่อไม่มีแท็บตรง savedId แม้มีแท็บ Flow อื่นเปิดอยู่', () => {
+  const tabs = [{ id: 2, url: 'https://flow.google.com/?hl=en', active: true, lastAccessed: 20 }]
+  assert.equal(flowNavigation.preferredFlowTab(tabs, 1), null)
+  assert.equal(flowNavigation.preferredFlowTab(tabs, undefined), null)
+})
+await test('preferredFlowTab คืนแท็บที่ id ตรง savedId', () => {
+  const tabs = [{ id: 1, url: 'https://flow.google.com/project/a', lastAccessed: 10 }, { id: 2, url: 'https://flow.google.com/?hl=en', active: true, lastAccessed: 20 }]
+  assert.equal(flowNavigation.preferredFlowTab(tabs, 1).id, 1)
+})
+
 
 console.log(`\nผ่าน ${passed} ข้อ`)

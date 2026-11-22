@@ -2,8 +2,8 @@
 /**
  * สร้างแพ็กเกจส่งลูกค้า — ลูกค้าคัดลอกโฟลเดอร์ไปวาง ดับเบิลคลิก ติดตั้งครั้งแรก.bat แล้วใช้ได้เลย
  *
- *   node scripts/build-package.mjs            → dist/ChinaAuto/
- *   node scripts/build-package.mjs --zip      → dist/ChinaAuto/ + dist/ChinaAuto.zip
+ *   node scripts/build-package.mjs            → dist/Phi1Baht/
+ *   node scripts/build-package.mjs --zip      → dist/Phi1Baht/ + dist/Phi1Baht.zip
  *
  * ใส่อะไรบ้าง
  *   โค้ด: เฉพาะไฟล์ที่ git ติดตาม (ไฟล์ที่ .gitignore กันไว้ — .env, เสียงที่โคลน, งานในโปรเจกต์ — ไม่ติดไปเอง)
@@ -24,7 +24,7 @@ import { ROOT } from '../pipeline/lib/config.mjs'
 // ไฟล์ที่ไปถึงลูกค้า / ค่าเริ่มต้นของลูกค้า — กฎชุดเดียวกับตัวอัปเดตในเครื่องลูกค้า (bridge/update-package.js)
 import { RESET, USER_CONFIG, DEFAULT_CONFIG, shipsToCustomer, isCustomerData, customerDefaults, installerProblems, githubRepoUrl } from '../bridge/package-rules.js'
 
-const OUT_NAME = 'ChinaAuto'
+const OUT_NAME = 'Phi1Baht'
 const DIST = join(ROOT, 'dist')
 const OUT = join(DIST, OUT_NAME)
 const zip = process.argv.includes('--zip')
@@ -155,16 +155,16 @@ if (dirty) console.warn('  ⚠️ มีงานที่ยังไม่ com
 writeFileSync(join(OUT, 'VERSION.json'), JSON.stringify({ commit, sha, dirty, builtAt: new Date().toISOString(), repo, branch, files: shipped.sort() }, null, 2) + '\n')
 
 writeFileSync(join(OUT, 'อ่านก่อนใช้งาน.txt'), [
-  'ตำนานจีน Auto — ระบบทำคลิปการ์ตูนอัตโนมัติ',
+  'ผี 1 บาท — ระบบทำคลิปการ์ตูนอัตโนมัติ',
   '',
   'สิ่งที่ต้องมี: Windows 10/11 · Google Chrome ที่ล็อกอิน ChatGPT และ Google Flow ไว้',
   '(ไม่ต้องติดตั้ง Node.js / ffmpeg / Python — แถมมาในโฟลเดอร์ runtime แล้ว)',
   '',
   'วิธีติดตั้ง (ครั้งเดียว)',
-  '  1. วางโฟลเดอร์นี้ไว้ที่ไหนก็ได้ เช่น D:\\ChinaAuto (อย่าวางใน Downloads ที่อาจถูกลบ)',
+  '  1. วางโฟลเดอร์นี้ไว้ที่ไหนก็ได้ เช่น D:\\Phi1Baht (อย่าวางใน Downloads ที่อาจถูกลบ)',
   '  2. ดับเบิลคลิก ติดตั้งครั้งแรก.bat — Chrome จะเปิดหน้า extensions ให้เอง',
   '  3. ทำตามขั้นที่ขึ้นในหน้าต่างดำ (เปิด Developer mode → Load unpacked → วางที่อยู่ที่คัดลอกไว้ให้)',
-  '  4. กดไอคอน ตำนานจีน Auto บนแถบ Chrome — โปรแกรมเปิดเอง',
+  '  4. กดไอคอน ผี 1 บาท บนแถบ Chrome — โปรแกรมเปิดเอง',
   '',
   'ย้ายโฟลเดอร์ทีหลัง → ดับเบิลคลิก ติดตั้งครั้งแรก.bat อีกครั้ง',
   'อัปเดตเป็นรุ่นใหม่ → โปรแกรมตรวจเองทุก 30 นาที มีรุ่นใหม่จะขึ้นแถบ "มีอัปเดตใหม่" ในแผงข้าง กด "อัปเดต" ได้เลย',

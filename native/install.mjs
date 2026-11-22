@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ตัวติดตั้ง ตำนานจีน Auto — setup.exe (native/setup.cs) หรือ ติดตั้งครั้งแรก.bat → native/bootstrap.ps1 หา/ลง Node.js → ไฟล์นี้
+ * ตัวติดตั้ง ผี 1 บาท — setup.exe (native/setup.cs) หรือ ติดตั้งครั้งแรก.bat → native/bootstrap.ps1 หา/ลง Node.js → ไฟล์นี้
  * ลูกค้าดับเบิลคลิกครั้งเดียว ไม่ต้องกด next — ทุกขั้นเงียบ รันซ้ำได้ทุกเมื่อ (ย้ายโฟลเดอร์ / อัปเดต / ซ่อม)
  *
  *   1. ของที่โปรแกรมต้องใช้: ffmpeg + ffprobe, Python + edge-tts (เสียง Edge)
@@ -8,7 +8,7 @@
  *   2. ลงทะเบียน native host กับ Chrome (และ Edge) — HKCU ของผู้ใช้คนนี้ ไม่ต้องใช้ admin
  *   3. ทดสอบจริงแบบเดียวกับที่ Chrome เรียก: อ่าน registry → manifest → cmd /c host.bat → ส่ง { type: 'ensure' }
  *      → bridge ต้องเปิดขึ้นและตอบ แล้วถาม /api/checklist ว่าเครื่องยังขาดอะไรที่จำเป็น
- *   4. สร้าง shortcut "ตำนานจีน Auto" บนเดสก์ท็อปและ Start menu
+ *   4. สร้าง shortcut "ผี 1 บาท" บนเดสก์ท็อปและ Start menu
  *   5. ตรวจว่า Chrome โหลด extension ไว้แล้วหรือยัง — ขั้น Load unpacked เป็นขั้นเดียวที่ Chrome ไม่ยอมให้โปรแกรมทำแทน
  *      ถ้ายัง: เปิดหน้า chrome://extensions + คัดลอกที่อยู่โฟลเดอร์ไว้ให้ แล้วรอจนโหลดเสร็จ
  *   6. สรุปเป็นภาษาไทยในหน้าต่างป๊อปอัป: พร้อมแล้ว หรือพังตรงไหน ต้องทำอะไรต่อ
@@ -33,7 +33,7 @@ import { join, dirname, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 
-const HOST = process.env.CARTOON_AUTO_HOST || 'com.china_auto.bridge'
+const HOST = process.env.CARTOON_AUTO_HOST || 'com.phi1baht.bridge'
 const DIR = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(DIR, '..')
 const RUNTIME = join(ROOT, 'runtime')
@@ -44,7 +44,7 @@ const REG_KEYS = [
 ]
 const manifestFile = join(DIR, `${HOST}.json`)
 const batFile = join(DIR, 'host.bat')
-const SHORTCUT_NAME = 'ตำนานจีน Auto.lnk'
+const SHORTCUT_NAME = 'ผี 1 บาท.lnk'
 
 const args = process.argv.slice(2)
 const flag = (name) => args.includes(name)
@@ -349,7 +349,7 @@ function ensureVersionFile() {
  * โฟลเดอร์แบบนั้นจึงลงทะเบียนผ่าน junction ที่ %LOCALAPPDATA%\DhammaAuto\app ซึ่งชี้กลับมาที่โฟลเดอร์นี้
  */
 const RISKY = /[&^%!]/
-const JUNCTION = join(process.env.LOCALAPPDATA ?? tmpdir(), 'ChinaAuto', 'app')
+const JUNCTION = join(process.env.LOCALAPPDATA ?? tmpdir(), 'Phi1Baht', 'app')
 
 function removeJunction() {
   try {
@@ -384,7 +384,7 @@ function writeHostFiles() {
   const path = join(hostDir(), 'host.bat')
   writeFileSync(manifestFile, JSON.stringify({
     name: HOST,
-    description: 'ตำนานจีน Auto — เปิดโปรแกรมเมื่อกดไอคอน extension',
+    description: 'ผี 1 บาท — เปิดโปรแกรมเมื่อกดไอคอน extension',
     path,
     type: 'stdio',
     allowed_origins: [`chrome-extension://${id}/`],
@@ -484,7 +484,7 @@ function createShortcuts() {
     `'@`,
     `foreach ($d in ${dirs}) {`,
     `  if (-not $d -or -not (Test-Path -LiteralPath $d)) { continue }`,
-    `  [DhammaLnk]::Save((Join-Path $d ${psText(SHORTCUT_NAME)}), ${psText(target)}, ${psText(ROOT)}, ${psText('ตำนานจีน Auto — เปิดโปรแกรมทำคลิปธรรมะ')}, ${existsSync(icon) ? psText(icon) : "''"}, 7)`,
+    `  [DhammaLnk]::Save((Join-Path $d ${psText(SHORTCUT_NAME)}), ${psText(target)}, ${psText(ROOT)}, ${psText('ผี 1 บาท — เปิดโปรแกรมทำคลิปธรรมะ')}, ${existsSync(icon) ? psText(icon) : "''"}, 7)`,
     `}`,
   ].join('\n'), { timeout: 120_000 })
 }
@@ -575,7 +575,7 @@ function copyToClipboard(text) {
 }
 
 async function ensureExtension() {
-  const label = 'Extension ตำนานจีน Auto ใน Chrome'
+  const label = 'Extension ผี 1 บาท ใน Chrome'
   const chrome = chromeExe()
   if (!chrome) return report(label, false, 'ไม่พบ Google Chrome ในเครื่องนี้', 'ติดตั้ง Chrome จาก https://www.google.com/chrome แล้วดับเบิลคลิก setup.exe อีกครั้ง')
 
@@ -583,9 +583,9 @@ async function ensureExtension() {
   if (ext?.here && !ext.disabled) return report(label, true, 'โหลดไว้แล้ว')
 
   const steps = ext?.here && ext.disabled
-    ? 'เปิดสวิตช์ของ ตำนานจีน Auto Bridge ในหน้า chrome://extensions ให้เป็นสีน้ำเงิน'
+    ? 'เปิดสวิตช์ของ ผี 1 บาท ในหน้า chrome://extensions ให้เป็นสีน้ำเงิน'
     : [
-        ext ? `กด "Remove" ที่ ตำนานจีน Auto ตัวเก่า (โหลดจาก ${ext.path}) ก่อน แล้ว` : '',
+        ext ? `กด "Remove" ที่ ผี 1 บาท ตัวเก่า (โหลดจาก ${ext.path}) ก่อน แล้ว` : '',
         'เปิดสวิตช์ "Developer mode" มุมขวาบน → กด "Load unpacked" → คลิกช่องที่อยู่ด้านบนของหน้าต่างเลือกโฟลเดอร์ กด Ctrl+V แล้ว Enter → กด Select Folder',
       ].join('')
   if (quiet) return report(label, false, ext ? 'โหลดจากโฟลเดอร์อื่น/ถูกปิดอยู่' : 'ยังไม่ได้โหลด', steps)
@@ -616,7 +616,7 @@ function popup(text, icon) {
     powershell([
       `Add-Type -AssemblyName System.Windows.Forms`,
       `$owner = New-Object System.Windows.Forms.Form -Property @{ TopMost = $true }`,
-      `[void][System.Windows.Forms.MessageBox]::Show($owner, ${psText(text)}, 'ตำนานจีน Auto', 'OK', '${icon}')`,
+      `[void][System.Windows.Forms.MessageBox]::Show($owner, ${psText(text)}, 'ผี 1 บาท', 'OK', '${icon}')`,
     ].join('; '), { timeout: 24 * 3600_000 })
   } catch {}
 }
@@ -635,7 +635,7 @@ function uninstall() {
   console.log('ถอนการลงทะเบียนและลบ shortcut แล้ว (ไฟล์โปรแกรมและงานของคุณยังอยู่ครบ)')
 }
 
-// ชื่อโปรแกรม/ส่วนเสริมของโปรเจกต์นี้ — โปรเจกต์ที่แยกออกไป (Cartoon Kids, ตำนานจีน Auto) ใช้ตัวถอนชุดเดียวกันได้โดยไม่ต้องแก้ข้อความ
+// ชื่อโปรแกรม/ส่วนเสริมของโปรเจกต์นี้ — โปรเจกต์ที่แยกออกไป (Cartoon Kids, ผี 1 บาท) ใช้ตัวถอนชุดเดียวกันได้โดยไม่ต้องแก้ข้อความ
 // หน้าต่าง cmd แสดงเฉพาะอักษรอังกฤษได้แน่นอน — ชื่อที่เป็นภาษาไทยใช้คำกลางแทนในข้อความภาษาอังกฤษ
 const PRODUCT = SHORTCUT_NAME.replace(/.lnk$/i, '')
 const EXT_NAME = (() => {
@@ -868,9 +868,9 @@ if (!flag('--no-shortcut')) {
   step('สร้าง shortcut')
   try {
     createShortcuts()
-    report('Shortcut "ตำนานจีน Auto"', true, option('--shortcut-dir') ? option('--shortcut-dir') : 'บนเดสก์ท็อปและ Start menu')
+    report('Shortcut "ผี 1 บาท"', true, option('--shortcut-dir') ? option('--shortcut-dir') : 'บนเดสก์ท็อปและ Start menu')
   } catch (err) {
-    report('Shortcut "ตำนานจีน Auto"', false, err.message.split(/\r?\n/)[0], 'ไม่มีผลกับการใช้งาน — เปิดโปรแกรมด้วยไอคอน extension ใน Chrome ได้เหมือนเดิม')
+    report('Shortcut "ผี 1 บาท"', false, err.message.split(/\r?\n/)[0], 'ไม่มีผลกับการใช้งาน — เปิดโปรแกรมด้วยไอคอน extension ใน Chrome ได้เหมือนเดิม')
   }
 }
 
@@ -899,7 +899,7 @@ if (!failed.length) {
   summary = [
     'ติดตั้งเสร็จ พร้อมใช้งาน ✓',
     '',
-    'ใช้งาน: เปิด Chrome → กดไอคอนจิ๊กซอว์บนแถบ → ปักหมุด ตำนานจีน Auto → กดไอคอน แผงทำคลิปเปิดขึ้นมาเอง',
+    'ใช้งาน: เปิด Chrome → กดไอคอนจิ๊กซอว์บนแถบ → ปักหมุด ผี 1 บาท → กดไอคอน แผงทำคลิปเปิดขึ้นมาเอง',
     'ในแผงข้างกด "ตรวจความพร้อม" → ตรวจใหม่ — เหลือแค่ล็อกอิน ChatGPT และ Google Flow ใน Chrome',
   ].join('\n')
 } else {

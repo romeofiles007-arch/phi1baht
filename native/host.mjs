@@ -162,7 +162,7 @@ async function takeOverPort(port) {
 
 async function ensure() {
   const env = readEnv()
-  const port = Number(env.BRIDGE_PORT || 8786)
+  const port = Number(env.BRIDGE_PORT || 8787)
   const token = ensureToken(env)
 
   // bridge ที่ตอบอยู่ต้องเป็นของโฟลเดอร์นี้ (รับ token เดียวกัน) — ไม่ใช่แค่ "พอร์ตตอบ"

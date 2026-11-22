@@ -72,8 +72,7 @@ function waitTabLoaded(tabId) {
  * การโหลด chatgpt.com/ ใหม่ = เริ่มแชตใหม่ ไม่ต้องหาปุ่ม New chat ซึ่ง selector เปลี่ยนบ่อย
  */
 /**
- * แท็บเว็บที่ใช้ร่วมกับ background — แท็บที่จำไว้ > แท็บที่เปิดอยู่แล้ว > เปิดใหม่ (มีไม่มีจริงๆ เท่านั้น)
- * ไม่ต้องเปิดแท็บ ChatGPT/Flow เพิ่มทุกครั้งที่สั่งงาน
+ * แท็บเว็บที่ใช้ร่วมกับ background — เฉพาะแท็บที่แอปเปิดเองและจำเลขไว้ ไม่ยืมแท็บของผู้ใช้ (ไม่มี = เปิดใหม่)
  */
 async function reuseTab(key, patterns) {
   const { [key]: savedId } = await chrome.storage.session.get(key)
@@ -82,12 +81,7 @@ async function reuseTab(key, patterns) {
     if (tab) await chrome.storage.session.set({ [key]: tab.id })
     return tab
   }
-  const saved = savedId ? await chrome.tabs.get(savedId).catch(() => null) : null
-  if (saved) return saved
-  const tabs = await chrome.tabs.query({ url: patterns })
-  const tab = tabs.find((t) => !t.discarded) ?? tabs[0] ?? null
-  if (tab) await chrome.storage.session.set({ [key]: tab.id })
-  return tab
+  return savedId ? await chrome.tabs.get(savedId).catch(() => null) : null
 }
 
 async function freshChatTab() {
