@@ -12,7 +12,7 @@
  * สั่งซ้ำด้วยหัวข้อเดิม = ทำต่อจากแผนกที่ค้าง (งานที่เสร็จแล้วไม่ทำซ้ำ)
  * สถานะเขียนที่ projects/<slug>/autopilot.json ให้แผงข้างอ่าน
  *
- *   node pipeline/autopilot.mjs "<หัวข้อ>" [--lang th|en] [--title-lang th|en] [--minutes 5]
+ *   node pipeline/autopilot.mjs "<หัวข้อ>" [--lang th|en] [--title-lang th|en] [--minutes 1]   (ไม่ใส่ = ความยาวตามตั้งค่า · ตั้งต้น 1 นาที)
  */
 import { PENDING_USAGE, adoptPendingUsage } from './lib/usage.mjs'
 import { spawn } from 'node:child_process'
@@ -21,13 +21,13 @@ import { join, dirname, basename } from 'node:path'
 import { loadConfig, projectDir, slugify, ROOT } from './lib/config.mjs'
 import { bgmFor, bgmMode, bgmDb } from './lib/bgm.mjs'
 import { requireBridge, runJob } from './lib/bridge.mjs'
-import { scriptPrompt, scoredTopicsPrompt, parseScoredTopics, opensWithHaveYouEver, endsWithLesson, endsGeneric, tellsAsYou } from './lib/prompts.mjs'
+import { scriptPrompt, scoredTopicsPrompt, parseScoredTopics, opensWithHaveYouEver, endsWithLecture, endsCliffhanger, endsGeneric, tellsAsYou } from './lib/prompts.mjs'
 import { saveScript, loadScript, scriptProblem } from './lib/stage2.mjs'
 import { shotlistFiles, readRounds, resetRounds, mergeRounds, saveRound, nextRoundPrompt } from './lib/shotlist.mjs'
 import { collectImages } from './lib/shotfile.mjs'
 import { characterAttachments, activeCharacter } from './lib/character.mjs'
 import { ensureProfile } from './lib/clip_profile.mjs'
-import { reviseLengthPrompt, paceOf, resolveMood } from '../extension/prompts.js'
+import { reviseLengthPrompt, paceOf, resolveScare, scareApplies, SCARE_LEVELS } from '../extension/prompts.js'
 import { hasCover } from './lib/cover.mjs'
 import { clipSettings, clipTarget, clipScopeLabel, clipsDir, collectClips, scenes } from './lib/clips.mjs'
 import { kieKey, kieTier, kieBalance } from './lib/kie.mjs'
@@ -56,12 +56,12 @@ if (autoTopic) {
 }
 let title = words.filter((w) => w !== '--auto-topic').join(' ').trim()
 if (!title && !autoTopic) {
-  console.error('ใช้: node pipeline/autopilot.mjs "<หัวข้อ>" | --auto-topic [--genre mix|<แนว>] [--lang th|en] [--minutes 5]')
+  console.error('ใช้: node pipeline/autopilot.mjs "<หัวข้อ>" | --auto-topic [--genre mix|<แนว>] [--lang th|en] [--minutes 1]')
   process.exit(1)
 }
 
-// แนวเนื้อหา (ตั้งค่าคลิป): "สุ่ม" → เลือกครั้งเดียวตอนนี้ ให้หัวข้อ บท และโปรไฟล์ของคลิปเป็นแนวเดียวกัน
-process.env.CLIP_MOOD = resolveMood(process.env.CLIP_MOOD || config.script.mood)
+// ระดับความสยอง (ตั้งค่าคลิป): "สุ่ม" → เลือกครั้งเดียวตอนนี้ ให้หัวข้อ บท ภาพ และโปรไฟล์ของคลิปเป็นระดับเดียวกัน
+process.env.CLIP_SCARE = resolveScare(process.env.CLIP_SCARE || config.script.scare)
 
 // ── แผนกคิดหัวข้อ (เฉพาะ --auto-topic): ChatGPT เสนอ 5 หัวข้อพร้อมคะแนน → เลือกคะแนนสูงสุดที่ยังไม่เคยทำ ──
 let topicPick = null
@@ -76,7 +76,7 @@ if (autoTopic) {
   let guard = { window: recent.length, judged: false }
   const seen = listSeenTitles()
   console.log('▶ แผนกคิดหัวข้อ')
-  console.log(`   แนว: ${!config.script.genre || config.script.genre === 'mix' ? 'สุ่มหลากหลายแนว' : config.script.genre}${process.env.CLIP_MOOD === 'happy' ? ' · เพิ่มความสุข' : ''}`)
+  console.log(`   แนว: ${!config.script.genre || config.script.genre === 'mix' ? 'สุ่มหลากหลายแนว' : config.script.genre}${scareApplies(config.script.genre) ? ` · ความสยอง${SCARE_LEVELS[process.env.CLIP_SCARE].label}` : ''}`)
   // ผู้เขียนบทเป็น Gemini → ให้ Gemini คิดหัวข้อด้วย · Gemini ล้มเมื่อไรใช้ ChatGPT แทนจนจบขั้นนี้
   let topicGemini = altWriter()
   console.log(`   ${topicGemini ? topicGemini.name : 'ChatGPT'} กำลังเสนอหัวข้อและให้คะแนน…`)
@@ -128,7 +128,7 @@ if (autoTopic) {
   title = topics[0].title
   console.log(`   เลือก: ${title} (${topics[0].score} คะแนน)`)
   const theme = topics[0].theme
-  if (theme?.area || theme?.dhamma) console.log(`   ด้านชีวิต: ${theme.area ?? '-'} · หลักคิดแกน: ${theme.dhamma ?? '-'}`)
+  if (theme?.subject || theme?.core) console.log(`   ตัวหลัก: ${theme.subject ?? '-'} · ปมเรื่อง: ${theme.core ?? '-'}`)
 }
 const slug = slugify(title)
 // ค่าใช้จ่าย: token ChatGPT ของคลิปนี้ (ช่วงคิดหัวข้อจดไว้ที่ไฟล์พัก → รวมเข้าคลิปตอนนี้)
@@ -408,14 +408,20 @@ async function scriptDepartment() {
       feedback = '\n\n⚠️ บทรอบก่อนขึ้นต้นด้วยคำถาม "คุณเคย…ไหม" ซึ่งห้ามใช้ — เขียนบทใหม่ทั้งหมด บรรทัดแรกเข้าเรื่องทันทีด้วยเหตุการณ์หรือภาพที่กำลังเกิดขึ้น และห้ามใช้รูปประโยค "คุณเคย…ไหม/เคยไหม" ตลอดทั้งบท'
       continue
     }
-    // ผู้ใช้ (20 พ.ย. 2026): เล่าอย่างเดียว ไม่ทิ้งท้ายด้วยข้อคิด — ปิดด้วยประโยคเฉียบคมประโยคเดียว · รอบสุดท้ายยอมรับ ไม่ให้งานผลิตค้าง
-    if (endsWithLesson(text) && attempt < 3) {
-      console.warn('   บทปิดท้ายด้วยข้อคิด/บทเรียน — ขอเขียนใหม่ให้เล่าอย่างเดียว')
-      feedback = '\n\n⚠️ บทรอบก่อนปิดท้ายด้วยการถอดข้อคิด/สรุปบทเรียน ซึ่งห้ามทำ — เขียนบทใหม่ทั้งหมด เล่าเรื่องอย่างเดียวจนจบ แล้วปิดด้วยประโยคเฉียบคมสั้นๆ เพียง 1 ประโยค ห้ามมีคำว่า ข้อคิด บทเรียน "เรื่องนี้สอนเรา" "นำไปใช้" หรือโยงมาชีวิตคนยุคนี้'
+    // เล่มละบาทปิดด้วยประโยคสอนใจ 1 ประโยค — เทศนาหลายบรรทัดตอนท้ายไม่เอา · รอบสุดท้ายยอมรับ ไม่ให้งานผลิตค้าง
+    if (endsWithLecture(text) && attempt < 3) {
+      console.warn('   บทเทศนาข้อคิดหลายบรรทัดตอนท้าย — ขอเขียนใหม่ให้ปิดด้วยประโยคเดียว')
+      feedback = '\n\n⚠️ บทรอบก่อนเทศนาข้อคิด/บทเรียนหลายบรรทัดตอนท้าย — เขียนบทใหม่ทั้งหมด เล่าเรื่องให้จบ แล้วปิดด้วยประโยคสอนใจแบบเล่มละบาทเพียง 1 ประโยค (หมวดตลกใช้มุกปิด 1 ประโยค) ห้ามไล่ข้อคิดหลายข้อ ห้ามโยงมาชีวิตคนยุคนี้'
+      continue
+    }
+    // เรื่องต้องจบในคลิปเสมอ — จบค้าง "ติดตามตอนต่อไป" ถือว่าล้มเหลว · รอบสุดท้ายยอมรับ ไม่ให้งานผลิตค้าง
+    if (endsCliffhanger(text) && attempt < 3) {
+      console.warn('   บทจบค้างแบบ "ติดตามตอนต่อไป" — ขอเขียนใหม่ให้จบในคลิป')
+      feedback = '\n\n⚠️ บทรอบก่อนจบค้าง (ติดตามตอนต่อไป/ภาคต่อ) ซึ่งห้ามทำ — เขียนบทใหม่ทั้งหมดให้เรื่องจบในคลิปนี้ ปมคลี่คลาย ผลกรรมหรือหักมุมครบ แล้วปิดด้วยประโยคสอนใจ 1 ประโยค'
       continue
     }
     // ผู้ใช้ (21 พ.ย. 2026): "สาระน้อย ไม่มีจังหวะให้ติดตาม" — ตัวเอกเป็น "คุณ" ไม่มีชื่อ ไม่มีเดิมพัน · รอบสุดท้ายยอมรับ
-    if (profile?.category !== 'self' && tellsAsYou(text) && attempt < 3) {
+    if (tellsAsYou(text) && attempt < 3) {
       console.warn('   บทเล่าให้ "คุณ" เป็นตัวละคร — ขอเขียนใหม่แบบบุรุษที่ 3')
       feedback = '\n\n⚠️ บทรอบก่อนให้ "คุณ" เป็นตัวละครในเรื่อง ("คุณยืนอยู่…" "คุณก้มลง…") ซึ่งห้ามทำ — เขียนบทใหม่ทั้งหมดแบบบุรุษที่ 3 ตัวเอกมีชื่อ มีเป้าหมาย มีสิ่งที่จะเสีย และทำตาม "หัวใจของบท" ครบทุกข้อ'
       continue

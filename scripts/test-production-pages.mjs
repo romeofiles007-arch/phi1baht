@@ -70,9 +70,9 @@ test('หมวดของคลิปอ่านจากโปรไฟล�
   const root = mkdtempSync(join(tmpdir(), 'china-pages-'))
   try {
     mkdirSync(join(root, 'projects', 'clip-a', '00_ref'), { recursive: true })
-    writeFileSync(join(root, 'projects', 'clip-a', '00_ref', 'profile.json'), JSON.stringify({ category: 'sanguo', title: 'x' }))
+    writeFileSync(join(root, 'projects', 'clip-a', '00_ref', 'profile.json'), JSON.stringify({ category: 'ghost', title: 'x' }))
     const name = clipCategory('clip-a', root)
-    assert.equal(name, CATEGORIES.find((c) => c.id === 'sanguo').name)
+    assert.equal(name, CATEGORIES.find((c) => c.id === 'ghost').name)
     assert.equal(acceptsCategory({ categories: [name] }, name), true)
     assert.equal(acceptsCategory({ categories: [name] }, null), false) // ของเดิม: ไม่มีหมวด = เพจนี้ไม่รับ
     assert.equal(clipCategory('missing', root), null)

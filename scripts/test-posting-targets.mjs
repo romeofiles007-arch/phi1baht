@@ -13,7 +13,7 @@ const { ROOT } = await import('../pipeline/lib/config.mjs')
 const projectDir = mkdtempSync(join(ROOT, 'projects', '_targettest-'))
 const slug = basename(projectDir)
 const file = `${slug}.mp4`
-const category = 'หมวด 3 · ตำนานจอมยุทธ์ & นิทานจีน'
+const category = 'หมวด 3 · นิทานพื้นบ้าน & จักรๆ วงศ์ๆ'
 const clipAt = Date.now()
 const future = clipAt + 86400_000
 let passed = 0
@@ -38,7 +38,7 @@ const request = async (path, body) => {
 }
 const test = async (name, fn) => {
   P.saveQueue([])
-  P.saveAccounts({ settings: { autoCheck: false }, facebook: [{ id: 'tale', name: 'เพจตำนานจีน', pageId: '1234567', token: 'test', categories: [category] }], youtube: [] })
+  P.saveAccounts({ settings: { autoCheck: false }, facebook: [{ id: 'folk', name: 'เพจนิทานผี 1 บาท', pageId: '1234567', token: 'test', categories: [category] }], youtube: [] })
   await fn()
   passed++
   console.log(`  ✓ ${name}`)
@@ -48,7 +48,7 @@ const item = (extra = {}) => ({ ...P.newItem({ slug, file, title: 'คลิป�
 try {
   mkdirSync(join(projectDir, '00_ref'))
   mkdirSync(join(projectDir, '06_render'))
-  writeFileSync(join(projectDir, '00_ref', 'profile.json'), JSON.stringify({ category: 'tale' }))
+  writeFileSync(join(projectDir, '00_ref', 'profile.json'), JSON.stringify({ category: 'folk' }))
   writeFileSync(join(projectDir, '06_render', file), '')
 
   await test('automatic enrollment reads clip category and selects its matching page', async () => {

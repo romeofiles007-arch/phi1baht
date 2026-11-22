@@ -2,7 +2,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { ROOT } from './config.mjs'
-import { lifeAreaOf } from '../../extension/prompts.js'
+import { subjectOf } from '../../extension/prompts.js'
 
 export function listDoneTitles() {
   const root = join(ROOT, 'projects')
@@ -30,8 +30,8 @@ export function listSeenTitles() {
 }
 
 /**
- * ด้านชีวิต + หลักคิดของคลิปล่าสุด (ใหม่สุดก่อน) — ให้คิดหัวข้อรอบถัดไปเลี่ยง
- * คลิปที่ทำก่อนมีระบบนี้ไม่มี theme → เดาด้านชีวิตจากชื่อเรื่อง
+ * ตัวหลัก + ปมเรื่องของคลิปล่าสุด (ใหม่สุดก่อน) — ให้คิดหัวข้อรอบถัดไปเลี่ยง
+ * คลิปที่ไม่มี theme (พิมพ์หัวข้อเอง) → เดาตัวหลักจากชื่อเรื่อง
  */
 export function recentThemes(limit = 10) {
   const root = join(ROOT, 'projects')
@@ -45,9 +45,9 @@ export function recentThemes(limit = 10) {
     let theme = null
     try { theme = JSON.parse(readFileSync(join(dir, 'topics_scored.json'), 'utf8'))?.chosen?.theme ?? null } catch {}
     const title = readFileSync(titleFile, 'utf8').trim()
-    rows.push({ at: statSync(titleFile).mtimeMs, area: theme?.area ?? lifeAreaOf(title), dhamma: theme?.dhamma ?? null })
+    rows.push({ at: statSync(titleFile).mtimeMs, subject: theme?.subject ?? subjectOf(title), core: theme?.core ?? null })
   }
-  return rows.sort((a, b) => b.at - a.at).slice(0, limit).map(({ area, dhamma }) => ({ area, dhamma }))
+  return rows.sort((a, b) => b.at - a.at).slice(0, limit).map(({ subject, core }) => ({ subject, core }))
 }
 
 /** theme ของคลิป (จากตอนคิดหัวข้อ) — ไม่มี = null */

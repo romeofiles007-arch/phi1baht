@@ -13,9 +13,9 @@
     "titleLanguage": "th",
     "_titleLanguage": "ภาษาของชื่อเรื่องและหัวข้อ — th | en (แยกจาก narration ได้)",
     "genre": "mix",
-    "_genre": "แนวของหัวข้อที่ให้ AI เสนอ — mix (สุ่มคนละแนวทุกหัวข้อ) หรือชื่อแนวจาก GENRES ใน extension/prompts.js",
-    "mood": "off",
-    "_mood": "แนวเนื้อหา: off ปกติ (ตาม Blueprint) | random สุ่มต่อคลิป | happy เพิ่มความสุข ไม่เสนอความทุกข์ — เลือกได้ที่ ⚡ ตั้งค่าคลิป"
+    "_genre": "หมวดของหัวข้อที่ให้ AI เสนอ — mix (คละทั้ง 5 หมวด) หรือชื่อหมวดจาก GENRES ใน extension/prompts.js (หมวด 1 · ผีไทย … หมวด 5 · ตลกบ้านทุ่ง)",
+    "scare": "medium",
+    "_scare": "ระดับความสยอง (เฉพาะหมวดผีไทยและไสยศาสตร์): light เบา | medium กลาง | strong เข้ม | random สุ่มต่อคลิป — ทุกระดับห้ามเปลือย ห้ามไส้/ศพแหลก เลือดได้เล็กน้อย · เลือกได้ที่ ⚡ ตั้งค่าคลิป"
   },
   "tts": {
     "engine": "edge",
@@ -85,8 +85,8 @@
       "google-flow"
     ],
     "model": "gemini-3-pro-image-preview",
-    "aspectRatio": "16:9",
-    "resolution": "1920x1080",
+    "aspectRatio": "9:16",
+    "resolution": "1080x1920",
     "concurrency": 4,
     "characterLockRefs": true
   },
@@ -103,7 +103,7 @@
     "_tier": "ระดับโมเดล Kie: cheap = ถูก Seedance v1 Pro 480p (14 เครดิต/ฉาก · สำรองด้วย Seedance 2.0 Mini) | mid = พอใช้ Hailuo 2.3 768p (30) | pro = เก่ง Kling 2.6 (55)"
   },
   "render": {
-    "resolution": "1920x1080",
+    "resolution": "1080x1920",
     "fps": 30,
     "voiceoverDb": 0,
     "bgmDb": -21,

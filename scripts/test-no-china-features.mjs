@@ -23,11 +23,11 @@ test('ภาษามีแค่ th กับ en', () => {
 test('ไม่มีหมวดผู้เล่าเรื่อง (id self) และไม่มีหมวดโหมดเฉพาะ', () => {
   assert.equal(P.CATEGORIES.some((c) => c.id === 'self'), false)
   assert.equal(P.CATEGORIES.some((c) => c.exclusive), false)
-  assert.deepEqual(P.CATEGORIES.map((c) => c.id), ['sanguo', 'sage', 'tale']) // Task 4 จะแทนด้วย 5 หมวดผี
+  assert.deepEqual(P.CATEGORIES.map((c) => c.id), ['ghost', 'saiyasat', 'folk', 'drama', 'comedy']) // Task 4: 5 หมวดเล่มละบาท
 })
 
 test('prompt บทไม่เหลือสไตล์ประวัติศาสตร์/พากย์จีน', () => {
-  const p = P.scriptPrompt('BP', 'ชื่อเรื่อง', { language: 'th', profile: { category: 'sanguo' } })
+  const p = P.scriptPrompt('BP', 'ชื่อเรื่อง', { language: 'th', profile: { category: 'ghost' } })
   assert.ok(!/ย้อนรอยประวัติศาสตร์|พากย์จีน|ผู้เล่าเรื่องเจ้าของช่อง/.test(p))
 })
 

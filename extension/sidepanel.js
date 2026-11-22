@@ -6,7 +6,7 @@
  *
  * prompt ใช้ชุดเดียวกับ pipeline/ (extension/prompts.js) ผลจึงเหมือนรันจาก terminal
  */
-import { BLUEPRINT_FILE, topicsPrompt, scriptPrompt, parseTopics, cleanScript, estimateMinutes, slugify, scoredTopicsPrompt, parseScoredTopics, GENRES, CATEGORIES, categoryOf, resolveMood, storyTitlesFirst } from './prompts.js'
+import { BLUEPRINT_FILE, topicsPrompt, scriptPrompt, parseTopics, cleanScript, estimateMinutes, slugify, scoredTopicsPrompt, parseScoredTopics, GENRES, CATEGORIES, categoryOf, resolveScare, scareApplies, storyTitlesFirst } from './prompts.js'
 import { screenTopics, localDuplicate } from './dedupe.js'
 import { initIcons, setIconLabel } from './icons.js'
 import { portrait, DEPARTMENTS, HANDOFF, AGENT_WORD, elapsed, SEA_ASSETS } from './agents.js'
@@ -14,8 +14,6 @@ import { initPosting } from './posting.js'
 import { applyCategoryTheme, categoryGenre } from './category-themes.js'
 import { preferredFlowTab, flowHomeUrl } from './flow-navigation.js'
 import { scheduleFromFields, scheduleFields, scheduleCopy } from './production-schedule.js'
-
-/** พระของฉัน (โหมดพระสอนธรรม) — ประกาศไว้บนสุด เพราะ render() ช่วงโหลดแรกอ่านค่านี้ */
 
 initIcons()
 
@@ -162,10 +160,10 @@ const failStatus = (id, err) =>
 $('stopTopics').addEventListener('click', stopRun)
 $('stopScript').addEventListener('click', stopRun)
 
-/** แนวเนื้อหาของหัวข้อชุดใหม่ ('happy' | 'off') — "สุ่ม" เลือกตอนขอหัวข้อ แล้วจำไว้ใช้กับบทของหัวข้อชุดนี้ */
-function newClipMood() {
-  S.mood = resolveMood(clip?.mood)
-  return S.mood
+/** ระดับความสยองของหัวข้อชุดใหม่ ('light' | 'medium' | 'strong') — "สุ่ม" เลือกตอนขอหัวข้อ แล้วจำไว้ใช้กับบทของหัวข้อชุดนี้ */
+function newClipScare() {
+  S.scare = resolveScare(clip?.scare)
+  return S.scare
 }
 
 // ── 1 หัวข้อ ──
@@ -173,7 +171,7 @@ $('askTopics').addEventListener('click', async () => {
   $('topicsRawBox').hidden = true
   try {
     const text = await withBusy('topicsStatus', 'ChatGPT กำลังคิดหัวข้อ', async () =>
-      askChatGPT(topicsPrompt(await blueprint(), { titleLanguage: S.titleLanguage, genre: S.genre, mood: newClipMood() })),
+      askChatGPT(topicsPrompt(await blueprint(), { titleLanguage: S.titleLanguage, genre: S.genre, scare: newClipScare() })),
     )
     const topics = parseTopics(text)
     if (!topics.length) {
@@ -202,7 +200,7 @@ async function selectTopic(t) {
 $('askScript').addEventListener('click', async () => {
   $('scriptRawBox').hidden = true
   S.minutes = Math.min(60, Math.max(1, Number($('minutes').value) || 1))
-  const opts = { language: S.language, targetMinutes: S.minutes, wordsPerMinute: WORDS_PER_MINUTE, engage: clip?.engage !== 'off', mood: S.mood ?? resolveMood(clip?.mood) }
+  const opts = { language: S.language, targetMinutes: S.minutes, wordsPerMinute: WORDS_PER_MINUTE, engage: clip?.engage !== 'off', scare: S.scare ?? resolveScare(clip?.scare) }
   try {
     const text = await withBusy('scriptStatus', 'ChatGPT กำลังเขียนบท (บทยาว ใช้เวลาหลายนาที)', async () =>
       askChatGPT(scriptPrompt(await blueprint(), S.selected.title, opts)),
@@ -1306,11 +1304,11 @@ async function startAutopilot({ title, autoTopic }) {
   setStatus('autoStatus', 'กำลังเริ่ม…', 'busy')
   try {
     const app = await localApp()
-    // หัวข้อที่เลือกจากรายการที่เสนอ → ส่งแนวเนื้อหาที่ใช้ตอนเสนอไปด้วย บทจะได้แนวเดียวกัน · พิมพ์เอง/ให้ระบบคิด = ตามตั้งค่าคลิป
-    const mood = !autoTopic && S.mood && S.scoredTopics?.some((t) => t.title === title) ? S.mood : undefined
+    // หัวข้อที่เลือกจากรายการที่เสนอ → ส่งระดับความสยองที่ใช้ตอนเสนอไปด้วย บทจะได้ระดับเดียวกัน · พิมพ์เอง/ให้ระบบคิด = ตามตั้งค่าคลิป
+    const scare = !autoTopic && S.scare && S.scoredTopics?.some((t) => t.title === title) ? S.scare : undefined
     // แก่นเรื่องที่ตัวตรวจเรื่องซ้ำสรุปไว้ → เก็บไว้กับคลิป ให้รอบถัดไปรู้ว่าคลิปนี้เล่าเรื่องอะไร (ดู extension/dedupe.js)
     const key = S.scoredTopics?.find((t) => t.title === title)?.key
-    const { slug } = await api(app, '/api/autopilot', { title, autoTopic, genre: S.genre, language: S.language, minutes: S.minutes, mood, key })
+    const { slug } = await api(app, '/api/autopilot', { title, autoTopic, genre: S.genre, language: S.language, minutes: S.minutes, scare, key })
     // เปิดแท็บ ChatGPT ไว้ก่อน — ถ้ายังไม่ได้ล็อกอินจะเห็นทันที
     if (!(await reuseTab('chatTabId', ['https://chatgpt.com/*', 'https://chat.openai.com/*']))) {
       const tab = await chrome.tabs.create({ url: CHATGPT_URL, active: false })
@@ -1466,7 +1464,7 @@ function renderTopicMode() {
 
 // ── แนวคลิป: สุ่มหลากหลาย หรือเจาะแนวเดียว ──
 for (const g of ['mix', ...GENRES]) {
-  const label = g === 'mix' ? 'คละทั้ง 3 หมวด' : g
+  const label = g === 'mix' ? 'คละทั้ง 5 หมวด' : g
   $('topicGenre').append(Object.assign(document.createElement('option'), { value: g, textContent: label }))
 }
 /** บันทึกหมวดที่เลือกลงตั้งค่าในเครื่อง — ผลิตต่อเนื่องใช้หมวดนี้ */
@@ -1474,6 +1472,7 @@ const syncGenre = async () => api(await localApp(), '/api/clip-settings', { genr
 $('topicGenre').addEventListener('change', async () => {
   S.genre = $('topicGenre').value
   applyCategoryTheme(S.genre)
+  renderClipSettings() // ระดับความสยองแสดงเฉพาะหมวดผี/ไสย/คละ
   await save()
   await syncGenre()
 })
@@ -1495,7 +1494,7 @@ $('suggestTopics').addEventListener('click', async () => {
     const avoid = recent.length ? recent.map((r) => r.title) : history.done ?? []
     const seen = history.seen ?? []
     const text = await withBusy('suggestStatus', 'ChatGPT กำลังคิดหัวข้อและให้คะแนน', async () =>
-      askChatGPT(scoredTopicsPrompt(await blueprint(), { titleLanguage: S.language, minutes: S.minutes, avoid, seen, genre: S.genre, mood: newClipMood() })),
+      askChatGPT(scoredTopicsPrompt(await blueprint(), { titleLanguage: S.language, minutes: S.minutes, avoid, seen, genre: S.genre, scare: newClipScare() })),
     )
     const offered = parseScoredTopics(text)
     // จำไว้ว่าเสนออะไรไปแล้ว — ครั้งหน้าให้ ChatGPT เลี่ยง (รวมข้อที่จะถูกตัดเพราะซ้ำ)
@@ -1646,23 +1645,24 @@ function renderClipSettings() {
     }
   }
   for (const b of engage.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.value === clip.engage))
-  // แนวเนื้อหา: ปกติ · สุ่ม · เพิ่มความสุข — โปรแกรมในเครื่องรุ่นเก่าไม่ส่งมา → ซ่อน
-  const mood = $('clipMood')
-  const moodOptions = clip.options.mood ?? []
-  mood.parentElement.hidden = !moodOptions.length
-  if (!mood.childElementCount) {
-    for (const o of moodOptions) {
+  // ระดับความสยอง: เบา · กลาง · เข้ม · สุ่ม — แสดงเฉพาะเมื่อเลือกหมวดผีไทย ไสยศาสตร์ หรือคละหมวด (หมวดอื่นไม่สยอง)
+  const scare = $('clipScare')
+  const scareOptions = clip.options.scare ?? []
+  scare.parentElement.hidden = !scareOptions.length || !scareApplies(S.genre)
+  if (!scare.childElementCount) {
+    for (const o of scareOptions) {
       const b = Object.assign(document.createElement('button'), { type: 'button', textContent: o.label })
       b.dataset.value = o.id
-      mood.append(b)
+      scare.append(b)
     }
   }
-  for (const b of mood.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.value === clip.mood))
-  $('clipMoodHint').textContent = {
-    off: 'ตาม Blueprint — เปิดเรื่องด้วยทุกข์ใจของคนดูแล้วชี้ทางออกได้',
-    random: 'สุ่มต่อคลิป ครึ่งหนึ่งเป็นแนวเพิ่มความสุข อีกครึ่งเป็นแนวปกติ',
-    happy: 'หัวข้อและบทเน้นความสุข อิ่มใจ มีกำลังใจ ไม่เสนอความทุกข์ ปัญหา ความกลัว นรก หรือความตาย',
-  }[clip.mood] ?? ''
+  for (const b of scare.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.value === clip.scare))
+  $('clipScareHint').textContent = {
+    light: 'หลอนเบาๆ ด้วยบรรยากาศ เงา และเสียง ผีโผล่ชัดครั้งเดียว ไม่มีเลือด — ดูได้ทั้งบ้าน',
+    medium: 'หน้าผีชัดแบบปกเล่มละบาท มีจังหวะสะดุ้ง 1 ครั้ง เลือดแค่หยดเล็กๆ',
+    strong: 'ผีเผชิญหน้าใกล้ๆ ผลกรรมหนัก — แต่ยังไม่เปลือย ไม่มีไส้หรือศพแหลก เหมือนทุกระดับ',
+    random: 'สุ่มระดับต่อคลิป (เบา กลาง หรือเข้ม)',
+  }[clip.scare] ?? ''
   // ผู้เขียนบท: ChatGPT · Gemini — โปรแกรมในเครื่องรุ่นเก่าไม่ส่งมา → ซ่อน
   renderWriterSwitch()
   // ผู้ช่วยจัดฉาก/Kie — เลือกสัดส่วนของฉากทั้งเรื่อง
@@ -1824,9 +1824,9 @@ $('clipPause').addEventListener('click', (e) => {
   const b = e.target.closest('button')
   if (b && !localBusy()) saveClipSettings({ pause: b.dataset.value })
 })
-$('clipMood').addEventListener('click', (e) => {
+$('clipScare').addEventListener('click', (e) => {
   const b = e.target.closest('button')
-  if (b && !localBusy()) saveClipSettings({ mood: b.dataset.value })
+  if (b && !localBusy()) saveClipSettings({ scare: b.dataset.value })
 })
 $('clipWriter').addEventListener('click', (e) => {
   const b = e.target.closest('button')
@@ -2126,7 +2126,7 @@ async function runSetupTts(button) {
 async function loadChecklist() {
   setStatus('checklistStatus', 'กำลังตรวจ…', 'busy')
   const items = [
-    { id: 'extension', group: 'พื้นฐาน', label: 'Extension ธรรมะ Auto', need: 'required', status: 'ok', detail: `เวอร์ชัน ${chrome.runtime.getManifest().version}` },
+    { id: 'extension', group: 'พื้นฐาน', label: 'Extension ผี 1 บาท', need: 'required', status: 'ok', detail: `เวอร์ชัน ${chrome.runtime.getManifest().version}` },
   ]
   const app = await chrome.runtime.sendMessage({ type: 'ENSURE_APP' }).catch((err) => ({ ok: false, error: String(err?.message ?? err) }))
   items.push(
@@ -2134,7 +2134,7 @@ async function loadChecklist() {
       ? { id: 'native', group: 'พื้นฐาน', label: 'โปรแกรมในเครื่อง (bridge)', need: 'required', status: 'ok', detail: app.url }
       : {
           id: 'native', group: 'พื้นฐาน', label: 'โปรแกรมในเครื่อง (bridge)', need: 'required', status: 'missing', detail: app?.error ?? 'เปิดไม่ได้',
-          fix: { text: 'ดับเบิลคลิก setup.exe ในโฟลเดอร์โปรแกรม ธรรมะ Auto — ลง Node.js, ffmpeg และเชื่อม Chrome ให้เองทั้งหมด รอจนขึ้นหน้าต่างสรุป แล้วกด ↻ ตรวจใหม่ (ไม่ต้องปิด Chrome)' },
+          fix: { text: 'ดับเบิลคลิก setup.exe ในโฟลเดอร์โปรแกรม ผี 1 บาท — ลง Node.js, ffmpeg และเชื่อม Chrome ให้เองทั้งหมด รอจนขึ้นหน้าต่างสรุป แล้วกด ↻ ตรวจใหม่ (ไม่ต้องปิด Chrome)' },
         },
   )
   const [chat, flow, machine] = await Promise.all([
@@ -3630,10 +3630,10 @@ function prodOptions() {
 }
 
 /**
- * สัดส่วนหมวด (%) ของผลิตต่อเนื่อง — ใช้เมื่อติ๊กสุ่มหมวด · ยังไม่เคยตั้ง = เท่าๆ กัน (34/33/33)
+ * สัดส่วนหมวด (%) ของผลิตต่อเนื่อง — ใช้เมื่อติ๊กสุ่มหมวด · ยังไม่เคยตั้ง = เท่าๆ กัน (20% ทุกหมวด)
  * คำนวณจำนวนคลิปต่อหมวดของชุดแบบเดียวกับ bridge (shareGenre ใน bridge/production.js): เลือกหมวดที่ยังขาดมากสุดทีละคลิป
  */
-const SHARE_CATS = CATEGORIES.filter((c) => !c.exclusive)
+const SHARE_CATS = CATEGORIES
 function shareCounts(share, count) {
   const ids = SHARE_CATS.map((c) => c.id).filter((id) => share[id] > 0)
   const total = ids.reduce((a, id) => a + share[id], 0)

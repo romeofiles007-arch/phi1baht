@@ -8,34 +8,34 @@ import { readProfile } from './clip_profile.mjs'
 
 import * as shared from '../../extension/prompts.js'
 
-export const { cleanScript, parseTopics, GENRES, opensWithHaveYouEver, endsWithLesson, endsGeneric, tellsAsYou } = shared
+export const { cleanScript, parseTopics, GENRES, opensWithHaveYouEver, endsWithLecture, endsCliffhanger, endsGeneric, tellsAsYou } = shared
 
 /** Blueprint คือแหล่งความจริงเดียวของกติกาทั้งหมด — ส่งไปทั้งฉบับทุกครั้ง ไม่สรุปย่อ */
-export const BLUEPRINT_MARK = 'V6 จีนโบราณ'
+export const BLUEPRINT_MARK = 'V1 ผี 1 บาท'
 export function blueprint(config) {
   const text = readFileSync(join(ROOT, config.blueprint), 'utf8')
-  // กันรันจากสำเนาเก่า/ไฟล์ Blueprint ยุคธรรมะ แล้วได้บทผิดแนวทั้งคลิป
-  if (!text.includes(BLUEPRINT_MARK)) throw new Error(`Blueprint ที่ ${config.blueprint} ไม่ใช่รุ่นจีนโบราณ (V6) — กำลังรันจากสำเนาเก่าอยู่หรือเปล่า`)
+  // กันรันจากสำเนาเก่า/ไฟล์ Blueprint ของแอปอื่น แล้วได้บทผิดแนวทั้งคลิป
+  if (!text.includes(BLUEPRINT_MARK)) throw new Error(`Blueprint ที่ ${config.blueprint} ไม่ใช่รุ่นผี 1 บาท (V1) — กำลังรันจากสำเนาเก่าอยู่หรือเปล่า`)
   return text
 }
 
-/** แนวเนื้อหาของคลิปนี้ ('happy' | 'off') — autopilot สุ่มไว้ใน CLIP_MOOD แล้ว ไม่งั้นตามตั้งค่าคลิป (สุ่มใหม่ทุกครั้งที่เรียก) */
-export const clipMood = (config) => shared.resolveMood(process.env.CLIP_MOOD || config.script?.mood)
+/** ระดับความสยองของคลิปนี้ ('light' | 'medium' | 'strong') — autopilot สุ่มไว้ใน CLIP_SCARE แล้ว ไม่งั้นตามตั้งค่าคลิป (สุ่มใหม่ทุกครั้งที่เรียก) */
+export const clipScare = (config) => shared.resolveScare(process.env.CLIP_SCARE || config.script?.scare)
 
 export function topicsPrompt(config) {
-  return shared.topicsPrompt(blueprint(config), { titleLanguage: config.script.titleLanguage, genre: config.script.genre, mood: clipMood(config) })
+  return shared.topicsPrompt(blueprint(config), { titleLanguage: config.script.titleLanguage, genre: config.script.genre, scare: clipScare(config) })
 }
 
 export const { parseScoredTopics } = shared
 
 /** หัวข้อพร้อมคะแนน — ชื่อหัวข้อใช้ภาษาเดียวกับเสียงพากย์ของคลิป */
 export function scoredTopicsPrompt(config, { avoid = [], seen = [], themes } = {}) {
-  return shared.scoredTopicsPrompt(blueprint(config), { titleLanguage: config.script.language, minutes: config.script.targetMinutes, avoid, seen, genre: config.script.genre, mood: clipMood(config), themes: themes ?? shared.pickThemes(5, recentThemes()) })
+  return shared.scoredTopicsPrompt(blueprint(config), { titleLanguage: config.script.language, minutes: config.script.targetMinutes, avoid, seen, genre: config.script.genre, scare: clipScare(config), themes: themes ?? shared.pickThemes(shared.pickGenres(config.script.genre), recentThemes()) })
 }
 
-/** profile = โปรไฟล์ของคลิป (หมวด + พระเกจิ) จาก clip_profile.mjs — ไม่มี = ให้ ChatGPT ดูหมวดจากชื่อเรื่อง */
+/** profile = โปรไฟล์ของคลิป (หมวด + ลายเส้น + ระดับความสยอง) จาก clip_profile.mjs — ไม่มี = ให้ ChatGPT ดูหมวดจากชื่อเรื่อง */
 export function scriptPrompt(config, title, profile = null) {
-  return shared.scriptPrompt(blueprint(config), title, { ...config.script, profile, mood: profile?.mood ?? clipMood(config), theme: themeOf(slugify(title)) })
+  return shared.scriptPrompt(blueprint(config), title, { ...config.script, profile, scare: profile?.scare ?? clipScare(config), theme: themeOf(slugify(title)) })
 }
 
 
@@ -99,25 +99,26 @@ export function clipLanguage(config, slug) {
   return config.script.language
 }
 
-/** ภาษาของคำอธิบายช็อตและตัวอักษรในภาพ — ตามภาษาเสียงพากย์ของคลิป */
+/**
+ * ภาษาของคำอธิบายช็อต — ตามภาษาเสียงพากย์ของคลิป
+ * ภาพในเรื่องไม่มีตัวหนังสือ (Blueprint กฎ 7) — ซับไตเติลและกล่องคำบรรยายใส่ตอนตัดต่อ · ปกเป็นภาพเดียวที่มีตัวหนังสือ
+ */
 export function imageLanguageRule(language) {
-  if (language === 'en') {
-    return `- ภาษาในภาพ: English — เขียนคำอธิบายใน field (Env/Action/Frame) เป็นภาษาอังกฤษ · ตัวอักษรในภาพ (on-screen text, label, thought bubble) เป็นภาษาอังกฤษ ALL CAPS คำสั้น`
-  }
-  return `- ภาษาในภาพ: ไทย — เขียนคำอธิบายใน field (Env/Action/Frame) เป็นภาษาไทย แต่คงชื่อ field (SHOT, Chars, Env, Action, Frame) และ @TAG เป็นภาษาอังกฤษตามเดิม
-- ตัวอักษรในภาพ (on-screen text, label, thought bubble) เป็นภาษาไทย คำสั้น 1–4 คำ ตัวหนา สะกดถูก — ใส่ข้อความที่จะให้อยู่ในภาพในเครื่องหมายคำพูด เช่น ข้อความบนภาพ "เวลาหยุด?" · ห้ามใช้ภาษาอังกฤษในภาพ`
+  const noText = '- ภาพในเรื่องไม่มีตัวหนังสือ: ห้ามสั่งให้มี on-screen text ลูกโป่งคำพูด คำเสียงประกอบ ป้าย หรือ label ในช็อตใดเลย (ซับไตเติลใส่ตอนตัดต่อ) — ตัวหนังสือมีได้เฉพาะภาพปก'
+  if (language === 'en') return `- ภาษาในภาพ: English — เขียนคำอธิบายใน field (Env/Action/Frame) เป็นภาษาอังกฤษ\n${noText}`
+  return `- ภาษาในภาพ: ไทย — เขียนคำอธิบายใน field (Env/Action/Frame) เป็นภาษาไทย แต่คงชื่อ field (SHOT, Chars, Env, Action, Frame) และ @TAG เป็นภาษาอังกฤษตามเดิม\n${noText}`
 }
 
-/** แนวภาพของคลิปใหม่: landscape 16:9 (ค่าเดิมของ Blueprint) | portrait 9:16 */
+/** แนวภาพของคลิปใหม่: portrait 9:16 (ค่าตั้งต้นของ Blueprint และของแอป) | landscape 16:9 */
 export function orientationOf(config = loadConfig()) {
-  return config.render?.orientation === 'portrait' ? 'portrait' : 'landscape'
+  return config.render?.orientation === 'landscape' ? 'landscape' : 'portrait'
 }
 export const aspectOf = (config) => (orientationOf(config) === 'portrait' ? '9:16' : '16:9')
 
-/** Blueprint ใช้ 16:9 เป็นค่าเริ่มต้น — คลิปแนวตั้งต้องบอกให้ใช้ 9:16 แทน */
+/** Blueprint ใช้ 9:16 เป็นค่าเริ่มต้น — คลิปแนวนอนต้องบอกให้ใช้ 16:9 แทน · แนวตั้งย้ำวิธีจัดองค์ประกอบ */
 export function orientationRule(config = loadConfig()) {
-  if (orientationOf(config) !== 'portrait') return ''
-  return `- คลิปนี้เป็นวิดีโอแนวตั้ง 9:16 (Shorts / Reels / TikTok) — ใช้ ASPECT RATIO 9:16 แทนค่าเริ่มต้น 16:9 ใน Style Bible ของ Blueprint ทุกภาพเป็น 9:16
+  if (orientationOf(config) !== 'portrait') return '- คลิปนี้เป็นวิดีโอแนวนอน 16:9 — ใช้ ASPECT RATIO 16:9 แทนค่าเริ่มต้น 9:16 ใน Style Bible ของ Blueprint ทุกภาพเป็น 16:9'
+  return `- คลิปนี้เป็นวิดีโอแนวตั้ง 9:16 (TikTok / Reels / Shorts) — ASPECT RATIO 9:16 ตาม Style Bible ของ Blueprint ทุกภาพเป็น 9:16
 - จัดองค์ประกอบแนวตั้ง: ตัวละครและจุดสนใจอยู่กลางภาพ ฉากหลังต้องเต็มเฟรมถึงขอบทุกด้าน
 - ห้ามเว้นพื้นที่ว่าง แถบสี ขอบขาว หรือโซน subtitle-safe ในภาพ และห้ามเขียนคำพวกนี้ลงใน prompt (ซับไตเติลมีกล่องพื้นทึบของตัวเองอยู่แล้ว)`
 }

@@ -10,9 +10,8 @@
  *   - Google Flow prompt แรก: แนบรูปเป็น ingredient ให้ agent ล็อกหน้าตาตัวละครตามรูป
  */
 import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, readdirSync } from 'node:fs'
-import { join, extname, basename } from 'node:path'
+import { join, extname } from 'node:path'
 import { ROOT } from './config.mjs'
-import { readProfile } from './clip_profile.mjs'
 import { ART_STYLES } from '../../extension/prompts.js'
 
 export const CHARACTER_DIR = join(ROOT, 'characters', 'current')
@@ -67,19 +66,16 @@ export function clearCharacter() {
 }
 
 /**
- * ตัวละครหลักของคลิป
- *   - หมวดสามก๊ก / ปราชญ์จีนที่ไม่มีภาพ → ไม่ใช้ตัวละครของฉัน (ตัวหลักคือบุคคลในเรื่อง)
- *   - อื่นๆ → ตัวละครของฉัน ถ้าเปิดไว้และมีรูปหรือคำอธิบาย
+ * ตัวละครหลักของคลิป — ตัวละครของฉัน ถ้าเปิดไว้และมีรูปหรือคำอธิบาย ใช้ได้ทุกหมวด
+ * (ผี 1 บาทเป็นเรื่องแต่งทุกหมวด ไม่มีบุคคลจริงที่ต้องเป็นตัวหลักแทน) · ผู้เรียกเดิมยังส่ง slug มาได้ ไม่มีผล
  */
-export function activeCharacter(slug) {
-  const profile = slug ? readProfile(slug) : null
-  if (profile?.category === 'sanguo' || profile?.category === 'sage') return null
+export function activeCharacter() {
   const c = readCharacter()
   return c.enabled && (c.images.length || c.description) ? c : null
 }
 
-/** หมวดที่ตัวละครหลักต้องเป็นการ์ตูนเต็มตัวเสมอ (บุคคลในประวัติศาสตร์ ห้ามเป็นตัวก้าง) */
-const fullBodyOf = (c, profile) => !!c?.images.length || ['sanguo', 'sage'].includes(profile?.category)
+/** แนบรูปตัวละคร = การ์ตูนเต็มตัวตามรูป */
+const fullBodyOf = (c) => !!c?.images.length
 
 /** รูปสำหรับแนบไปกับงาน (ChatGPT / Flow) */
 export function characterAttachments(c = activeCharacter()) {
@@ -103,7 +99,7 @@ export function characterRule(c = activeCharacter(), profile = null) {
 
 /** แบบตัวละคร: แนบรูปอ้างอิง = การ์ตูนเต็มตัว · ไม่แนบ = การ์ตูน doodle หัวโต แขนขาเป็นหลอดมีความหนา (ไม่ใช่ตัวก้าง) — Blueprint มีทั้ง 2 แบบ ระบบบอกว่าคลิปนี้ใช้แบบไหน */
 export function bodyStyleRule(c = activeCharacter(), profile = null) {
-  // ลายเส้นภาพวาด (สีน้ำพุทธกาล / ภาพวาดจีน): สัดส่วนสมจริง ไม่ใช่การ์ตูน (รายละเอียดอยู่ใน ART_STYLES ที่ต่อท้าย prompt)
+  // ลายเส้นที่มีแบบตัวละครของตัวเอง (body ใน ART_STYLES): สัดส่วนสมจริง ไม่ใช่การ์ตูน (รายละเอียดอยู่ใน ART_STYLES ที่ต่อท้าย prompt)
   const painted = ART_STYLES[profile?.artStyle]?.body
   if (painted) return painted
   return fullBodyOf(c, profile)

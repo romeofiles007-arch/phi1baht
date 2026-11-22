@@ -4,11 +4,11 @@
  *
  *   node scripts/test-script-guard.mjs
  *
- * ที่มา (19 พ.ย. 2026): ผลิตต่อเนื่องปล่อยคลิปเสียออกมา 1 คลิป และทำสามก๊กซ้ำ 3 รอบติด
+ * ที่มา (19 พ.ย. 2026): ผลิตต่อเนื่องปล่อยคลิปเสียออกมา 1 คลิป และทำหมวดเดิมซ้ำ 3 รอบติด
  *   1. ChatGPT ถามกลับแทนที่จะเขียนบท ("ต้องการให้ใช้บุคคลใดเป็นตัวเอกครับ?")
  *      ระบบรับคำถามนั้นเป็นบท แล้วพากย์ ทำซับ ทำภาพ 16 ใบ เรนเดอร์เป็นคลิป 34 วินาที
  *      และตั้งเวลาโพสต์ขึ้นเพจต่อเอง
- *   2. สัดส่วนหมวด 34/33/33 ทำให้คลิปแรกของทุกชุดเป็นหมวดที่ตั้ง % สูงสุดแบบตายตัว
+ *   2. สัดส่วนหมวด 34/33/33 (แอปต้นแบบ 3 หมวด) ทำให้คลิปแรกของทุกชุดเป็นหมวดที่ตั้ง % สูงสุดแบบตายตัว
  *      และคลิปที่ล้มไม่ถูกนับ คิวหมวดจึงไม่ขยับ — ได้หมวดเดิมซ้ำไม่รู้จบ
  */
 import { scriptProblem } from '../pipeline/lib/stage2.mjs'
@@ -51,7 +51,8 @@ ok(scriptProblem('Which character would you like me to use?') !== null, 'จั�
 
 console.log('\nตัวสุ่มหมวดตามสัดส่วน')
 
-const share = { sanguo: 34, sage: 33, tale: 33 }
+// Task 4: 5 หมวดผี 1 บาท (เดิม 3 หมวด 34/33/33) — ผีไทยเป็นหมวดหลักได้ % มากสุด
+const share = { ghost: 24, saiyasat: 19, folk: 19, drama: 19, comedy: 19 }
 const ROUNDS = 3000
 
 // คลิปแรกของชุด (made ว่าง) — เดิมได้หมวดที่ % สูงสุดทุกครั้ง
@@ -60,14 +61,14 @@ for (let i = 0; i < ROUNDS; i++) {
   const g = shareGenre(share, {}, Math.random)
   first[g] = (first[g] ?? 0) + 1
 }
-ok(Object.keys(first).length === 3, 'คลิปแรกของชุดกระจายครบทั้ง 3 หมวด', Object.values(first).join(' / '))
+ok(Object.keys(first).length === 5, 'คลิปแรกของชุดกระจายครบทั้ง 5 หมวด', Object.values(first).join(' / '))
 const lowest = Math.min(...Object.values(first)) / ROUNDS
-ok(lowest > 0.2, 'ไม่มีหมวดไหนถูกกดต่ำผิดปกติ', `น้อยสุด ${(lowest * 100).toFixed(1)}%`)
+ok(lowest > 0.12, 'ไม่มีหมวดไหนถูกกดต่ำผิดปกติ', `น้อยสุด ${(lowest * 100).toFixed(1)}%`)
 
 // โควตายังต้องทำงาน: ทำหมวดหนึ่งไปแล้ว คลิปถัดไปต้องเป็นหมวดอื่น
 const next = new Set()
-for (let i = 0; i < 500; i++) next.add(shareGenre(share, { sanguo: 1 }, Math.random))
-ok(next.size === 2 && ![...next].some((n) => n.startsWith('หมวด 1')), 'ทำหมวด 1 ไปแล้ว คลิปถัดไปสลับหมวดเสมอ', [...next].join(' / '))
+for (let i = 0; i < 500; i++) next.add(shareGenre(share, { ghost: 1 }, Math.random))
+ok(next.size === 4 && ![...next].some((n) => n.startsWith('หมวด 1')), 'ทำหมวด 1 ไปแล้ว คลิปถัดไปสลับหมวดเสมอ', [...next].join(' / '))
 
 // ไม่ได้ตั้งสัดส่วน → null (คละหมวดแบบเดิม)
 ok(shareGenre({}, {}, Math.random) === null, 'ไม่ได้ตั้งสัดส่วน → คละหมวดแบบเดิม')

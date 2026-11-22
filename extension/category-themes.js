@@ -7,27 +7,46 @@ const semantic = {
 }
 const palette = (mode, values) => ({...semantic[mode], ...values})
 
+// ภาพฉากและไอคอนยังเป็นชุดเดิมของแอปต้นแบบทุกหมวด — งานธีม (Task 9) จะวาดชุดของผี 1 บาทแล้วเปลี่ยนชื่อไฟล์ที่นี่
+const ART = { day:'agents/china-day.png', night:'agents/china-night.png', icon:'icons/category-sanguo.png' }
+
+/**
+ * ธีมหน้าจอของแต่ละหมวด — โรงพิมพ์การ์ตูนผียุค 2520 ยามดึก ทุกหมวดเป็นพื้นมืดนวลตา (ไม่มีพื้นขาว)
+ *   ผีไทย = แดงเลือด · ไสยศาสตร์ = ม่วงกลางคืนกับทองของขลัง (ตามปกผีเล่มละบาท)
+ *   นิทาน / ชีวิตสอนใจ / ตลก = ฟ้าอ่อนกับเหลืองแบบปกนครไทย แต่กดพื้นให้มืดลง
+ * mix (คละหมวด) ใช้ธีมผีไทย ซึ่งเป็นหมวดหลักของแอป
+ */
 export const CATEGORY_THEMES = {
-  sanguo: {
-    title:'วรรณกรรมจีนและวีรบุรุษ', day:'agents/china-day.png', night:'agents/china-night.png', icon:'icons/category-sanguo.png',
-    light:palette('light',{bg:'#2a1a1e',panel:'#36242a',ink:'#fbe9e9',muted:'#d6b0b3',accent:'#ff9f93',line:'#9c7276',pick:'#452b31',wood:'#1b1013',gold:'#eec372',action:'#eec372','action-ink':'#1d1700'}),
-    dark:palette('dark',{bg:'#1d1113',panel:'#2b191c',ink:'#fbe9e9',muted:'#d2aaad',accent:'#ff9f93',line:'#9c7276',pick:'#3b2428',wood:'#160c0e',gold:'#eec372',action:'#eec372','action-ink':'#1d1700'}),
+  ghost: {
+    title:'ผีไทย', ...ART,
+    light:palette('light',{bg:'#2a1517',panel:'#361c1f',ink:'#f6e6dc',muted:'#d8b4a8',accent:'#ff9a8a',line:'#9a6a64',pick:'#46262a',wood:'#1a0c0d',gold:'#e9c46a',action:'#e9c46a','action-ink':'#1d1400'}),
+    dark:palette('dark',{bg:'#1a0d0e',panel:'#281517',ink:'#f6e6dc',muted:'#d2ada2',accent:'#ff9a8a',line:'#9a6a64',pick:'#3a1f22',wood:'#120809',gold:'#e9c46a',action:'#e9c46a','action-ink':'#1d1400'}),
   },
-  sage: {
-    title:'ปรัชญาจีนโบราณ', day:'agents/china-day.png', night:'agents/china-night.png', icon:'icons/category-sanguo.png',
-    light:palette('light',{bg:'#1a2342',panel:'#232e52',ink:'#e6ebfb',muted:'#b2bce0',accent:'#9fb3f0',line:'#6d7bab',pick:'#2d3962',wood:'#121732',gold:'#aab8ef'}),
-    dark:palette('dark',{bg:'#10152a',panel:'#1a2240',ink:'#e6ebfb',muted:'#aab5dc',accent:'#9fb3f0',line:'#6d7bab',pick:'#242e52',wood:'#0c1021',gold:'#aab8ef'}),
+  saiyasat: {
+    title:'ไสยศาสตร์และหมอผี', ...ART,
+    light:palette('light',{bg:'#231b34',panel:'#2e2443',ink:'#efe8fb',muted:'#c6b9e0',accent:'#e6c46e',line:'#7a6a9e',pick:'#3a2e54',wood:'#150f22',gold:'#e6c46e'}),
+    dark:palette('dark',{bg:'#181226',panel:'#221a35',ink:'#efe8fb',muted:'#bfb1db',accent:'#e6c46e',line:'#7a6a9e',pick:'#2d2345',wood:'#0f0a19',gold:'#e6c46e'}),
   },
-  tale: {
-    title:'ตำนานจอมยุทธ์และนิทานจีน', day:'agents/china-day.png', night:'agents/china-night.png', icon:'icons/category-sanguo.png',
-    light:palette('light',{bg:'#163126',panel:'#1f4031',ink:'#e4f3e9',muted:'#aecebb',accent:'#8ed9b4',line:'#6a937c',pick:'#28523c',wood:'#0f2418',gold:'#8ed9b4'}),
-    dark:palette('dark',{bg:'#0d1f17',panel:'#152c21',ink:'#e4f3e9',muted:'#a6c8b4',accent:'#8ed9b4',line:'#6a937c',pick:'#1e3d2e',wood:'#091710',gold:'#8ed9b4'}),
+  folk: {
+    title:'นิทานพื้นบ้านและจักรๆ วงศ์ๆ', ...ART,
+    light:palette('light',{bg:'#1b2a3d',panel:'#243650',ink:'#fdf3d6',muted:'#c9d3e6',accent:'#ffd85c',line:'#6d82a3',pick:'#2e4463',wood:'#111c2b',gold:'#ffd85c'}),
+    dark:palette('dark',{bg:'#121e2d',panel:'#1a2a3e',ink:'#fdf3d6',muted:'#c2cde2',accent:'#ffd85c',line:'#6d82a3',pick:'#23364f',wood:'#0b1420',gold:'#ffd85c'}),
+  },
+  drama: {
+    title:'ชีวิตสอนใจ', ...ART,
+    light:palette('light',{bg:'#17303a',panel:'#1f3d49',ink:'#eef7fb',muted:'#b7d3df',accent:'#9fdcf5',line:'#5f8b9c',pick:'#284a58',wood:'#0e1f26',gold:'#f3d27a'}),
+    dark:palette('dark',{bg:'#10232b',panel:'#173039',ink:'#eef7fb',muted:'#afcdda',accent:'#9fdcf5',line:'#5f8b9c',pick:'#1f3c48',wood:'#09171c',gold:'#f3d27a'}),
+  },
+  comedy: {
+    title:'ตลกบ้านทุ่ง', ...ART,
+    light:palette('light',{bg:'#232a14',panel:'#2f381c',ink:'#fbf5d4',muted:'#d3d6a8',accent:'#ffe14d',line:'#808a55',pick:'#3b4624',wood:'#151a0b',gold:'#ffe14d'}),
+    dark:palette('dark',{bg:'#181e0d',panel:'#222a14',ink:'#fbf5d4',muted:'#cdd0a0',accent:'#ffe14d',line:'#808a55',pick:'#2d371b',wood:'#0e1207',gold:'#ffe14d'}),
   },
 }
 
 export const themeKey = value => categoryOf(value)?.id ?? 'mix'
 export const categoryGenre = value => categoryOf(value)?.name ?? 'mix'
-export const themeForGenre = value => CATEGORY_THEMES[themeKey(value)] ?? CATEGORY_THEMES.tale
+export const themeForGenre = value => CATEGORY_THEMES[themeKey(value)] ?? CATEGORY_THEMES.ghost
 
 export function categoryThemeCss() {
   const rule = (id,theme,mode) => {

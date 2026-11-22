@@ -14,7 +14,7 @@ import { pipeline as pipeStreams } from 'node:stream/promises'
 import { join, resolve, sep, extname } from 'node:path'
 import { ROOT, loadConfig, updateConfig, slugify } from '../pipeline/lib/config.mjs'
 import { topicsPrompt, scriptPrompt, parseTopics, cleanScript, GENRES } from '../pipeline/lib/prompts.mjs'
-import { ART_STYLES, RETIRED_ART_STYLES, MOODS } from '../extension/prompts.js'
+import { ART_STYLES, RETIRED_ART_STYLES, SCARE_LEVELS } from '../extension/prompts.js'
 import { createProduction } from './production.js'
 import { saveScript, loadScript } from '../pipeline/lib/stage2.mjs'
 import { createRunner } from './runner.js'
@@ -822,8 +822,8 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
         // เริ่มใหม่ตั้งแต่แผนกที่เลือก (ไม่ใส่ = ทำต่อจากที่ค้าง) — ต้องมีหัวข้อ ใช้กับคลิปที่มีอยู่แล้ว
         const restartFrom = title && ['script', 'voice', 'art', 'images', 'clips', 'edit'].includes(body.restartFrom) ? body.restartFrom : null
         const slug = autoTopic ? null : slugify(title)
-        // แนวเนื้อหาที่แผงข้างใช้ตอนเสนอหัวข้อ (สุ่มไว้แล้ว) → บทเป็นแนวเดียวกับหัวข้อ · ไม่ส่ง = autopilot เลือกตามตั้งค่าคลิป
-        const env = ['happy', 'off'].includes(body.mood) ? { CLIP_MOOD: body.mood } : undefined
+        // ระดับความสยองที่แผงข้างใช้ตอนเสนอหัวข้อ (สุ่มไว้แล้ว) → บทเป็นระดับเดียวกับหัวข้อ · ไม่ส่ง = autopilot เลือกตามตั้งค่าคลิป
+        const env = ['light', 'medium', 'strong'].includes(body.scare) ? { CLIP_SCARE: body.scare } : undefined
         const started = runner.start('autopilot', slug, { title, autoTopic, genre, language, titleLanguage, minutes, restartFrom, env })
         // ขั้นเสียงพากย์อ่านภาษา/ความยาวเป้าหมายจาก config — ให้ตรงกับที่เลือกในแผงข้าง
         updateConfig((c) => {
@@ -931,8 +931,12 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
             if (MOTION_PRESETS[body.motion]) c.render.motion = body.motion
             // ชวนคุยท้ายคลิป: 'on' (ค่าเริ่มต้น) | 'off' — ใช้กับบทที่เขียนหลังจากนี้
             if (['on', 'off'].includes(body.engage)) c.script.engage = body.engage === 'on'
-            // แนวเนื้อหา: off ปกติ | random สุ่มต่อคลิป | happy เพิ่มความสุข ไม่เสนอความทุกข์ — ใช้กับคลิปใหม่
-            if (MOODS[body.mood]) c.script.mood = body.mood
+            // ระดับความสยอง (หมวดผี/ไสย): light เบา | medium กลาง | strong เข้ม | random สุ่มต่อคลิป — ใช้กับคลิปใหม่
+            if (SCARE_LEVELS[body.scare]) {
+              c.script.scare = body.scare
+              delete c.script.mood
+              delete c.script._mood
+            }
             // ผู้เขียนบทและหัวข้อ: chatgpt (ค่าเริ่มต้น) | gemini — ใช้กับคลิปที่เริ่มหลังจากนี้
             if (WRITERS[body.writer]) c.script.writer = body.writer
             // ม้าน้ำ/Kie: 'off' · เปอร์เซ็นต์ของฉากทั้งเรื่อง · 'first' = N ภาพแรก (จำนวนจาก firstCount)
@@ -974,7 +978,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
           pause: PAUSE_PRESETS[c.tts.pause] ? c.tts.pause : 'normal',
           motion: MOTION_PRESETS[c.render.motion] ? c.render.motion : 'off',
           engage: c.script.engage === false ? 'off' : 'on',
-          mood: MOODS[c.script.mood] ? c.script.mood : 'off',
+          scare: SCARE_LEVELS[c.script.scare] ? c.script.scare : 'medium',
           writer: writerOf(c),
           gemini: { hasKey: hasKey('GEMINI_API_KEY') },
           bgm: bgmMode(c),
@@ -993,7 +997,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
             kieTier: Object.entries(KIE_TIERS).map(([id, t]) => ({ id, label: t.label, name: t.name, credits: t.credits, detail: t.detail })),
             motion: Object.entries(MOTION_PRESETS).map(([id, m]) => ({ id, label: m.label })),
             engage: [{ id: 'on', label: 'ชวนคุย' }, { id: 'off', label: 'ไม่ชวน' }],
-            mood: Object.entries(MOODS).map(([id, m]) => ({ id, label: m.label })),
+            scare: Object.entries(SCARE_LEVELS).map(([id, s]) => ({ id, label: s.label })),
             writer: Object.entries(WRITERS).map(([id, w]) => ({ id, label: w.label })),
             bgmLevel: Object.entries(BGM_LEVELS).map(([id, l]) => ({ id, label: l.label })),
             bgm: [

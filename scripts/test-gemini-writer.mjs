@@ -29,11 +29,11 @@ test('ผู้เขียนบท: ค่าเริ่มต้น ChatGPT 
 test('Gemini เว็บ: ตัดส่วนกำกับภาพของ Blueprint ออก ให้คำสั่งเขียนบทพอดีช่องพิมพ์', async () => {
   const { scriptPrompt } = await import('../pipeline/lib/prompts.mjs')
   const { loadConfig } = await import('../pipeline/lib/config.mjs')
-  const prompt = scriptPrompt(loadConfig(), 'ม่อจื๊อเดินสิบวันสิบคืน', { category: 'sage', mood: 'happy' })
+  const prompt = scriptPrompt(loadConfig(), 'คืนที่นางตะเคียนร้องไห้', { category: 'ghost', scare: 'strong' })
   const trimmed = trimForWebWriter(prompt)
   assert.ok(trimmed.length < 30_000, `ยาว ${trimmed.length} ตัวอักษร`)
   assert.ok(!trimmed.includes('### OUTPUT 5'), 'ส่วนภาพต้องถูกตัด')
-  for (const keep of ['STAGE 2', 'หัวใจของบท', 'ตอนจบของบท', '## 4. สูตร Hook', 'ม่อจื๊อเดินสิบวันสิบคืน']) assert.ok(trimmed.includes(keep), `ต้องเหลือ ${keep}`)
+  for (const keep of ['STAGE 2', 'หัวใจของบท', 'ตอนจบของบท', '## 4. สูตร Hook', 'คืนที่นางตะเคียนร้องไห้', 'ระดับความสยองของคลิปนี้: เข้ม']) assert.ok(trimmed.includes(keep), `ต้องเหลือ ${keep}`)
   assert.equal(trimForWebWriter('ไม่มีหัวข้อ Blueprint'), 'ไม่มีหัวข้อ Blueprint')
 })
 

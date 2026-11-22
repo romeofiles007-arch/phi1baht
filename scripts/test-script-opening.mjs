@@ -19,7 +19,7 @@ test('จับบทที่ขึ้นต้น "คุณเคย…ไห
   assert.equal(opensWithHaveYouEver('เคยไหม... งานยังไม่เสร็จ แต่ใจกลับเหนื่อย'), true)
   assert.equal(opensWithHaveYouEver('บทพากย์ 1 นาที — การให้อภัยตัวเอง\nคุณเคยทำผิดพลาด...\nแล้วให้อภัยตัวเองไม่ได้ไหม'), true, 'มีหัวเรื่องนำ 1 บรรทัด')
   assert.equal(opensWithHaveYouEver('Have you ever felt alone?'), true)
-  assert.equal(opensWithHaveYouEver('你有没有想过'), true)
+  // Task 4: ไม่มีพากย์ภาษาจีนแล้ว — ตัวจับรูปประโยคภาษาจีนถูกตัดออก
 })
 
 test('ไม่จับบทที่เข้าเรื่องเลย หรือมีคำถามสะท้อนใจกลางบท', () => {

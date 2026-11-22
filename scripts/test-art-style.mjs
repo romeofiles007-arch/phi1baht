@@ -36,7 +36,7 @@ test('คลิปเก่าที่เป็นลายเส้นเล�
   const dir = join(ROOT, 'projects', slug, '00_ref')
   try {
     mkdirSync(dir, { recursive: true })
-    writeFileSync(join(dir, 'profile.json'), JSON.stringify({ category: 'tale', artStyle: 'chinese' }))
+    writeFileSync(join(dir, 'profile.json'), JSON.stringify({ category: 'ghost', artStyle: 'chinese' }))
     assert.equal(RETIRED_ART_STYLES.chinese, 'inkwash')
     assert.equal(readProfile(slug).artStyle, 'inkwash')
     // คำสั่งที่ส่งให้ Flow ใช้ลายเส้นหมึกจีน + กฎเต็มเฟรม
@@ -61,7 +61,9 @@ test('โทนสีหลักเย็นสบายตาและปร�
   assert.ok(!/สีสดอิ่ม/.test(prompt))
   assert.ok(!/golden-saffron and amber|แสงทองเรือง|โทนทองอำพัน/.test(JSON.stringify(ART_STYLES)))
   const blueprint = readFileSync(new URL('../extension/VDO Concept.txt', import.meta.url), 'utf8')
-  assert.match(blueprint, /COLOR PALETTE \(base is COOL/)
+  // Task 4: Blueprint V1 ผี 1 บาทใช้ชุดสีตามหมวด (ผี/ไสยโทนมืด · นิทาน/ดราม่า/ตลกโทนสว่าง) แทนโทนเย็นของแอปต้นแบบ
+  // (กฎโทนสีใน flowPrompt / COLOR_MOOD_RULE เปลี่ยนตามหมวดใน Task 5)
+  assert.match(blueprint, /COLOR PALETTE \(per category/)
   assert.match(blueprint, /COLOR MOOD/)
   assert.ok(!/golden dawn, soft candlelight|warm and peaceful mood|SAFFRON ORANGE, DEEP BROWN, or GOLD-YELLOW/.test(blueprint))
 })

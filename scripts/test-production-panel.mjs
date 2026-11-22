@@ -19,7 +19,7 @@ import { scheduleFromFields, scheduleFields, scheduleCopy } from '/extension/pro
 import { applyCategoryTheme } from '/extension/category-themes.js';
 import { CATEGORIES } from '/extension/prompts.js';
 const params = new URLSearchParams(location.search);
-applyCategoryTheme(params.get('category') || 'tale');
+applyCategoryTheme(params.get('category') || 'ghost');
 const box = document.getElementById('prodBox'),control=document.getElementById('autoControlBlock'),section=document.getElementById('autoSection'),main=document.querySelector('main');
 control.replaceChildren(box);section.replaceChildren(control);main.replaceChildren(section);document.body.replaceChildren(main);
 // Preserve all shipped ancestor selectors and inherited tokens, trim only the preview surround.
@@ -81,7 +81,7 @@ try {
     return r.result.value
   }
   await command('Page.enable'); await command('Runtime.enable')
-  const load = async (category = 'tale') => {
+  const load = async (category = 'ghost') => {
     await command('Page.navigate', { url: base + '/extension/preview.html?category=' + category })
     for (let i = 0; i < 100; i++) { if (await evaluate('window.previewReady === true')) return; await pause(50) }
     throw new Error('Preview did not become ready: ' + errors.join('; '))
@@ -146,7 +146,7 @@ try {
   assert.equal(await evaluate('window.fixture.state.active'), false)
   assert.equal(await evaluate('window.calls.some(c=>/posting/.test(c.path))'), false)
   const results = []
-  for (const mode of process.argv.includes('--interactions-only') ? [] : ['dark', 'light']) for (const category of ['tale', 'monk', 'sanguo']) for (const width of [360, 450]) {
+  for (const mode of process.argv.includes('--interactions-only') ? [] : ['dark', 'light']) for (const category of ['ghost', 'saiyasat', 'folk', 'drama', 'comedy']) for (const width of [360, 450]) {
     await command('Emulation.setDeviceMetricsOverride', { width, height: 1500, deviceScaleFactor: 1, mobile: false })
     await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: mode }] })
     await load(category)
@@ -164,7 +164,7 @@ try {
       assert.ok(metrics.contrast >= 4.5, JSON.stringify(results.at(-1)))
       assert.ok(metrics.buttonContrast >= 4.5, JSON.stringify(results.at(-1)))
       assert.equal(metrics.targets, true, JSON.stringify(results.at(-1)))
-      if (category === 'tale' && width === 360 || category === 'sanguo' && width === 450 && !advanced) {
+      if (category === 'ghost' && width === 360 || category === 'comedy' && width === 450 && !advanced) {
         const shot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true })
         writeFileSync(join(output, `production-${category}-${mode}-${width}${advanced ? '-options' : ''}.png`), Buffer.from(shot.data, 'base64'))
       }

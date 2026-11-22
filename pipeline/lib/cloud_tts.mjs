@@ -218,8 +218,8 @@ const EMOTION_STYLE = {
   excited: 'in an excited, energetic voice',
   serious: 'in a serious, weighty documentary voice',
   soft: 'in a soft, gentle voice',
-  // หมวด 1 สอนธรรม — เรียบ สงบ ทุ้ม ไม่ขึ้นลงมาก
-  sage: 'in a calm, steady, low and even voice, like an old Chinese storyteller recounting a legend, with very little rise and fall',
+  // นักเล่าเรื่องผียามดึก — ช้า ทุ้ม เรียบ ไม่ขึ้นลงมาก (PACE.calm ใน extension/prompts.js)
+  storyteller: 'in a slow, low, steady voice, like an old Thai ghost-story narrator on late-night radio, with very little rise and fall',
 }
 
 /** ความเร็ว 1.1 → "+10%" ตามรูปแบบของ edge-tts */

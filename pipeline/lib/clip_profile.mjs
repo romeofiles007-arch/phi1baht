@@ -1,31 +1,26 @@
 /**
- * โปรไฟล์ของคลิป — หมวดเนื้อหา + ลายเส้น + แนวเนื้อหา
+ * โปรไฟล์ของคลิป — หมวดเนื้อหา + ลายเส้น + ระดับความสยอง
  *
- * เก็บที่ projects/<slug>/00_ref/profile.json   { category, title, artStyle, mood }
+ * เก็บที่ projects/<slug>/00_ref/profile.json   { category, title, artStyle, scare }
  *
  * หมวดมาจาก: แนวที่เลือก/คอลัมน์ Genre ของหัวข้อ → ถ้าไม่รู้ ดูจากชื่อเรื่อง
  */
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { ROOT, loadConfig } from './config.mjs'
-import { categoryOf, ART_STYLES, RETIRED_ART_STYLES, resolveMood } from '../../extension/prompts.js'
+import { CATEGORIES, categoryOf, ART_STYLES, RETIRED_ART_STYLES, resolveScare, scareApplies, SCARE_LEVELS } from '../../extension/prompts.js'
 
 export const refDir = (slug) => join(ROOT, 'projects', slug, '00_ref')
 const profileFile = (slug) => join(refDir(slug), 'profile.json')
 
 /**
- * โปรไฟล์คลิปยุคธรรมะ (ก่อน พ.ย. 2026) — หมวดเก่า รูปพระ และวิธีเล่าแบบเก่า
- * อ่านแล้วแปลงเป็นของใหม่ทันที และทิ้งรูปอ้างอิงเก่าเสมอ
+ * โปรไฟล์ที่เขียนด้วยแอปรุ่นก่อน (หมวดที่ไม่มีแล้ว ฟิลด์ของฟีเจอร์ที่ตัดออก) → อ่านเป็นของใหม่
+ * หมวดที่ไม่รู้จัก = เดาจากชื่อเรื่อง · แนวเนื้อหาเดิม (mood) ไม่ใช้แล้ว
  */
-const LEGACY_CATEGORY = { buddha: 'sanguo', monk: 'sage', dhamma: 'tale' }
 export function migrateProfile(profile) {
   if (!profile) return profile
-  if (LEGACY_CATEGORY[profile.category]) profile.category = LEGACY_CATEGORY[profile.category]
-  delete profile.narration
-  delete profile.self
-  delete profile.figure
-  delete profile.monk
-  delete profile.buddha
+  if (!CATEGORIES.some((c) => c.id === profile.category)) profile.category = detectCategory(profile.title)
+  for (const old of ['narration', 'self', 'figure', 'monk', 'buddha', 'mood']) delete profile[old]
   return profile
 }
 
@@ -33,7 +28,7 @@ export function readProfile(slug) {
   if (!slug) return null
   try {
     const profile = migrateProfile(existsSync(profileFile(slug)) ? JSON.parse(readFileSync(profileFile(slug), 'utf8')) : null)
-    // ลายเส้นที่เลิกใช้แล้ว (ภาพวาดจีน) → อ่านเป็นลายเส้นที่มาแทน ไม่แก้ไฟล์ของคลิป
+    // ลายเส้นที่เลิกใช้แล้ว → อ่านเป็นลายเส้นที่มาแทน ไม่แก้ไฟล์ของคลิป
     if (profile && RETIRED_ART_STYLES[profile.artStyle]) profile.artStyle = RETIRED_ART_STYLES[profile.artStyle]
     return profile
   } catch {
@@ -47,9 +42,17 @@ function saveProfile(slug, profile) {
   return profile
 }
 
-// คำจับหมวด 1 — ครอบคลุมวรรณกรรมจีนคลาสสิกทุกเรื่องที่ใช้ได้ ไม่ใช่แค่สามก๊ก
-const SANGUO_WORDS = /สามก๊ก|ขงเบ้ง|จูกัดเหลียง|กวนอู|เล่าปี่|เตียวหุย|โจโฉ|ซุนกวน|ซุนเซ็ก|จูล่ง|สุมาอี้|จิวยี่|ลิโป้|ลกซุน|เกียงอุย|ฮวาโต๋|ม้าเฉียว|ตั๋งโต๊ะ|อ้วนเสี้ยว|เตียวเสียน|ผาแดง|เกงจิ๋ว|ไซอิ๋ว|เห้งเจีย|ซุนหงอคง|ซัมจั๋ง|เสวียนจั้ง|ตือโป๊ยก่าย|ซัวเจ๋ง|ซ้องกั๋ง|เหลียงซาน|บู๊สง|ลิมชอง|หลินชง|โลจิซิม|ห้องสิน|เกียงจูแหย|จื่อหยา|นาจา|หอแดง|เปาบุ้นจิ้น|ฌ้อปาอ๋อง|เซี่ยงหยี่|หลิวปัง|ฮั่นเกาจู่|หันสิน|เตียวเหลียง|ชอหาน|เลียดก๊ก|ตระกูลหยาง|มู่กุ้ยอิง|งักฮุย|มู่หลาน|เซฺว เหรินกุ้ย|จิ๋นซี|บูเช็กเทียน|ซือหม่า เชียน|ซือหม่าเชียน|หลี่ ไป๋|หลี่ไป๋|ไซซี|กุ้ยเฟย|ขุนศึก|แม่ทัพ|ราชวงศ์|ฮ่องเต้|จ๊กก๊ก|วุยก๊ก|ง่อก๊ก/
-const SAGE_WORDS = /ขงจื๊อ|เล่าจื๊อ|จวงจื่อ|จวงจื๊อ|เม่งจื๊อ|ซุนวู|ม่อจื๊อ|ฮั่นเฟย|พิชัยสงคราม|เต้าเต๋อ|หลุนหยฺวี่|ปรัชญาจีน|เต๋า|ขงจื่อ/
+/**
+ * คำจับหมวดจากชื่อเรื่อง — เช็กตามลำดับ (ตลกก่อน เพราะ "หมอผีปลอม" "ขี้โม้นอนป่าช้า" มีคำผีอยู่ด้วย)
+ * ไม่ตรงหมวดไหน = ผีไทย (หมวดหลัก)
+ */
+const CATEGORY_WORDS = [
+  ['comedy', /ตลก|ขำ|หัวเราะ|ป่วน|ขี้โม้|ขี้ขลาด|หมอผีปลอม|ทิดจ่อย|หูตึง|โดนเอง/],
+  ['folk', /ยักษ์|นางฟ้า|เจ้าชาย|เจ้าหญิง|ของวิเศษ|สังข์ทอง|เงาะ|ปลาบู่|ไกรทอง|ชาละวัน|ขุนแผน|ขุนช้าง|ศรีธนญชัย|พระรถ|เมรี|โสนน้อย|นางเงือก|ฤๅษี|ฤาษี|พญานาค|จักรๆ|นิทาน|เมืองยักษ์|ม้าวิเศษ/],
+  ['saiyasat', /หมอผี|ไสย|ตะกรุด|ยันต์|คาถา|ของขลัง|ของเฮี้ยน|ธุดงค์|ศาลพระภูมิ|หุ่นพยนต์|เสือสมิง|ยาสั่ง|ทำของ|มนต์ดำ/],
+  ['ghost', /ผี|กระสือ|ปอบ|กระหัง|พราย|ตานี|ตะเคียน|โพง|กองกอย|เปรต|วิญญาณ|หลอน|ป่าช้า|โลงศพ|หลุมศพ|บ้านร้าง/],
+  ['drama', /อกตัญญู|เมียน้อย|เมียหลวง|เศรษฐี|ลูกเขย|แม่เลี้ยง|ทรยศ|มรดก|การพนัน|คนจน|คนรวย|ดราม่า|หลงเงิน/],
+]
 
 /**
  * ลายเส้นของคลิป ตามตั้งค่าคลิปตอนเริ่มทำ ("สุ่ม" = เลือกตอนนี้แล้วบันทึกไว้ ใช้ลายเส้นเดียวทั้งคลิป)
@@ -67,9 +70,7 @@ function clipStyle() {
 /** เดาหมวดจากชื่อเรื่อง */
 export function detectCategory(title) {
   const t = String(title ?? '')
-  if (SAGE_WORDS.test(t)) return 'sage'
-  if (SANGUO_WORDS.test(t)) return 'sanguo'
-  return 'tale'
+  return CATEGORY_WORDS.find(([, re]) => re.test(t))?.[0] ?? 'ghost'
 }
 
 /**
@@ -80,10 +81,10 @@ export async function ensureProfile(slug, { title, genre, log = console.log } = 
   let profile = readProfile(slug)
   if (!profile) {
     const category = categoryOf(genre)?.id ?? detectCategory(title)
-    // แนวเนื้อหา: autopilot สุ่มไว้แล้วตอนคิดหัวข้อ (CLIP_MOOD) → หัวข้อกับบทเป็นแนวเดียวกัน
-    profile = { category, title, ...clipStyle(), mood: resolveMood(process.env.CLIP_MOOD || loadConfig().script?.mood) }
+    // ระดับความสยอง: autopilot สุ่มไว้แล้วตอนคิดหัวข้อ (CLIP_SCARE) → หัวข้อ บท และภาพเป็นระดับเดียวกัน
+    profile = { category, title, ...clipStyle(), scare: resolveScare(process.env.CLIP_SCARE || loadConfig().script?.scare) }
     saveProfile(slug, profile)
-    log(`   หมวดของคลิป: ${profile.category}${profile.mood === 'happy' ? ' · แนวเพิ่มความสุข' : ''}`)
+    log(`   หมวดของคลิป: ${profile.category}${scareApplies(profile.category) ? ` · ความสยอง${SCARE_LEVELS[profile.scare].label}` : ''}`)
   }
   return profile
 }
