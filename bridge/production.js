@@ -1,0 +1,532 @@
+/**
+ * ผลิตต่อเนื่อง (🏭) — สั่ง "ทำคลิปอัตโนมัติ" ทีละคลิปเองตามเวลา จนครบจำนวน
+ *
+ *   ตั้งเวลา   now = เริ่มทันที · at = เริ่มตอน HH:MM (ครั้งเดียว) · daily = ทุกวันตอน HH:MM
+ *   หน่วงเวลา  พักระหว่างคลิปแบบสุ่ม delayMin–delayMax นาที (ไม่ให้ ChatGPT/Flow/Kie ถูกใช้ถี่)
+ *   สุ่ม       หมวด/หัวข้อ · ลายเส้น · วิธีเล่า · ภาษา — ข้อที่ไม่สุ่มใช้ค่าในตั้งค่าคลิปตามเดิม
+ *   คิวโพสต์   เปิดโหมดโพสต์อัตโนมัติ → คลิปที่เสร็จเข้าคิว 📣 เอง (posting.js ดึงเข้าคิวทุกไม่กี่นาที)
+ *
+ * สถานะเก็บที่ projects/_production.json — bridge รีสตาร์ทกลางทาง (เช่นโค้ดอัปเดต) ก็ทำต่อได้
+ * คลิปล้มข้ามไปคลิปถัดไป · ล้มติดกัน 3 คลิปหยุดทั้งชุด (น่าจะมีอะไรพังที่ต้องให้คนดู)
+ */
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, linkSync, copyFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { spawn } from 'node:child_process'
+import { ROOT, loadConfig } from '../pipeline/lib/config.mjs'
+import { GENRES, CATEGORIES, categoryOf } from '../extension/prompts.js'
+import { clipSettings } from '../pipeline/lib/clips.mjs'
+import { hasKey } from '../pipeline/lib/env.mjs'
+import { loadQueue, loadAccounts, allTargets, findTarget, pageSequence } from '../pipeline/lib/posting.mjs'
+import { playDoneSound } from './runner.js'
+import { selfNarratorReady, SELF_NOT_READY } from '../pipeline/lib/self_narrator.mjs'
+
+const FILE = join(ROOT, 'projects', '_production.json')
+const LAST_RUN = join(ROOT, 'projects', '_autopilot_last.json')
+const TICK_MS = 15_000
+const MAX_FAILS_IN_ROW = 3
+export const LANGUAGES = ['th', 'zh', 'en']
+
+export const DEFAULT_SETTINGS = {
+  count: 1, // 0 = ไม่จำกัด จนกว่าจะกดหยุด · ผู้ใช้ (5 พ.ย. 2026): ค่าตั้งต้นเอาแค่ 1 คลิป
+  start: 'now', // now | at | daily
+  time: '22:00',
+  delayMin: 20,
+  delayMax: 40,
+  random: { genre: true, art: true, narration: true, language: false },
+  languages: ['th'], // ภาษาที่สุ่มได้ (ใช้เมื่อ random.language)
+  // off = เก็บในคลัง | now = เข้าคิวแล้วตั้งเวลาโพสต์ทันที · ไม่มีขั้น AI ตรวจแล้ว (ผู้ใช้ 16 พ.ย. 2026) — ค่าเก่า 'ai' นับเป็น 'now'
+  autoPost: 'now',
+  // โพสต์ลงเพจไหน: all = ระบบกระจายเอง แพลตฟอร์มละ 1 เพจ/ช่องที่รับหมวดของคลิป (กฎห้ามโพสต์ซ้ำ) · split = แบ่งคลิปตามจำนวนที่ตั้งต่อเพจ (คลิปละเพจเดียว)
+  postPages: 'all',
+  pageQuota: {}, // { "fb:<id>" | "yt:<id>": จำนวนคลิปต่อชุด } ใช้เมื่อ postPages = split
+  // สัดส่วนหมวดเมื่อสุ่มหมวด (random.genre) — { buddha: %, monk: %, dhamma: % } · ว่าง/รวม 0 = เท่าๆ กัน
+  // ผู้ใช้ (19 พ.ย. 2026): ใช้หลายเพจ แต่ละเพจรับคนละหมวด → กำหนดได้ว่าหมวดไหนผลิตมากน้อยเท่าไร
+  genreShare: {},
+}
+/** หมวดที่กำหนดสัดส่วนได้ (ไม่รวมโหมดเฉพาะ พระสอนธรรม) */
+export const SHARE_CATEGORIES = CATEGORIES.filter((c) => !c.exclusive).map((c) => c.id)
+const AUTO_POST = ['off', 'now']
+const POST_PAGES = ['all', 'split']
+const TARGET_KEY = /^(fb|yt|tk):[\w.-]{1,64}$/
+
+// dismissed = กดล้างชุดที่ค้างแล้ว (ไม่ทำต่อ) — เริ่มชุดใหม่ล้างค่านี้เอง เพราะ startBatch ใช้ blankState()
+// blocksInRow = Flow บล็อกติดกันกี่ครั้ง · blockPause = กำลังพักเพราะ Flow บล็อก (แผงข้างบอกผู้ใช้)
+const blankState = () => ({ active: false, pageIndex: 0, made: 0, failed: 0, failsInRow: 0, nextAt: null, run: null, batch: 0, message: '', history: [], dismissed: false, blocksInRow: 0, blockPause: null })
+
+function readJson(file, fallback) {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'))
+  } catch {
+    return fallback
+  }
+}
+
+/** ค่าที่ผู้ใช้ส่งมา → ค่าที่ปลอดภัย */
+export function cleanSettings(input = {}, base = DEFAULT_SETTINGS) {
+  const s = { ...base, random: { ...base.random }, languages: [...base.languages] }
+  const int = (v, min, max) => Math.min(max, Math.max(min, Math.round(Number(v))))
+  if (input.count !== undefined && Number.isFinite(Number(input.count))) s.count = int(input.count, 0, 100)
+  if (['now', 'at', 'daily'].includes(input.start)) s.start = input.start
+  if (/^([01]?\d|2[0-3]):[0-5]\d$/.test(String(input.time ?? ''))) s.time = String(input.time).padStart(5, '0')
+  if (input.delayMin !== undefined && Number.isFinite(Number(input.delayMin))) s.delayMin = int(input.delayMin, 0, 720)
+  if (input.delayMax !== undefined && Number.isFinite(Number(input.delayMax))) s.delayMax = int(input.delayMax, 0, 720)
+  if (s.delayMax < s.delayMin) s.delayMax = s.delayMin
+  for (const k of Object.keys(DEFAULT_SETTINGS.random)) if (typeof input.random?.[k] === 'boolean') s.random[k] = input.random[k]
+  if (Array.isArray(input.languages)) {
+    const langs = input.languages.filter((l) => LANGUAGES.includes(l))
+    if (langs.length) s.languages = [...new Set(langs)]
+  }
+  if (AUTO_POST.includes(input.autoPost)) s.autoPost = input.autoPost
+  else if (input.autoPost === 'ai' || input.autoPost === true) s.autoPost = 'now' // ค่าแบบเก่า (AI ตรวจ / ติ๊กถูก)
+  else if (input.autoPost === false) s.autoPost = 'off'
+  if (!AUTO_POST.includes(s.autoPost)) s.autoPost = s.autoPost ? 'now' : 'off' // ค่าที่บันทึกไว้เป็น 'ai' → เข้าคิวโพสต์เลย
+  if (POST_PAGES.includes(input.postPages)) s.postPages = input.postPages
+  if (!POST_PAGES.includes(s.postPages)) s.postPages = 'all'
+  if (input.pageQuota && typeof input.pageQuota === 'object') {
+    s.pageQuota = {}
+    for (const [k, v] of Object.entries(input.pageQuota)) if (TARGET_KEY.test(k) && Number.isFinite(Number(v)) && Number(v) > 0) s.pageQuota[k] = int(v, 0, 100)
+  }
+  s.pageQuota = { ...(s.pageQuota ?? {}) }
+  if (input.genreShare && typeof input.genreShare === 'object') {
+    s.genreShare = {}
+    for (const id of SHARE_CATEGORIES) if (Number.isFinite(Number(input.genreShare[id]))) s.genreShare[id] = int(input.genreShare[id], 0, 100)
+  }
+  s.genreShare = { ...(s.genreShare ?? {}) }
+  return s
+}
+
+/** เวลา HH:MM ครั้งถัดไป (วันนี้ถ้ายังไม่ถึง ไม่งั้นพรุ่งนี้) */
+export function nextTimeAt(hhmm, now = Date.now()) {
+  const [h, m] = hhmm.split(':').map(Number)
+  const d = new Date(now)
+  d.setHours(h, m, 0, 0)
+  if (d.getTime() <= now) d.setDate(d.getDate() + 1)
+  return d.getTime()
+}
+
+export const randomDelayMs = (s, rand = Math.random) => Math.round((s.delayMin + rand() * (s.delayMax - s.delayMin)) * 60_000)
+
+// Autopilot prints a human recovery hint after its error; retain the actionable quota marker.
+export const productionError = lines => (lines ?? []).findLast(line => STOP_ALL.test(line)) ?? lines?.at(-1) ?? null
+// ล้มแบบนี้ทุกคลิปถัดไปก็ล้มเหมือนกัน → หยุดทั้งรอบ: บัญชี Flow ติดลิมิตครบ · เครดิต ElevenLabs หมด (ต้องเติมเอง ไม่สลับเสียง)
+// FLOW_BLOCKED = Flow ปฏิเสธคำสั่งของ Agent (กันบอต/ใช้งานผิดปกติ) ไล่ทำคลิปต่อมีแต่พังทุกคลิป (20 พ.ย. 2026)
+const STOP_ALL = /FLOW_ACCOUNTS_EXHAUSTED|FLOW_BLOCKED|เครดิต ElevenLabs หมด/
+
+/**
+ * Flow บล็อก (เตือนการใช้งานผิดปกติ / ไม่รับคำสั่งนานเกิน) — ทำคลิปถัดไปทันทีก็โดนเหมือนกัน และยิ่งสั่งยิ่งดูเป็นบอต
+ * ผู้ใช้ (20 พ.ย. 2026) เลือกให้พักเองแล้วทำต่อเอง: บล็อกครั้งแรก → พัก 2 ชม. แล้วทำคลิปเดิมต่อจากที่ค้าง
+ * บล็อกซ้ำติดกัน (พักแล้วยังโดน) → หยุดจริง ให้คนเปิด Flow สั่งเองด้วยมือให้ผ่านก่อน
+ */
+export const BLOCK_PAUSE_MS = 2 * 60 * 60_000
+export const MAX_BLOCKS_IN_ROW = 2
+export function onFlowBlocked(blocksInRow = 0, now = Date.now()) {
+  const n = (blocksInRow ?? 0) + 1
+  return n >= MAX_BLOCKS_IN_ROW ? { blocksInRow: n, stop: true, nextAt: null } : { blocksInRow: n, stop: false, nextAt: now + BLOCK_PAUSE_MS }
+}
+
+/**
+ * หมวดของคลิปถัดไปตามสัดส่วน % — เลือกหมวดที่ยังได้น้อยกว่าสัดส่วนมากที่สุด (ไม่ใช่สุ่มล้วน)
+ * ชุด 10 คลิป ตั้ง 50/30/20 → ได้ 5/3/2 พอดี · made = { id: จำนวนคลิปที่ทำสำเร็จแล้วในชุดนี้ }
+ * ไม่ได้ตั้ง (รวม 0) → null = คละหมวดแบบเดิม
+ */
+export function shareGenre(share = {}, made = {}, rand = Math.random) {
+  const ids = SHARE_CATEGORIES.filter((id) => share[id] > 0)
+  if (!ids.length) return null
+  const total = ids.reduce((a, id) => a + share[id], 0)
+  const n = ids.reduce((a, id) => a + (made[id] ?? 0), 0) + 1
+  const gap = (id) => (share[id] / total) * n - (made[id] ?? 0)
+  const best = Math.max(...ids.map(gap))
+  // ต่างกันไม่ถึงครึ่งคลิป = ถือว่าเสมอแล้วสุ่ม ไม่ใช่ชี้ตัวเดียว
+  // ตอนเริ่มชุด made ยังว่าง gap จึงเท่ากับสัดส่วนตรง ๆ (34/33/33) หมวดที่ตั้ง % สูงสุด
+  // จะชนะแบบตายตัวทุกครั้ง → คลิปแรกของทุกชุดเป็นสามก๊กเสมอ (ผู้ใช้เจอ 3 รอบติด 19 พ.ย. 2026)
+  // พอห่างกันเกินครึ่งคลิปเมื่อไหร่ โควตายังบังคับตามสัดส่วนเหมือนเดิม
+  const tied = ids.filter((id) => gap(id) >= best - 0.5)
+  const id = tied[Math.floor(rand() * tied.length)]
+  return CATEGORIES.find((c) => c.id === id).name
+}
+
+/** ตัวเลือกของคลิปถัดไป — สุ่มเฉพาะข้อที่ติ๊กไว้ · made = หมวดที่ทำสำเร็จแล้วในชุด (ใช้กับสัดส่วนหมวด) */
+export function pickClip(s, config, rand = Math.random, made = {}) {
+  const pick = (list) => list[Math.floor(rand() * list.length)]
+  const language = s.random.language ? pick(s.languages) : config.script.language ?? 'th'
+  // โหมดเฉพาะ (ผู้เล่าเรื่อง) เลือกไว้ = ทุกคลิปเป็นโหมดนั้น ไม่สุ่มหมวดทับ แม้ติ๊ก "สุ่มหมวด" ไว้
+  const fixed = categoryOf(config.script.genre)
+  return {
+    genre: fixed?.exclusive ? fixed.name : s.random.genre ? shareGenre(s.genreShare, made, rand) ?? 'mix' : GENRES.includes(config.script.genre) ? config.script.genre : 'mix',
+    language,
+    // ชื่อเรื่องภาษาเดียวกับเสียงพากย์เมื่อสุ่มภาษา (คลิปจีนชื่อจีน)
+    titleLanguage: s.random.language ? language : config.script.titleLanguage ?? language,
+    minutes: config.script.targetMinutes,
+    // clip_profile.mjs อ่านตัวแปรนี้แทน config — สุ่มต่อคลิปโดยไม่แตะตั้งค่าคลิปของผู้ใช้
+    env: { ...(s.random.art && { CLIP_ART_STYLE: 'random' }), ...(s.random.narration && { CLIP_NARRATION: 'random' }) },
+  }
+}
+
+const READY_DIR = join(ROOT, 'projects', '_ready')
+const videoOf = (slug) => join(ROOT, 'projects', slug, '06_render', `${slug}.mp4`)
+
+/** เปิดไฟล์/โฟลเดอร์ด้วยโปรแกรมของ Windows แบบหน้าต่างขยายเต็มจอ (start /max) */
+export function openMax(target) {
+  if (process.platform !== 'win32') return
+  spawn('cmd.exe', ['/d', '/s', '/c', `start "" /max "${target}"`], { windowsVerbatimArguments: true, windowsHide: true, stdio: 'ignore' }).on('error', () => {})
+}
+
+/**
+ * ผลิตครบชุด → รวมคลิปไว้โฟลเดอร์เดียว (projects/_ready/<วันเวลา>/01 ชื่อเรื่อง.mp4 …) พร้อมดูทันที
+ * ใช้ hard link (ไม่กินที่เพิ่ม) · ลิงก์ไม่ได้ (คนละไดรฟ์) ค่อยคัดลอก
+ */
+export function prepareReady(items, now = Date.now()) {
+  const ok = items.filter((h) => h.ok && h.slug && existsSync(videoOf(h.slug)))
+  if (!ok.length) return null
+  const d = new Date(now)
+  const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`
+  const dir = join(READY_DIR, stamp)
+  mkdirSync(dir, { recursive: true })
+  const files = ok.map((h, i) => {
+    const name = `${String(i + 1).padStart(2, '0')} ${String(h.title ?? h.slug).replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)}.mp4`
+    const target = join(dir, name)
+    if (!existsSync(target)) {
+      try {
+        linkSync(videoOf(h.slug), target)
+      } catch {
+        copyFileSync(videoOf(h.slug), target)
+      }
+    }
+    return { slug: h.slug, title: h.title, file: target }
+  })
+  return { dir, files, at: now }
+}
+
+export function createProduction({ runner, log, json, readBody, scheduler = true, halted = () => false }) {
+  let data = readJson(FILE, null) ?? {}
+  let settings = cleanSettings(data.settings ?? {})
+  let state = { ...blankState(), ...(data.state ?? {}) }
+
+  function save() {
+    mkdirSync(join(ROOT, 'projects'), { recursive: true })
+    const tmp = `${FILE}.tmp`
+    writeFileSync(tmp, JSON.stringify({ settings, state }, null, 2))
+    renameSync(tmp, FILE)
+  }
+
+  function say(message) {
+    state.message = message
+    log(`ผลิตต่อเนื่อง: ${message}`)
+  }
+
+  const fmt = (t) => new Date(t).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+  const target = () => (settings.count > 0 ? settings.count : Infinity)
+
+  function startBatch(now = Date.now()) {
+    state = { ...blankState(), history: state.history.slice(-30), ready: state.ready ?? null, active: true, batch: (state.batch ?? 0) + 1 }
+    state.nextAt = settings.start === 'now' ? now : nextTimeAt(settings.time, now)
+    say(settings.start === 'now' ? 'เริ่มผลิต' : `ตั้งเวลาไว้ เริ่ม ${fmt(state.nextAt)}${settings.start === 'daily' ? ' ทุกวัน' : ''}`)
+    save()
+  }
+
+  /** ชุดที่หยุดกลางทาง (ล้มติดกัน / บัญชี Flow เต็ม / กดหยุดเอง) ยังทำไม่ครบ → ทำต่อได้ · กดล้างแล้วไม่ถามอีก */
+  const resumable = () => !state.active && !state.dismissed && (state.batch ?? 0) > 0 && state.made < target()
+
+  /** คลิปล่าสุดของชุดล้มหลังได้ชื่อเรื่องแล้ว → ทำต่อคลิปนั้นจากแผนกที่ค้าง ไม่เริ่มหัวข้อใหม่ */
+  function unfinishedClip() {
+    const last = state.history.filter((h) => h.batch === state.batch).at(-1)
+    if (!last || last.ok || !last.slug || !last.title) return null
+    const status = readJson(join(ROOT, 'projects', last.slug, 'autopilot.json'), null)
+    return status?.status === 'done' ? null : { slug: last.slug, title: last.title, language: last.language, genre: last.genre ?? null }
+  }
+
+  /** ทำต่อชุดเดิม — นับจำนวนคลิปต่อจากเดิม · at = 'HH:MM' ตั้งเวลาทำต่อ (ไม่ใส่ = ทำต่อเลย) */
+  function resume(at, now = Date.now()) {
+    state.active = true
+    state.run = null
+    state.failsInRow = 0
+    state.blocksInRow = 0
+    state.blockPause = null
+    state.resume = unfinishedClip()
+    state.nextAt = at ? nextTimeAt(at, now) : now
+    const n = `คลิป ${state.made + 1}${settings.count ? `/${settings.count}` : ''}`
+    const what = state.resume ? `"${state.resume.title}" ต่อจากที่ค้าง` : n
+    say(at ? `ตั้งเวลาทำต่อ ${fmt(state.nextAt)} — ${what}` : `ทำต่อ — ${what}`)
+    save()
+  }
+
+  function stop() {
+    if (state.run && runner.snapshot()?.status === 'running' && runner.snapshot()?.startedAt === state.run.startedAt) runner.stop()
+    state.active = false
+    state.run = null
+    state.nextAt = null
+    state.blockPause = null
+    say('หยุดแล้ว')
+    save()
+  }
+
+  /** ล้างชุดที่หยุดค้าง — ไม่ทำต่อแล้ว กล่อง "ทำต่อ" หายไป · ประวัติคลิปยังอยู่ กดเริ่มผลิตได้ชุดใหม่นับจาก 0 */
+  function dismiss() {
+    state.dismissed = true
+    state.resume = null
+    state.nextAt = null
+    say('ล้างชุดที่ค้างแล้ว — กดเริ่มผลิตเพื่อเริ่มชุดใหม่')
+    save()
+  }
+
+  /** ผลของคลิปที่เพิ่งจบ — ดูจาก runner ถ้ายังอยู่ ไม่งั้นจาก autopilot.json ของคลิป (bridge รีสตาร์ทระหว่างทาง) */
+  function runResult(run) {
+    const snap = runner.snapshot()
+    const last = readJson(LAST_RUN, null)
+    const slug = last && last.at >= run.startedAt - 5000 ? last.slug : null
+    const title = slug ? last.title : null
+    if (snap && snap.startedAt === run.startedAt) {
+      if (snap.status === 'running') return null
+      return { slug, title, ok: snap.status === 'done', error: snap.status === 'done' ? null : productionError(snap.lines) ?? snap.status }
+    }
+    const status = slug ? readJson(join(ROOT, 'projects', slug, 'autopilot.json'), null) : null
+    return { slug, title, ok: status?.status === 'done', error: status?.status === 'done' ? null : status?.error ?? 'ไม่ทราบผล (โปรแกรมรีสตาร์ทระหว่างทำ)' }
+  }
+
+  /**
+   * โหมดแบ่งเพจ: เพจของคลิปถัดไปตามลำดับ (pageSequence) — คืน [key] หนึ่งเพจ
+   * ทุกเพจหรือยังไม่ได้ตั้งจำนวน → null (posting เลือกทุกเพจที่รับหมวดของคลิปเอง)
+   */
+  function pagesForNextClip() {
+    if (settings.postPages !== 'split') return null
+    let keys = []
+    try {
+      keys = allTargets(loadAccounts())
+    } catch {}
+    const seq = pageSequence(settings.pageQuota, keys)
+    if (!seq.length) return null
+    const key = seq[(state.pageIndex ?? 0) % seq.length]
+    state.pageIndex = (state.pageIndex ?? 0) + 1
+    return [key]
+  }
+
+  function finishRun(result, now = Date.now()) {
+    state.history.push({ ...result, batch: state.batch, startedAt: state.run.startedAt, endedAt: now, language: state.run.language, genre: state.run.genre ?? null })
+    state.history = state.history.slice(-40)
+    state.run = null
+    // Flow บล็อก = ปัญหาของ Flow ไม่ใช่ของคลิป → ไม่นับเป็นคลิปล้ม (ไม่เข้า "ล้มติดกัน 3 ครั้ง") และทำคลิปเดิมต่อหลังพัก
+    const blocked = !result.ok && /FLOW_BLOCKED/.test(result.error ?? '')
+    if (result.ok) {
+      state.made++
+      state.failsInRow = 0
+    } else if (!blocked) {
+      state.failed++
+      state.failsInRow++
+    }
+    if (!blocked) state.blocksInRow = 0
+    // คลิปเสร็จ → จ่อคิวโพสต์ทันที (posting.enqueueAuto ต่อสายมาจาก server.js)
+    if (result.ok && result.slug && settings.autoPost !== 'off' && api.onClipReady) {
+      const pages = pagesForNextClip()
+      Promise.resolve(api.onClipReady(result.slug, settings.autoPost, pages))
+        .catch((err) => log(`ผลิตต่อเนื่อง: ส่ง "${result.title ?? result.slug}" เข้าคิวโพสต์ไม่ได้ — ${err.message}`))
+    }
+    const name = result.title ? `"${result.title}"` : 'คลิป'
+    if (blocked) {
+      const next = onFlowBlocked(state.blocksInRow, now)
+      state.blocksInRow = next.blocksInRow
+      if (next.stop) {
+        state.active = false
+        state.nextAt = null
+        state.blockPause = null
+        say(`หยุด — Flow บล็อกซ้ำ ${next.blocksInRow} ครั้งติดกัน แม้พักแล้ว · เปิดหน้า Flow สั่งสร้างภาพเองด้วยมือสักครั้งให้ผ่าน แล้วกดทำต่อ (ภาพที่ได้แล้วยังอยู่)`)
+      } else {
+        state.nextAt = next.nextAt
+        state.resume = unfinishedClip()
+        state.blockPause = { until: next.nextAt, title: state.resume?.title ?? result.title ?? null }
+        say(`Flow บล็อกชั่วคราว — พัก ${BLOCK_PAUSE_MS / 3_600_000} ชม. แล้วทำ${state.resume ? ` "${state.resume.title}" ต่อจากที่ค้าง` : 'คลิปถัดไป'} เวลา ${fmt(next.nextAt)}`)
+      }
+    } else if (!result.ok && /FLOW_ACCOUNTS_EXHAUSTED/.test(result.error ?? '')) {
+      state.active = false
+      state.nextAt = null
+      say('หยุด — บัญชี Flow ติดลิมิตครบแล้วหรือยืนยันบัญชีใหม่ไม่ได้ รอโควต้าคืนแล้วกดทำต่อ (หรือตั้งเวลาทำต่อ) ระบบทำคลิปเดิมต่อจากที่ค้าง')
+    } else if (!result.ok && /เครดิต ElevenLabs หมด/.test(result.error ?? '')) {
+      state.active = false
+      state.nextAt = null
+      say(`หยุด — ${result.error}`)
+    } else if (state.made >= target()) {
+      completeBatch(now)
+    } else if (state.failsInRow >= MAX_FAILS_IN_ROW) {
+      state.active = false
+      state.nextAt = null
+      say(`หยุด — คลิปล้มติดกัน ${MAX_FAILS_IN_ROW} ครั้ง (ล่าสุด: ${result.error ?? '-'}) ตรวจดูแล้วกดทำต่อ หรือตั้งเวลาทำต่อ`)
+    } else {
+      state.nextAt = now + randomDelayMs(settings)
+      say(`${result.ok ? `ได้ ${name}` : `${name} ไม่สำเร็จ — ข้าม`} · คลิปถัดไป ${fmt(state.nextAt)}`)
+    }
+    save()
+  }
+
+  /** ครบจำนวนคลิปของรอบ → แจ้งเสร็จ แล้วหยุด (หรือรอรอบพรุ่งนี้ในโหมดทุกวัน) */
+  function completeBatch(now = Date.now()) {
+    playDoneSound()
+    // คลิปพร้อมดู: รวมเป็นโฟลเดอร์เดียว — ไม่เปิดเอง กดปุ่ม "เล่น" / "เปิดโฟลเดอร์" ในหน้าผลิตต่อเนื่องเมื่ออยากดู
+    // ผู้ใช้ (5 พ.ย. 2026): ทำคลิปเสร็จแล้วไม่ต้องเปิดคลิปให้อัตโนมัติ และไม่ต้องเปิดโฟลเดอร์ขึ้นมา
+    try {
+      const ready = prepareReady(state.history.filter((h) => h.batch === state.batch))
+      if (ready) state.ready = ready
+    } catch (err) {
+      log(`ผลิตต่อเนื่อง: เตรียมคลิปพร้อมดูไม่ได้ — ${err.message}`)
+    }
+    if (settings.start === 'daily') {
+      state.nextAt = nextTimeAt(settings.time, now)
+      state.made = 0
+      state.failed = 0
+      state.batch++
+      say(`ครบ ${settings.count} คลิปของวันนี้ — รอบถัดไป ${fmt(state.nextAt)} พรุ่งนี้`)
+    } else {
+      state.active = false
+      state.nextAt = null
+      say(`เสร็จครบ ${state.made} คลิป${state.failed ? ` (ล้ม ${state.failed})` : ''}`)
+    }
+  }
+
+  function launch(now = Date.now()) {
+    state.blockPause = null
+    const config = loadConfig()
+    if (clipSettings(config).enabled && !hasKey('KIE_API_KEY')) {
+      state.nextAt = now + 10 * 60_000
+      say('เปิดแอนิเมชัน Kie แต่ยังไม่มี API key — ลองใหม่อีก 10 นาที')
+      return save()
+    }
+    // หมวดที่ "ลงมือทำไปแล้ว" ในชุดนี้ → คลิปถัดไปเลือกหมวดให้ตรงสัดส่วน % ที่ตั้งไว้
+    // นับคลิปที่ล้มด้วย (ไม่เช็ก h.ok แล้ว): เดิมนับเฉพาะที่สำเร็จ พอหมวดไหนล้ม คิวก็ไม่ขยับ
+    // ระบบจึงเลือกหมวดเดิมซ้ำไม่รู้จบ — 19 พ.ย. 2026 ล้ม 1 รอบ แล้วได้สามก๊กซ้ำทั้ง 3 รอบ
+    const made = {}
+    for (const h of state.history) if (h.batch === state.batch && h.genre) made[h.genre] = (made[h.genre] ?? 0) + 1
+    const clip = pickClip(settings, config, Math.random, made)
+    // ทำต่อคลิปที่ค้าง: สั่งด้วยชื่อเรื่องเดิม autopilot ข้ามแผนกที่เสร็จแล้วเอง (หมวด/ลายเส้นอยู่ในโปรไฟล์ของคลิปแล้ว)
+    const again = state.resume
+    state.resume = null
+    if (again) Object.assign(clip, { language: again.language ?? clip.language, titleLanguage: again.language ?? clip.titleLanguage })
+    const run = again
+      ? runner.start('autopilot', again.slug, { title: again.title, genre: clip.genre, language: clip.language, titleLanguage: clip.titleLanguage, minutes: clip.minutes, env: clip.env, quiet: true })
+      : runner.start('autopilot', null, { autoTopic: true, genre: clip.genre, language: clip.language, titleLanguage: clip.titleLanguage, minutes: clip.minutes, env: clip.env, quiet: true })
+    state.run = { startedAt: run.startedAt, language: clip.language, genre: again ? again.genre ?? null : categoryOf(clip.genre)?.id ?? null }
+    const n = state.made + 1
+    say(`${again ? `ทำต่อ "${again.title}" · ` : ''}เริ่มคลิป ${n}${settings.count ? `/${settings.count}` : ''} (${{ th: 'ไทย', zh: 'จีน', en: 'อังกฤษ' }[clip.language]}${!again && categoryOf(clip.genre) ? ` · ${categoryOf(clip.genre).name}` : ''})`)
+    save()
+  }
+
+  function tick(now = Date.now()) {
+    // หยุดทุกอย่างอยู่ → ไม่เริ่มคลิปเอง ไม่ทำต่อหลัง Flow บล็อก (bridge/halt.js)
+    if (!state.active || halted()) return
+    if (state.run) {
+      const result = runResult(state.run)
+      if (result) finishRun(result, now)
+      return
+    }
+    if (!state.nextAt || now < state.nextAt) return
+    // ลดจำนวนคลิปต่อรอบระหว่างรอบ จนทำครบแล้ว → จบรอบ ไม่เริ่มคลิปเกิน
+    if (state.made >= target()) {
+      completeBatch(now)
+      return save()
+    }
+    if (runner.snapshot()?.status === 'running') {
+      if (!state.message.startsWith('รองานอื่น')) say('รองานอื่นที่กำลังทำอยู่ให้เสร็จก่อน')
+      return
+    }
+    try {
+      launch(now)
+    } catch (err) {
+      state.nextAt = now + 5 * 60_000
+      say(`เริ่มคลิปไม่ได้: ${err.message} — ลองใหม่อีก 5 นาที`)
+      save()
+    }
+  }
+
+  // เฉพาะ bridge ตัวจริง — bridge ทดสอบ (port อื่น) ใช้ไฟล์ชุดเดียวกัน ถ้าวนด้วยจะผลิตซ้อนกัน
+  if (scheduler) setInterval(() => {
+    try {
+      tick()
+    } catch (err) {
+      log(`ผลิตต่อเนื่อง: ${err.message}`)
+    }
+  }, TICK_MS).unref()
+
+  /** สถานะโพสต์ของแต่ละคลิป (จากคิว 📣) + มีเพจ/ช่องให้โพสต์หรือยัง */
+  function postInfo() {
+    let queue = []
+    let targets = 0
+    let pages = []
+    try {
+      queue = loadQueue()
+      const accounts = loadAccounts()
+      pages = allTargets(accounts).map((key) => {
+        const { kind, account } = findTarget(accounts, key)
+        return { key, kind, name: account?.name ?? key } // ชื่อเพจ/ช่องเท่านั้น ไม่ส่ง token
+      })
+      targets = pages.length
+    } catch {}
+    const bySlug = new Map(queue.filter((q) => q.status !== 'removed').map((q) => [q.slug, q]))
+    const history = state.history.slice(-10).reverse().map((h) => {
+      const q = h.slug && bySlug.get(h.slug)
+      return q ? { ...h, post: { status: q.status, scheduleAt: q.scheduleAt ?? null, ai: q.ai?.status === 'done' ? q.ai.verdict : q.ai?.status ?? null } } : h
+    })
+    return { history, targets, pages }
+  }
+
+  function view() {
+    const { history, targets, pages } = postInfo()
+    const canResume = resumable()
+    const clip = canResume ? unfinishedClip() : null
+    const resume = canResume ? { next: state.made + 1, title: clip?.title ?? null } : null
+    return { settings, state: { ...state, history }, resume, postTargets: targets, postPages: pages, languages: LANGUAGES, now: Date.now() }
+  }
+
+  async function handle(req, res, path) {
+    if (!path.startsWith('/api/production')) return false
+    if (req.method === 'GET' && path === '/api/production') return json(res, 200, view()), true
+    if (req.method !== 'POST') return json(res, 404, { error: 'ไม่มี endpoint นี้' }), true
+    const body = await readBody(req)
+    if (path === '/api/production/settings') {
+      settings = cleanSettings(body, settings)
+      // แก้เวลาเริ่มระหว่างรอเริ่ม → ใช้เวลาใหม่
+      if (state.active && !state.run && state.made === 0 && settings.start !== 'now') state.nextAt = nextTimeAt(settings.time)
+      save()
+      return json(res, 200, view()), true
+    }
+    if ((path === '/api/production/start' || path === '/api/production/resume') && halted()) return json(res, 423, { error: 'หยุดทุกอย่างไว้อยู่ — กด "ทำงานต่อ" ก่อน แล้วค่อยเริ่มผลิต' }), true
+    if (path === '/api/production/start') {
+      if (body.settings) settings = cleanSettings(body.settings, settings)
+      if (categoryOf(loadConfig().script.genre)?.id === 'self' && !selfNarratorReady()) return json(res, 400, { error: SELF_NOT_READY }), true
+      startBatch()
+      tick()
+      return json(res, 200, view()), true
+    }
+    if (path === '/api/production/resume') {
+      if (state.active) return json(res, 409, { error: 'กำลังผลิตอยู่แล้ว' }), true
+      if (!resumable()) return json(res, 400, { error: 'ไม่มีชุดที่หยุดค้าง — กดเริ่มผลิตแทน' }), true
+      const at = body.at == null || body.at === '' ? null : String(body.at)
+      if (at && !/^([01]?\d|2[0-3]):[0-5]\d$/.test(at)) return json(res, 400, { error: 'เลือกเวลาทำต่อให้ครบ' }), true
+      if (categoryOf(loadConfig().script.genre)?.id === 'self' && !selfNarratorReady()) return json(res, 400, { error: SELF_NOT_READY }), true
+      resume(at ? at.padStart(5, '0') : null)
+      tick()
+      return json(res, 200, view()), true
+    }
+    if (path === '/api/production/stop') {
+      stop()
+      return json(res, 200, view()), true
+    }
+    // ล้างชุดที่ค้าง: ซ่อนกล่อง "ทำต่อ" ไปเลย ไม่แตะประวัติหรือไฟล์คลิป
+    if (path === '/api/production/dismiss') {
+      if (state.active) return json(res, 409, { error: 'กำลังผลิตอยู่ — กดหยุดผลิตก่อน' }), true
+      if (!resumable()) return json(res, 400, { error: 'ไม่มีชุดที่หยุดค้าง' }), true
+      dismiss()
+      return json(res, 200, view()), true
+    }
+    // ชุดล่าสุดที่ผลิตเสร็จ: เปิดโฟลเดอร์ หรือเปิดคลิปเต็มจอ (เฉพาะไฟล์ในโฟลเดอร์พร้อมดูของเราเอง)
+    if (path === '/api/production/open') {
+      const ready = state.ready
+      if (!ready || !existsSync(ready.dir)) return json(res, 404, { error: 'ยังไม่มีชุดคลิปที่ผลิตเสร็จ' }), true
+      const file = ready.files[Number(body.index) || 0]?.file
+      if (body.what === 'play' && file && existsSync(file)) openMax(file)
+      else openMax(ready.dir)
+      return json(res, 200, view()), true
+    }
+    return json(res, 404, { error: 'ไม่มี endpoint นี้' }), true
+  }
+
+  // active: เปิดโหมดผลิตต่อเนื่องอยู่ (รวมช่วงพักระหว่างคลิป/รอเวลาเริ่ม) — ใช้กันเครื่องหลับ ไม่งั้นคลิปถัดไปไม่เริ่ม
+  const api = { handle, tick, view, stop, busy: () => !!state.run, active: () => !!state.active, onClipReady: null }
+  return api
+}

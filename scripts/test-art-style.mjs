@@ -1,0 +1,69 @@
+// เทสต์: ลายเส้นภาพ — เอา "ภาพวาดจีน" ออกแล้ว และทุกลายเส้นห้ามภาพมีขอบขาว/เป็นภาพบนกระดาษ
+//   node scripts/test-art-style.mjs
+// เคยเป็น (พ.ย. 2026): ภาพวาดจีนดูล้าหลัง ไม่ได้รับความนิยม ภาพออกมามีขอบขาวเหมือนภาพบนกระดาษ ไกลตัว
+import assert from 'node:assert/strict'
+import { mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { ART_STYLES, RETIRED_ART_STYLES, FULL_BLEED_RULE, COLOR_MOOD_RULE } from '../extension/prompts.js'
+import { ROOT } from '../pipeline/lib/config.mjs'
+import { readProfile } from '../pipeline/lib/clip_profile.mjs'
+import { flowPrompt } from '../pipeline/lib/prompts.mjs'
+
+let passed = 0
+const test = (name, fn) => {
+  fn()
+  passed++
+  console.log(`  ✓ ${name}`)
+}
+
+test('เลือกได้เฉพาะ การ์ตูน doodle / หมึกจีนลงสี / สุ่ม', () => {
+  assert.deepEqual(Object.keys(ART_STYLES), ['doodle', 'inkwash', 'random'])
+  // ลายเส้นจีนต้องเต็มเฟรม ไม่ใช่ภาพม้วนแขวนหรือภาพบนกระดาษที่มีขอบ
+  assert.match(ART_STYLES.inkwash.rule, /no hanging scroll/)
+  assert.match(ART_STYLES.inkwash.flow, /ไม่ใช่ภาพม้วนแขวน/)
+})
+
+test('หมึกจีนลงสีไม่มี "paper texture" และสั่งเต็มเฟรมไม่มีขอบขาว', () => {
+  const w = ART_STYLES.inkwash
+  assert.ok(!/paper texture/i.test(w.rule))
+  assert.match(w.rule, /full-bleed, no paper border, no white margin/)
+  assert.ok(w.rule.includes(FULL_BLEED_RULE))
+  assert.match(w.flow, /ไม่มีขอบขาว/)
+})
+
+test('คลิปเก่าที่เป็นลายเส้นเลิกใช้ อ่านเป็นหมึกจีนลงสี (ไม่แก้ไฟล์ของคลิป)', () => {
+  const slug = `_test_art_style_${process.pid}`
+  const dir = join(ROOT, 'projects', slug, '00_ref')
+  try {
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'profile.json'), JSON.stringify({ category: 'tale', artStyle: 'chinese' }))
+    assert.equal(RETIRED_ART_STYLES.chinese, 'inkwash')
+    assert.equal(readProfile(slug).artStyle, 'inkwash')
+    // คำสั่งที่ส่งให้ Flow ใช้ลายเส้นหมึกจีน + กฎเต็มเฟรม
+    const prompt = flowPrompt('BRIEF', {}, slug)
+    assert.ok(prompt.includes(ART_STYLES.inkwash.flow))
+    assert.ok(prompt.includes(FULL_BLEED_RULE))
+    assert.ok(!/ภาพบนแผ่นกระดาษ.*ที่มีขอบขาว/.test(prompt))
+  } finally {
+    rmSync(join(ROOT, 'projects', slug), { recursive: true, force: true })
+  }
+})
+
+test('การ์ตูน doodle ก็ได้กฎเต็มเฟรมไม่มีขอบขาว', () => {
+  assert.ok(flowPrompt('BRIEF', {}, null).includes(FULL_BLEED_RULE))
+})
+
+// พ.ย. 2026: ภาพออกโทนเหลืองไป — ผู้ใช้ขอโทนเย็นสบายตา หรือปรับตามอารมณ์เรื่อง
+test('โทนสีหลักเย็นสบายตาและปรับตามอารมณ์ — ทองใช้แค่จุดเล็ก', () => {
+  const prompt = flowPrompt('BRIEF', {}, null)
+  assert.ok(prompt.includes(COLOR_MOOD_RULE))
+  assert.match(COLOR_MOOD_RULE, /ห้ามทั้งภาพออกโทนเหลือง/)
+  assert.ok(!/สีสดอิ่ม/.test(prompt))
+  assert.ok(!/golden-saffron and amber|แสงทองเรือง|โทนทองอำพัน/.test(JSON.stringify(ART_STYLES)))
+  const blueprint = readFileSync(new URL('../extension/VDO Concept.txt', import.meta.url), 'utf8')
+  assert.match(blueprint, /COLOR PALETTE \(base is COOL/)
+  assert.match(blueprint, /COLOR MOOD/)
+  assert.ok(!/golden dawn, soft candlelight|warm and peaceful mood|SAFFRON ORANGE, DEEP BROWN, or GOLD-YELLOW/.test(blueprint))
+})
+
+console.log(`\nผ่าน ${passed} ข้อ`)

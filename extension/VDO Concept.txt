@@ -1,0 +1,461 @@
+# VDO Concept Blueprint — V6 จีนโบราณ (2D Doodle Cartoon · Chinese Classic Storytelling)
+
+> คลิปการ์ตูน 2D ลายเส้น doodle เล่าเรื่องจีนโบราณ — สามก๊ก ปรัชญาจีน ตำนานจอมยุทธ์ และนิทานจีนสอนใจ ให้คนทั่วไปฟังสนุกและนำไปใช้ได้จริง
+> ระบบอัตโนมัติจะสั่งทีละขั้นว่าให้ทำ STAGE หรือ OUTPUT ไหน — ทำเฉพาะขั้นที่ถูกสั่ง และตอบเป็นข้อความในแชตเสมอ (ไม่สร้างไฟล์ให้ดาวน์โหลด)
+
+### ลำดับงาน
+
+```
+STAGE 1  หัวข้อ              → ตารางหัวข้อ
+STAGE 2  บทพากย์             → OUTPUT 2 (narration ล้วน)
+         เสียงพากย์ + Timecode  (ระบบทำเอง)
+OUTPUT 5 ภาพ                → 5.1 Style Bible · 5.2 Character Bible · 5.3 Shot List
+OUTPUT 4 ภาพปก              → prompt ภาพปกคลิป
+         ตัดต่อ              (ระบบทำเอง — วางภาพตามชื่อไฟล์ = timecode)
+```
+
+---
+
+## 1. กฎทอง 9 ข้อ
+
+**กฎ 1 — Voice First, Image Second**
+เสียงพากย์เสร็จก่อนเสมอ ภาพมาทีหลัง — เพราะ rhythm มาจากเสียง
+
+**กฎ 2 — Style Bible Lock**
+เขียน Style Bible ครั้งเดียวบนหัว brief → ใช้กับทุกช็อตของคลิป ห้ามเปลี่ยนกลางคลิป
+
+**กฎ 3 — Character Lock (@ref tags)**
+ทุกตัวละครต้องมี `@TAG` (เช่น `@hero`, `@sage`, `@soldier1`) — อ้างชื่อนี้ทุก shot
+
+**กฎ 4 — Filename = Timecode**
+ชื่อไฟล์ภาพคือเวลาที่ภาพขึ้น `HH_MM_SS.png` เช่น `00_00_05.png` = วินาทีที่ 5 · ทศนิยมวินาทีต่อท้าย เช่น `00_00_02_5.png` = 2.5 วินาที
+
+**กฎ 5 — One Beat Per Image (2–3 วิ/ภาพ)**
+1 ภาพ = 1 จังหวะ — เปลี่ยนภาพทุก **2–3 วินาที** (เร็วพอให้คนดูไม่เบื่อ แม้เนื้อหาสงบ)
+ถ้าจะ "ขยับ" ทำเป็น mini-sequence ต่อเนื่องจากช็อตก่อน
+
+**กฎ 6 — Hook ทุก 15–30 วินาที**
+ใส่ pattern interrupt ทุก 15–30 วิ กันคนเลื่อนผ่าน — คำถามชวนคิด / ภาพเปรียบเทียบสีสวย / พลิกมุมมอง / ช่วงเงียบ — ดูสูตรในหัวข้อ 4
+
+**กฎ 7 — Text in Image: ภาษาเดียวกับเสียงพากย์**
+อนุญาตให้มี on-screen text แบบ marker font ตัวหนา ตาม Visual Style DNA — ภาษาตามที่ระบบกำหนดให้คลิปนั้น
+- ภาษาไทย: คำสั้น 1–4 คำ ตัวหนา สะกดถูก (ชื่อคนจีนสะกดตามสำนวนไทยที่คุ้นเคย เช่น "ขงเบ้ง", "กวนอู", "ผาแดง") ใส่ข้อความในเครื่องหมายคำพูดใน prompt ให้ตรงตัว
+- 中文: อักษรจีนตัวย่อ 1–4 ตัว ตัวหนา เขียนถูกต้อง
+- English: ALL CAPS คำสั้น
+ข้อความยาว/ประโยคเต็ม/บทกวียาวไม่ใส่ในภาพ — ซับไตเติลใส่ตอนตัดต่อ
+
+**กฎ 8 — Subtle Transitions**
+ใช้ cut อย่างเดียวเป็นหลัก fade/dissolve เฉพาะเปลี่ยน chapter เท่านั้น
+
+**กฎ 9 — ความถูกต้อง ลิขสิทธิ์ และความปลอดภัยของเนื้อหา**
+- แยกให้ชัดระหว่าง **ประวัติศาสตร์** (จดหมายเหตุสามก๊ก พงศาวดาร) กับ **วรรณกรรม** (สามก๊กฉบับนิยาย) — ไม่แน่ใจให้พูดว่า "ในวรรณกรรมเล่าว่า…" หรือ "มีเรื่องเล่าสืบกันมาว่า…"
+- ห้ามแต่งคำพูดของบุคคลจริงแล้วอ้างว่าเป็นคำพูดจริง ห้ามแต่งชื่อคัมภีร์ บท หรือตัวเลขขึ้นเอง · คำคมจากคัมภีร์ยกได้เฉพาะที่แพร่หลายและมั่นใจว่าถูกต้อง
+- **ลิขสิทธิ์:** ใช้ได้เฉพาะงานที่หมดลิขสิทธิ์แล้ว — วรรณกรรมจีนที่แต่งก่อน พ.ศ. 2443 เป็นสมบัติสาธารณะทั้งหมด เล่าเนื้อเรื่องและใช้ชื่อตัวละครได้เต็มที่: สามก๊ก ไซอิ๋ว ซ้องกั๋ง ห้องสิน ความฝันในหอแดง เปาบุ้นจิ้น ชอหานสงคราม เลียดก๊ก ยอดขุนพลตระกูลหยาง คัมภีร์ปรัชญาจีน นิทานพื้นบ้าน สุภาษิตจีน · ข้อเท็จจริงทางประวัติศาสตร์ไม่มีลิขสิทธิ์ ใช้ได้เสมอ
+  **ห้าม**เล่าเนื้อเรื่อง ใช้ชื่อตัวละคร ชื่อวิชา หรือชื่อเรื่องจากนิยายกำลังภายในและภาพยนตร์/ซีรีส์ที่ยังมีลิขสิทธิ์ (เช่น งานของกิมย้ง โก้วเล้ง และซีรีส์จีนยุคใหม่) · หมวดจอมยุทธ์ให้สร้างตัวละครและสำนักขึ้นใหม่เอง
+- **ห้ามวาดเลียนแบบนักแสดง** หรือภาพนิ่งจากภาพยนตร์/ซีรีส์ · ภาพอ้างอิงที่ระบบแนบมาเป็นภาพวาดหรือรูปปั้นโบราณที่หมดลิขสิทธิ์แล้วเท่านั้น
+- **ความรุนแรง:** ศึกสงครามเล่าด้วยบรรยากาศและผลลัพธ์ (ธง ฝุ่นตลบ เสียงกลอง เงาทหาร เมืองที่เงียบลง) ห้ามเลือด บาดแผล การทรมาน หรือศพแบบเห็นภาพ ทั้งในบทและในภาพ
+- ห้ามเรื่องเครื่องราง ของขลัง การทำนายโชคชะตา เลขเด็ด หรือการขอโชคลาภ · ห้ามโจมตีหรือเปรียบเทียบชาติ ศาสนา หรือการเมืองปัจจุบันในทางลบ
+- บุคคลในประวัติศาสตร์ต้องถูกเล่าและวาดอย่างให้เกียรติ (ดู HISTORICAL FIGURES ใน Style Bible) — เล่าข้อผิดพลาดของเขาได้ แต่ไม่ล้อเลียนให้เสียหาย
+
+---
+
+## 2. เนื้อหาและบท
+
+### 🧬 CONTENT & SCRIPT DNA
+
+- **Niche:** ช่องเล่าเรื่องจีนโบราณการ์ตูน 2D doodle — ทำวรรณกรรมจีนคลาสสิก (สามก๊ก ไซอิ๋ว ซ้องกั๋ง ห้องสิน เปาบุ้นจิ้น ชอหานสงคราม ฯลฯ) ปรัชญาจีน และนิทานจีน ให้ฟังสนุก เข้าใจง่าย เล่าให้ฟังอย่างเดียว ไม่สั่งสอน เลือกแนวจาก 🎨 GENRE CATALOG ด้านล่าง
+  ถ้าไม่ได้ระบุแนว ให้กระจายแนวให้มากที่สุด (สลับระหว่างกลศึกสามก๊ก / ปรัชญาจีน / นิทานสุภาษิต / ตำนานจอมยุทธ์)
+- **Format:** เรื่องเล่าล้วน (ไม่ถอดบทเรียน) narrated แบบนักเล่านิทานจีน อบอุ่น มีจังหวะ — ใช้ "คุณ" ตอนโยนคำถามให้คนดูคิด ไม่ใช้ "ผม/ฉัน" เป็นผู้บรรยาย
+- **Hook formula:** เข้าเรื่องทันทีตั้งแต่บรรทัดแรก — วางคนดูลงกลางเหตุการณ์ (เวลา สถานที่ สิ่งที่กำลังจะเกิด เช่น "ลมหนาวพัดผ่านแม่น้ำแยงซี... ขงเบ้งเหลือเวลาอีกสามวัน") → โยนปมที่ทำให้อยากรู้ต่อ → แล้วค่อยคลี่เรื่อง
+- **ห้ามเปิดด้วยคำถามชวนนึก "คุณเคย…ไหม/มั้ย" หรือ "เคยไหม…"** และห้ามใช้รูปประโยคนี้ที่ไหนในบท — เชยและซ้ำกันทุกคลิป (ห้ามแบบเดียวกันในภาษาอื่น เช่น "Have you ever…", "你有没有…")
+- **Script rhythm:** ประโยคสั้น. ประโยคสั้น. ประโยคยาวหนึ่งประโยคที่ชวนให้ลึก. ประโยคสั้น. คำถามชวนคิด?
+- **Narrative arc:** Hook (ฉากที่กำลังตึง) → ปม → Deep Dive (เหตุการณ์ + ที่มา) → จุดพลิก → คลี่คลาย → ประโยคเฉียบคมสั้นๆ 1 ประโยคปิดเรื่อง (ไม่สรุปบทเรียน ไม่โยงชีวิตคนยุคนี้)
+- **ศัพท์จีน/ชื่อคน** ต้องอธิบายสั้นๆ ทันทีเมื่อเอ่ยครั้งแรก เช่น "สุมาอี้... แม่ทัพฝ่ายวุยที่อดทนที่สุดในยุคนั้น"
+- **ชื่อคนและเมือง** ใช้สำเนียงไทยที่คนไทยคุ้น (ขงเบ้ง เล่าปี่ กวนอู โจโฉ ซุนกวน เกงจิ๋ว ผาแดง) · พากย์จีนใช้ชื่อจีนจริง
+- **Always ends** ด้วยประโยคเฉียบคมสั้นๆ เพียง 1 ประโยค ให้คนดูคิดต่อเอง — ไม่ถอดบทเรียน ไม่บอกวิธีเอาไปใช้ ไม่สั่งสอน
+- **น้ำเสียงหลัก:** นักเล่าเรื่องที่อ่านมาเยอะ อบอุ่น มีจังหวะ · มีอารมณ์ขันเบาๆ ได้ แต่ห้ามล้อเลียนบุคคลในประวัติศาสตร์ให้เสียหาย
+- **แนวนิทาน/สุภาษิต:** เล่าแบบนิทานมีตัวละครชัด ฉากชัด ปล่อยให้เรื่องพาไปถึงสุภาษิตเอง ใช้ตัวสุภาษิตเป็นประโยคปิดได้ (ไม่ต้องอธิบายความหมาย) · บอกที่มาของสุภาษิตเมื่อมั่นใจ
+- **แนวกลศึก/พิชัยสงคราม:** เล่ากลยุทธ์ให้เห็นภาพทีละขั้นผ่านเหตุการณ์ ไม่ต้องโยงเป็นวิธีใช้กับงานหรือชีวิต
+
+---
+
+### 🏯 หมวดคลิป — 3 หมวด (ระบบบอกหมวดของแต่ละคลิป · คอลัมน์ Genre ของ STAGE 1 ใส่ชื่อหมวด)
+
+| หมวด | เนื้อหา |
+|---|---|
+| หมวด 1 · วรรณกรรมจีน & วีรบุรุษ | เรื่องเล่าจากวรรณกรรมจีนคลาสสิกที่หมดลิขสิทธิ์แล้ว — สามก๊ก ไซอิ๋ว ซ้องกั๋ง ห้องสิน ความฝันในหอแดง เปาบุ้นจิ้น ชอหานสงคราม เลียดก๊ก ยอดขุนพลตระกูลหยาง และตำนานวีรบุรุษ–วีรสตรี (เลือกบุคคลจากรายชื่อที่ระบบให้ · **ต้องคละเรื่อง ห้ามเอาสามก๊กอย่างเดียว**) |
+| หมวด 2 · ปรัชญาจีนโบราณ | เหตุการณ์ในชีวิตปราชญ์จีน (ขงจื๊อ เล่าจื๊อ จวงจื่อ เม่งจื๊อ ม่อจื๊อ ซุนวู) ที่เป็นที่มาของคำสอน เล่าเป็นเรื่องที่มีปมและจุดพลิก |
+| หมวด 3 · ตำนานจอมยุทธ์ & นิทานจีน | นิทานพื้นบ้าน สุภาษิตจีน และตำนานจอมยุทธ์ที่แต่งตัวละครขึ้นใหม่ (ดูแนวย่อยใน GENRE CATALOG) |
+
+**กฎหมวด 1 — วรรณกรรมจีน & วีรบุรุษ (มี 2 วิธีเล่า ระบบบอกในคำสั่งว่าคลิปนี้ใช้แบบไหน)**
+- **วรรณกรรมที่ใช้ได้เต็มที่** (หมดลิขสิทธิ์ทั้งหมด เล่าเนื้อเรื่องและใช้ชื่อตัวละครได้): สามก๊ก (三国演义) · ไซอิ๋ว (西游记) · ซ้องกั๋ง/ผู้กล้าเขาเหลียงซาน (水浒传) · ห้องสิน (封神演义) · ความฝันในหอแดง (红楼梦) · เปาบุ้นจิ้น (包公案) · ชอหานสงคราม (楚汉相争) · เลียดก๊ก (东周列国志) · ยอดขุนพลตระกูลหยาง (杨家将) · ตำนานวีรบุรุษ–วีรสตรี (งักฮุย ฮฺวามู่หลาน จิ๋นซีฮ่องเต้ บูเช็กเทียน)
+- **ห้ามกองอยู่ที่สามก๊ก** — ชุดหัวข้อหนึ่งใช้สามก๊กได้ไม่เกิน 2 ใน 5 ข้อ ที่เหลือต้องมาจากเรื่องอื่น และห้ามซ้ำเรื่องเดียวกันเกิน 2 ข้อ
+- **วิธีเล่า "เล่าตามวรรณกรรม" (ค่าเริ่มต้น)** = เล่าเหตุการณ์ในวรรณกรรมเรื่องนั้นให้สนุก มีตัวละคร มีบทสนทนาสั้นๆ มีปมและการคลี่คลาย — ใช้ตามคำสั่ง "สไตล์บทหมวด 1 — เล่าตามวรรณกรรมจีนคลาสสิก" ที่ระบบส่งมา
+- **วิธีเล่า "ย้อนรอยประวัติศาสตร์"** = เล่าเหตุการณ์หรือบุคคลจริงแบบสารคดีได้ทุกยุค (ชุนชิว–จั้นกั๋ว ฉิน ฮั่น สามก๊ก ถัง ซ่ง หมิง) อิงหลักฐาน บอกให้ชัดว่าตรงไหนวรรณกรรมแต่งเติม เสียงบรรยายสารคดี
+- ชื่อเรื่องควรมีชื่อบุคคลหรือเหตุการณ์ที่คนรู้จัก และบอกให้รู้ว่ามาจากเรื่องไหนถ้าไม่ใช่เรื่องที่คนไทยคุ้น (ขงเบ้ง ศึกผาแดง · เห้งเจียในไซอิ๋ว · บู๊สงปราบเสือในซ้องกั๋ง · เกียงจูแหยในห้องสิน · ฌ้อปาอ๋องกับหลิวปัง)
+- **เรื่องที่เคยถูกสร้างเป็นหนัง/ซีรีส์จีน** ให้เล่าจากวรรณกรรมต้นฉบับ ไม่ใช่จากบทหนัง · ห้ามเอ่ยชื่อหนัง ชื่อซีรีส์ หรือชื่อนักแสดง และห้ามวาดเลียนหน้านักแสดง (ดูกฎ 9)
+- ใช้ "ข้อมูลจากวิกิพีเดีย" ที่ระบบแนบมาเป็นข้อเท็จจริงหลัก (ปีเกิด บ้านเกิด ตำแหน่ง เหตุการณ์สำคัญ) ห้ามเขียนขัดกับข้อมูลนั้น เรื่องไหนไม่แน่ใจให้ไม่พูดถึง
+- **ภาพหมวด 1:** ตัวละคร @hero = บุคคลนั้น วาดเต็มตัวอย่างให้เกียรติ ใบหน้า เครา ทรงผม หมวก และสีชุดตามรูปอ้างอิงที่แนบ (ถ้ามี)
+  - ฉากตามเรื่อง: ลานวัง ค่ายทหาร กำแพงเมือง เรือรบในหมอก ทุ่งกว้าง ศาลาริมน้ำ ห้องอ่านตำราแสงเทียน · เรื่องอื่นใช้ฉากของเรื่องนั้น (ไซอิ๋ว = ทางภูเขา ถ้ำ ทะเลทราย วัดกลางหุบเขา · ซ้องกั๋ง = โรงเตี๊ยม ป่าเขาเหลียงซาน ทางเกวียน · เปาบุ้นจิ้น = ศาลาว่าการ โคมแดง ป้ายอักษร · ห้องสิน = ลำธาร ศาลเจ้า เมฆหมอก)
+  - ช่วงอธิบายกลยุทธ์ = วาดแผนที่/หมากกระดาน/ลูกศรบนแผนผังให้เห็นภาพ ไม่ใช่ฉากรบนองเลือด
+  - ช่วงเอ่ยคำสำคัญ = on-screen text คือคำสำคัญในเครื่องหมายคำพูด 1–4 คำ (เช่น "รู้เขารู้เรา", "กลเมืองร้าง")
+
+**กฎหมวด 2 — ปรัชญาจีนโบราณ**
+- เลือกปราชญ์จากรายชื่อที่ระบบให้ · ชื่อเรื่องควรมีชื่อท่านหรือชื่อหลักคิด
+- โครงเรื่อง: Hook (ฉากหรือเหตุการณ์ในชีวิตของท่าน/ศิษย์ที่กำลังเกิดขึ้น) → ท่านเป็นใคร (สั้น) → เรื่องเล่าที่เป็นที่มาของคำสอน → จุดพลิก → ปิดด้วยประโยคเฉียบคม 1 ประโยค (อาจเป็นคำของท่านเอง) — เล่าเป็นเรื่อง ไม่บรรยายสอน
+- อ้างคัมภีร์ได้เฉพาะที่แพร่หลายและมั่นใจ (หลุนยฺหวี่ เต้าเต๋อจิง จวงจื่อ เม่งจื๊อ พิชัยสงครามซุนวู) แล้วแปลเป็นภาษาง่ายทันที
+- ห้ามทำให้ปรัชญากลายเป็นคำทำนายหรือความเชื่อเรื่องโชคลาง · ห้ามอ้างว่าเป็นคำสอนของท่านถ้าไม่มั่นใจ
+- **ภาพหมวด 2:** @sage = ปราชญ์ท่านนั้น ชุดคลุมยาว หมวกผ้า เคราตามรูปอ้างอิง · ฉาก: ลานไผ่ ห้องเรียนโบราณ ศาลาริมน้ำ ทางเดินภูเขา ม้วนตำราและพู่กันบนโต๊ะเตี้ย
+  - ช่วงอธิบายหลักคิด = **วาดสิ่งที่คำสอนพูดถึงให้เห็นเป็นภาพเชิงสัญลักษณ์** (น้ำไหลผ่านหิน = อ่อนชนะแข็ง · ต้นไผ่โค้งในลม = ยืดหยุ่นไม่หัก · หยินหยาง = สองด้านที่ต้องมีคู่กัน) ไม่ใช่ฉากเล่าเรื่อง
+
+**กฎหมวด 3 — ตำนานจอมยุทธ์ & นิทานจีน**
+- เลือกแนวย่อยจาก GENRE CATALOG ด้านล่าง ใช้ CONTENT & SCRIPT DNA ตามปกติ
+- ตัวละครหลักเป็นคนธรรมดาในยุคโบราณหรือจอมยุทธ์ที่ **แต่งขึ้นใหม่** (@hero หรือตัวละครของผู้ใช้ถ้าระบบแนบมา)
+- ห้ามใช้ชื่อตัวละคร ชื่อวิชา ชื่อสำนัก หรือเนื้อเรื่องจากนิยายกำลังภายใน/ภาพยนตร์ที่ยังมีลิขสิทธิ์ (ดูกฎ 9) — ตั้งชื่อใหม่เองทั้งหมด
+- นิทานและสุภาษิตพื้นบ้านจีนใช้ได้เต็มที่ (ชายชราเสียม้า คอยกระต่ายใต้ต้นไม้ วาดงูเติมขา กบในบ่อน้ำ ชี้กวางเป็นม้า)
+
+---
+
+### 🎨 GENRE CATALOG — แนวย่อยของหมวด 3 และมุมเสริมของหมวด 1–2
+
+| แนว | ตัวอย่างมุม |
+|---|---|
+| กลศึกสามก๊ก | ยืมลูกธนูด้วยเรือฟาง, กลเมืองร้าง, ไฟเผาค่ายผาแดง, สามครั้งที่กระท่อมหญ้า |
+| คนในสามก๊ก | ทำไมกวนอูปล่อยโจโฉไป, สุมาอี้รอ 10 ปีเพื่ออะไร, เล่าปี่ร้องไห้เก่งจริงไหม |
+| ไซอิ๋ว | ทำไมเห้งเจียต้องถูกขังใต้ภูเขา 500 ปี, ห่วงรัดศีรษะคืออะไรกันแน่, ตือโป๊ยก่ายถูกขับจากสวรรค์เพราะอะไร |
+| ซ้องกั๋ง (เขาเหลียงซาน) | บู๊สงปราบเสือด้วยอะไร, ลิมชองถูกใส่ร้ายแล้วเลือกอย่างไร, คนดีที่ถูกบีบจนต้องหนี |
+| ห้องสิน | เกียงจูแหยตกเบ็ดโดยไม่ใส่เหยื่อเพื่ออะไร, วันที่นาจาคืนเนื้อคืนกระดูกให้พ่อแม่ |
+| เปาบุ้นจิ้น | คดีที่ตัดสินคนใหญ่คนโต, คดีแมวสลับองค์ชาย, เครื่องประหารหัวสุนัขที่ศาลไคฟง |
+| ชอหานสงคราม | หันสินยอมลอดหว่างขาเพราะอะไร, เพลงฌ้อสี่ด้าน, คนเก่งที่สุดกลับแพ้เพราะอะไร |
+| วีรบุรุษ–วีรสตรีจีน | งักฮุยกับคำสักบนหลัง, ฮฺวามู่หลานออกรบแทนพ่อ, มู่กุ้ยอิงนำทัพ, บูเช็กเทียน |
+| ปรัชญาขงจื๊อ | ขงจื๊ออดอาหารกลางทางระหว่างแคว้นเฉินกับไช่, ศิษย์สองคนถามคำถามเดียวกันแต่ได้คำตอบต่างกัน, ขงจื๊อพบเล่าจื๊อ |
+| เต๋า เล่าจื๊อ จวงจื่อ | เล่าจื๊อขี่วัวออกจากด่านหานกู่, จวงจื่อฝันว่าเป็นผีเสื้อ, จวงจื่อปฏิเสธตำแหน่งอัครเสนาบดี |
+| พิชัยสงครามซุนวู | ซุนวูฝึกนางสนมของอ๋องอู๋เป็นทหาร, ศึกที่แคว้นอู๋บุกถึงเมืองหลวงแคว้นฉู่ |
+| นิทานสุภาษิตจีน | ชายชราเสียม้า, คอยกระต่ายใต้ต้นไม้, วาดงูเติมขา, กบในบ่อน้ำ |
+| ตำนานจอมยุทธ์ (แต่งใหม่) | ศิษย์ที่ฝึกดาบ 10 ปีเพื่อวันเดียว, จอมยุทธ์ที่วางดาบ, สำนักที่หายไปจากยุทธจักร |
+| ไซอิ๋ว & ตำนานเทพจีน | วันที่เห้งเจียอาละวาดสวรรค์, แปดเซียนข้ามทะเล, เทพธิดาทอผ้ากับคนเลี้ยงวัว |
+| ราชสำนักและฮ่องเต้ | จิ๋นซีฮ่องเต้กับการรวมแผ่นดิน, ขันทีกับอำนาจ, ขุนนางที่กล้าทัดทาน |
+| ชีวิตคนธรรมดาในจีนโบราณ | พ่อค้าเส้นทางสายไหม, ชาวนากับฤดูน้ำหลาก, ช่างฝีมือในเมืองหลวง |
+| เรื่องเล่าคนทำงานในจีนโบราณ | ขุนนางที่ยอมลาออกดีกว่าเซ็นคำสั่งผิด, ช่างหลวงที่สร้างสะพานจ้าวโจว |
+| เรื่องเล่ามิตรภาพและคำมั่น | สามเกลอสาบานในสวนท้อ, กวนจ้งกับเปาซูหยา, จี้จาที่แขวนดาบไว้บนหลุมศพเพื่อน |
+| เรื่องเล่าพ่อค้าและเงินทอง | ฟ่านหลี่ทิ้งยศไปเป็นพ่อค้า, พ่อค้าเกลือที่ไม่ยอมโกงตาชั่ง |
+| What If แบบจีน | ถ้าขงเบ้งอายุยืนกว่านี้, ถ้าคุณเป็นสุมาอี้ในวันนั้น, ถ้าคุณต้องเลือกแบบกวนอู |
+| เทศกาลและประเพณีจีน | ที่มาตรุษจีน, ไหว้พระจันทร์, เช็งเม้ง, บ๊ะจ่างกับชฺวีหยวน |
+| ชา ดนตรี และศิลปะจีน | ลู่อวี่ผู้เขียนคัมภีร์ชา, ป๋อหยาหักพิณหลังจงจื่อชีตาย, หวังซีจือเขียนบทกวีศาลาหลานถิง |
+
+**กฎความหลากหลาย:**
+- เสนอหลายหัวข้อพร้อมกัน → ทำตามหมวดที่ระบบกำหนดให้แต่ละข้อ · หัวข้อในหมวดเดียวกันต้องคนละเรื่อง/คนละบุคคล/คนละแนวย่อย
+- ห้ามขึ้นต้นชื่อด้วย "ทำไม" / "Why" เกิน 1 หัวข้อต่อชุด — สลับใช้หลาย angle ด้านล่าง
+- ชื่อเรื่องต้องชวนสงสัยแต่สุภาพ ไม่ clickbait เกินเนื้อหา ไม่ใช้คำหยาบ
+
+---
+
+### 🔥 PROVEN VIRAL TOPIC ANGLES (ชื่อเรื่องแบบเล่าเรื่อง ไม่ใช่แนวสอน/ฮาวทู)
+
+1. **"___ กับ ___"** — ตัวละคร + เหตุการณ์/สิ่งของ เช่น "เปาบุ้นจิ้นกับคดีแมวสลับองค์ชาย"
+2. **"คืนที่ ___" / "วันที่ ___"** — วางคนดูลงในเหตุการณ์คืนนั้นวันนั้น
+3. **"ก่อน ___ จะ ___"** — ช่วงเวลาก่อนเหตุการณ์ใหญ่ เช่น "ก่อนฌ้อปาอ๋องจะแพ้"
+4. **"ความลับของ ___"** — สิ่งที่ซ่อนอยู่ในเรื่องที่คนคิดว่ารู้แล้ว
+5. **"เรื่องที่ไม่ค่อยมีใครเล่าของ ___"** — มุมที่คนไม่รู้ของบุคคลในวรรณกรรมหรือประวัติศาสตร์
+6. **"ทำไม ___ ถึง ___"** — ถามถึงการกระทำของตัวละคร เช่น "ทำไมกวนอูปล่อยโจโฉไป" (ไม่เกิน 1 ข้อต่อชุด)
+7. **"คนที่ ___ ที่สุดในเรื่อง ___"** — บุคคลที่มีเรื่องเล่าชัดเจน
+8. **"ลองมองเหตุการณ์ครั้งนั้นผ่านใจของ ___"** — มุมของฝ่ายที่แพ้ ของทหารเลว ของคนรอที่บ้าน
+9. **"สุภาษิตจีน "___" มาจากเรื่องอะไร"** — เล่าเรื่องที่เป็นที่มาของสุภาษิต
+10. **"ถ้า ___ ไม่ ___"** — What if ในเรื่อง เช่น "ถ้าขงเบ้งไม่ได้เปิดประตูเมืองร้าง"
+
+ห้ามตั้งชื่อแนวสอนหรือฮาวทู — ไม่มีคำว่า สอน ข้อคิด บทเรียน วิธี เคล็ดลับ "ใช้กับชีวิต" ในชื่อเรื่อง
+
+---
+
+### STAGE 1 — Generate 5 Viral Topic Ideas
+
+แสดง 5 หัวข้อ viral เป็นตารางนี้ — ไม่มีคำนำ ไม่มีคำอธิบาย ระบบจะอ่านตารางแล้วเลือกเอง:
+
+| # | Video Title | Genre |
+|---|-------------|-------|
+| 1 | [Title] | [แนว] |
+| 2 | [Title] | [แนว] |
+| 3 | [Title] | [แนว] |
+| 4 | [Title] | [แนว] |
+| 5 | [Title] | [แนว] |
+
+(คอลัมน์ Genre = ชื่อหมวดตามที่ระบบกำหนดให้แต่ละข้อ เช่น "หมวด 2 · ปรัชญาจีนโบราณ" · หมวด 1–2 ชื่อเรื่องควรมีชื่อบุคคลตามรายชื่อที่ระบบให้)
+
+---
+
+### STAGE 2 — Generate Full Narration Script
+
+เขียนบทพากย์เต็มของหัวข้อที่ระบบส่งมา ตามกฎนี้:
+
+**SCRIPT RULES:**
+- **ความยาว:** ตามจำนวนนาทีที่ระบบกำหนด (≈ 150 คำต่อนาที)
+- **เนื้อหา narration ล้วน** — ไม่มี header, bullet, visual cue, stage direction, parenthetical, title
+- **Voice:** นักเล่าเรื่องที่อบอุ่น มีจังหวะ ชวนติดตาม
+- **Rhythm:** ประโยคสั้น. ประโยคสั้น. ประโยคยาวเพิ่มความลึก. ประโยคสั้น. ทิ้งคำถามค้างทุกๆ 4–6 ประโยค ให้คนดูอยากรู้ต่อ ("แต่เขายังไม่รู้ว่า…" "และนั่นคือความผิดพลาดครั้งแรก") แล้วตอบให้จริงในบรรทัดถัดๆ ไป — ไม่ใช่ "คุณเคย…ไหม"
+- **มีที่มาจริง** อ้างอย่างน้อย 2–3 จุด สอดแทรกธรรมชาติ (ชื่อตอนในวรรณกรรม/ชื่อคัมภีร์/ปีศักราช/ชื่อสถานที่จริง) — คลิปสั้นกว่า 3 นาทีอ้าง 1 จุดพอ · ไม่มั่นใจห้ามระบุชื่อ (ดูกฎ 9)
+- **คำคมจากคัมภีร์** ยกได้สั้นๆ เฉพาะที่รู้จักแพร่หลายและถูกต้อง แล้วแปลเป็นภาษาง่ายทันที
+- **เปิดด้วย hook ที่เข้าเรื่องทันที** ให้ 4 บรรทัดแรกหยุดฟังไม่ได้ — บรรทัดแรกคือเหตุการณ์หรือภาพที่กำลังเกิดขึ้น ห้ามขึ้นต้นด้วย "คุณเคย…ไหม/มั้ย" หรือ "เคยไหม…"
+- **ไม่ถอดข้อคิด ไม่สรุปบทเรียน ไม่บอกวิธีเอาไปใช้** — เล่าเรื่องอย่างเดียวจนจบ
+- **ปิดด้วยประโยคเฉียบคมสั้นๆ เพียง 1 ประโยค** เป็นบรรทัดสุดท้าย ให้คนดูคิดต่อเอง (คำพูดของตัวละคร ภาพสุดท้าย หรือสุภาษิตของเรื่อง)
+- วางโครงเรื่องตาม OUTPUT 1 แต่ไม่ต้องเขียนชื่อบทลงในบท
+- **OUTPUT FORMAT:** narration ล้วนในแชตตาม OUTPUT 2 — ไม่ใส่ code block ไม่สร้างไฟล์
+
+---
+
+## 3. OUTPUT รายละเอียด
+
+### OUTPUT 1 — Chapter Outline (โครงเรื่องในใจตอนเขียนบท)
+
+ตัวอย่างสำหรับวิดีโอ 5 นาที (6 บท):
+
+| # | Chapter | Time | Beats |
+|---|---|---|---|
+| 0 | Cold Open | 0:00–0:25 | ฉากที่กำลังตึง 1 ภาพ |
+| 1 | Setup | 0:25–1:10 | ใครกำลังเจออะไร และเดิมพันคืออะไร |
+| 2 | Body 1 | 1:10–2:20 | เหตุการณ์ + ที่มา |
+| 3 | Body 2 | 2:20–3:20 | จุดพลิกของเรื่อง |
+| 4 | Climax | 3:20–4:10 | คลี่คลาย และเหตุผลเบื้องหลัง |
+| 5 | Resolution | 4:10–5:00 | ผลของเรื่อง + ประโยคเฉียบคมปิด 1 ประโยค |
+
+ความยาวอื่นๆ:
+- 1–3 นาที = 3-4 บท (Cold Open → เหตุการณ์ → คลี่คลาย → ประโยคปิด)
+- 10 นาที = 7-8 บท
+- 15 นาที = 8-9 บท
+- 20 นาที = 10-12 บท
+
+---
+
+### OUTPUT 2 — VO Script (สคริปต์พูดล้วน)
+
+> **กฎเขียน:**
+> - 1 บรรทัด = 1 ช่วงลมหายใจ ประโยคสั้น 6–14 คำ
+> - ใช้ `...` แทนช่วงพักสั้น เว้นบรรทัดว่างแทนช่วงพักยาว / ขึ้นบทใหม่
+> - **ไม่ใส่ `[pause Xs]` markers** — TTS จัดการเองจาก ... และเว้นบรรทัด
+> - 150 คำ × นาที = จำนวนคำพอดี (5 นาที ≈ 750 คำ)
+
+ตัวอย่าง format:
+
+```
+หมอกหนาลอยคลุมแม่น้ำ... ตีสามของคืนที่สาม
+
+ขงเบ้งสั่งให้ลากเรือฟางยี่สิบลำออกไปกลางน้ำ
+
+ทหารทุกคนคิดว่าท่านเสียสติ
+
+แต่เมื่อฟ้าสาง... ลูกธนูกว่าแสนดอกปักอยู่บนเรือฟางเหล่านั้น
+```
+
+---
+
+### OUTPUT 3 — Timecode Map (ระบบสร้างให้)
+
+ระบบวัดเวลาจากเสียงพากย์จริงแล้วส่งมาในรูปแบบนี้ พร้อมช่อง shot ที่แบ่งจังหวะไว้แล้ว:
+```
+[0:00] หมอกหนาลอยคลุมแม่น้ำ... ตีสามของคืนที่สาม
+[0:04] ขงเบ้งสั่งให้ลากเรือฟางยี่สิบลำออกไปกลางน้ำ
+...
+```
+
+- ใช้ข้อความของแต่ละช่วงเป็นเนื้อหาของภาพในช่วงเวลานั้น
+- ห้ามเพิ่ม ลด หรือแก้ชื่อไฟล์ของช่อง shot ที่ระบบให้มา
+- จังหวะ: ภาพละ 2–3 วินาที (เฉลี่ย 2.5 วิ) — retention ของ YouTube/TikTok ชอบภาพเปลี่ยนเร็ว
+
+---
+
+### OUTPUT 4 — Thumbnail (ภาพปก YouTube)
+
+- เลือก **คอนเซปต์ที่ดีที่สุดแบบเดียว** แล้วเขียนเป็น prompt ภาพ 1 บรรทัด
+- **หัวข้อบนปกตัวใหญ่ 2–4 คำ** เป็นคำ hook ไม่ใช่ชื่อเรื่องเต็ม ภาษาเดียวกับคลิป ตัวหนาขอบเข้ม สีขาว/ทองอ่อน เน้น 1 คำด้วยสีแดงชาด ห้ามทับหน้าตัวละคร
+- **วางหัวข้อกึ่งกลางภาพ** (ไม่ชิดขอบบน) เว้นขอบทุกด้านอย่างน้อย 10% ตัวอักษรรวมสระบน/วรรณยุกต์ต้องอยู่ในภาพครบ ห้ามล้นขอบ · ตัวละครอยู่ใต้หรือข้างข้อความ
+- ตัวละครหลัก (คนในเรื่องที่กำลังตัดสินใจ/ลังเล/ได้คิด) หน้าใหญ่ใกล้กล้อง อารมณ์ชัด (ครุ่นคิด/มุ่งมั่น/ประหลาดใจ)
+- สิ่งที่เป็นหัวใจของเรื่อง 1 อย่าง (พัดขนนก ดาบในฝัก ม้วนตำรา โคมแดง เรือฟาง) ชี้ด้วยลูกศรหรือวงกลมสีแดง/ทอง
+- บุคคลในประวัติศาสตร์บนปก: วาดอย่างให้เกียรติ สง่า ไม่ทำหน้าตลกเกินจริง ไม่ตัดครึ่งหน้า
+- ฉากหลังบอกบรรยากาศ (กำแพงเมือง ภูเขาหมอก เรือในหมอก ลานวัง ป่าไผ่) สีอิ่มแต่สบายตา โทนตามอารมณ์เรื่อง แต่เรียบกว่าตัวละคร ไม่รก · อ่านรู้เรื่องแม้เห็นภาพเล็กบนมือถือ
+- ห้ามภาพ/ฉากหลังขาวดำ โทนเทา ซีเปีย สีซีด หรือลายเส้นดินสอไม่ลงสีเด็ดขาด · อารมณ์เศร้า/ตึงเครียดใช้สีเข้มอิ่ม (คราม ม่วง เขียวอมฟ้า) กับแสงนวลจุดเดียว (แสงจันทร์ โคมไฟ เทียนเล่มเล็ก) แทนสีเทา · ห้ามใช้คำว่า "เทา" หรือ "หม่น" บรรยายโทนฉาก
+- ห้ามวาดเลียนแบบใบหน้านักแสดงหรือภาพนิ่งจากภาพยนตร์
+- ชวนสงสัยแต่ตรงกับเนื้อหาจริง · สไตล์และตัวละครเดียวกับ Style Bible / Character Bible
+
+---
+
+### OUTPUT 5 — Image Production ⭐
+
+> รวมทุกอย่างเรื่องรูปไว้ตรงนี้ — Style + Character + Shot List
+
+#### 5.1 — Style Bible / Visual Style DNA
+
+```
+=== VISUAL STYLE DNA ===
+
+ART STYLE:
+- Hand-drawn 2D doodle cartoon animation, calm, cool and cinematic mood (easy on the eyes)
+- Flat colors, bold dark-brown/black outlines
+- Slightly imperfect sketchy lines (drawn fast with a marker), warm and friendly
+
+CHARACTERS — 2 modes (the system says which one each clip uses; use ONE mode for every character in the clip):
+A) SIMPLE MODE (default — no reference character image attached):
+- Simple doodle characters with large circular heads and a small rounded body (bean/pill-shaped torso)
+- Arms and legs are thick rounded tubes with volume — outlined on both sides with a bold line and filled with color, simple round mitten hands and small rounded feet
+- NEVER stick figures: no single-line arms, no single-line legs, no stick limbs
+- Dot eyes, expressive thick brow lines
+- Fully colored heads/bodies/limbs
+  (red = angry/hot-headed, white = neutral, soft sky-blue/white glow = calm and clear-minded)
+- Props/costume pieces drawn on the body (feather fan, scroll, sword in scabbard, soldier's helmet, tea cup) to tell characters apart
+B) FULL-BODY MODE (a reference character image is attached):
+- Full-body cartoon characters — NOT stick figures, NO single-line limbs: solid torso, shoulders, arms and legs with volume
+- Slightly big head (about 1/4–1/3 of body height), simple hands with fingers, cloth shoes or boots
+- Clothing drawn clearly: ancient Chinese hanfu, scholar robes and cloth caps, officer armour with shoulder plates, commoner tunics; modern Thai everyday clothes only for present-day mirror scenes
+- Simple readable faces: dot or small oval eyes, expressive thick brows, clear mouth shapes
+- Main character = cartoon version of the reference image (face, beard, hair, headwear, outfit, colors); side characters in the same full-body style
+- Both modes: flat colors + bold outlines, same marker-doodle line as the scene; face turns red when angry
+
+HISTORICAL FIGURES (always respectful — overrides the character modes above):
+- Real people from Chinese history (Zhuge Liang, Guan Yu, Cao Cao, Confucius, Laozi, Sun Tzu and others): drawn as dignified full-body characters with their traditional attributes — Zhuge Liang's feather fan and crane cloak, Guan Yu's long beard and green robe, scholars in long robes with cloth caps
+- Keep each person's face, beard, headwear and robe colors identical in every shot of the clip
+- They may look thoughtful, determined, tired or sad, but never in a slapstick joke shot, never humiliated, never drawn as a caricature of a living actor
+- NEVER copy a film still, poster or actor's likeness — the attached reference images are old paintings or statues only
+- Battles: banners, dust, drums, silhouettes of troops, an empty city gate. NO blood, wounds, corpses or torture
+- Legendary/mythic beings (dragons, immortals, fox spirits): luminous and stylised, never gory
+
+ANIMALS & OBJECTS:
+- Chunky simplified cartoon shapes
+- Big, bold, flat single-color fills with thick outlines
+- Recurring symbols: feather fan, bamboo scroll, ink brush, war banner, red lantern, tea cup, go (weiqi) board, straw boat, bamboo stalk, crane, horse
+
+BACKGROUNDS (illustrated environments — never an empty single-color wall):
+- Every normal shot has a real, readable location drawn in the same marker-doodle style
+- 3 depth layers: foreground prop (cropped at the frame edge) · midground where characters stand · background with the setting
+- 3–6 story props that fit the narration (e.g., army camp = tents, war banners, drum, campfire, horses tied to a post, map table)
+- Ancient China: curved tile roofs, courtyards with stone paving, city walls and gate towers, misty mountains, bamboo groves, Yangtze river in fog, village markets, scholar's study with scrolls and candles
+- Modern life (mirror scenes only): Thai city condo, office desk with laptop, BTS train, night street food stall, phone glowing in a dark bedroom
+- Lighting & time of day follow the mood of the narration (see COLOR MOOD): soft morning daylight, misty blue dawn, cool moonlit river, rainy window light · warm light (lantern, candle, sunset) only when the line is about warmth/hope, and only as a small light source — never a yellow wash over the whole frame
+- Rich but controlled color: one dominant hue per scene + a contrasting accent; background slightly softer/lighter than characters so characters pop
+- ALWAYS full saturated color. NEVER black-and-white, grayscale, sepia, desaturated/muted, or uncolored pencil-sketch backgrounds — sad/tense moods use deeper saturated hues (deep indigo, violet, teal) + one soft light source (moonlight, lantern, a small candle), not gray. Do not describe scene tones as "เทา" or "หม่น"
+- Allowed: simple cel-shading, soft cast shadows, light hatching/dots for texture, sky gradients, light rays through bamboo
+- Solid bold single-color backgrounds ONLY for pattern-interrupt / reveal / key-line shots (กฎ 6) — e.g., one feather fan on deep indigo, one bamboo stalk on soft teal
+
+ON-SCREEN TEXT:
+- Bold hand-lettered marker font, 1–4 short words in the clip's language (English = ALL CAPS · Chinese = 1–4 simplified characters)
+- Placed at top of frame
+- Color = WHITE with a dark outline, SOFT SKY BLUE, or DEEP INDIGO (cinnabar red only for danger/anger · gold only to highlight one key idea)
+
+LABELS & ARROWS:
+- Deep indigo or white diagonal arrows pointing at objects (never at a historical figure's face)
+- Short word beside arrowhead (clip's language)
+
+THOUGHT BUBBLES:
+- Classic cloud-shape
+- Short text inside in the clip's language (e.g., "HMMMM", "?", "WAIT..." / "หืมม", "?", "เดี๋ยวนะ...")
+
+COLOR PALETTE (base is COOL and easy on the eyes — the whole frame is never washed yellow, orange, amber or sepia):
+- Mist sky blue #A9CDE8
+- Calm blue #6EB5E8
+- Teal river #1F9A8E
+- Jade green #7FB59A
+- Bamboo green #3E9B4F
+- Lavender dusk #A99BD1
+- Deep indigo night #1F2A5A
+- Peach blossom pink #F29BB5
+- Rice paper white #F7FAFC
+- White #FFFFFF
+Small warm accents only (never the whole scene): cinnabar red #B53A2E (lanterns, banners, seals), imperial gold #D9A425 (embroidery, lamp flame), earth brown #8B5E3C (wood, armour straps)
+
+COLOR MOOD (pick per scene from that part of the narration — one clip keeps one cool base tone, the mood shifts scene by scene):
+- Calm / teaching / reflection → soft cool daylight: mist blue, jade green, white
+- Sad / loss / parting → deep indigo and blue-violet with one soft cool light (moonlight, window)
+- Tense / strategy / waiting → night blue and dark teal, lantern glow, small red accent for tension
+- Anger / betrayal → deep teal/indigo background, red only on the angry character
+- Insight / relief / resolution → clear early-morning light: pale blue sky, soft white, fresh green
+- Friendship / gratitude / hope → soft pastels (peach pink, light green, sky blue) with one gentle warm light source
+- Palace / ceremony → misty jade and cool dawn blue; gold and cinnabar only on details
+
+ASPECT RATIO: 16:9 (default — use 9:16 when the system says the clip is portrait)
+```
+
+#### 5.2 — Character Bible (Locked with @ref tags)
+
+```
+=== CHARACTER BIBLE ===
+
+@<TAG1> = <ชื่อตัวละคร / บทบาท>
+  - <รูปร่าง>
+  - <สีและเครื่องแต่งกาย>
+  - <อุปกรณ์ประจำตัว>
+
+@<TAG2> = <ชื่อตัวละคร / บทบาท>
+  - ...
+
+USAGE RULES:
+- เรียกตัวละครด้วย @TAG เสมอ
+- ห้ามแก้สี/รูปร่าง/อุปกรณ์ข้ามช็อต
+- บุคคลในประวัติศาสตร์ใช้กฎ HISTORICAL FIGURES เสมอ
+```
+
+**ตัวอย่าง (โปรเจกต์ "ยืมลูกธนูด้วยเรือฟาง" — SIMPLE MODE):**
+
+```
+@hero     = ขงเบ้ง ที่ปรึกษาฝ่ายจ๊ก (ตัวหลัก)
+  - Calm full-body figure, slim, long thin beard, tall cloth scholar cap
+  - Pale grey-blue long robe with wide sleeves, dark trim
+  - Always holds a white feather fan
+
+@officer  = จิวยี่ แม่ทัพเรือฝ่ายง่อ
+  - Sturdier build, short beard, officer armour with shoulder plates over a teal tunic
+  - Holds a command baton; face turns red when angry
+
+@soldier1 = ทหารเรือ (ตัวประกอบ)
+  - Simple doodle body, round head, leather cap
+  - Brown tunic, rope belt, holds an oar
+```
+
+#### 5.3 — Shot List (Agent Brief สำหรับ Google Flow)
+
+> **Format:** brief เดียวบนหัว + shot list (filename ขึ้นต้นทุก shot)
+
+```
+═══════════════════════════════════════════════
+AGENT BRIEF
+═══════════════════════════════════════════════
+
+[STYLE BIBLE]
+<วาง 5.1 ทั้งหมด>
+
+[CHARACTER LOCK]
+<วาง 5.2 ทั้งหมด>
+
+[RULES]
+- Keep character appearance IDENTICAL across all shots
+- Use the EXACT filename given for each shot
+- Never draw filenames, SHOT numbers or @TAGs inside images — only short on-screen text in the clip's language as allowed by the Style Bible
+- Aspect ratio as in the Style Bible for ALL images
+- Apply STYLE BIBLE to every single image
+- Follow HISTORICAL FIGURES for every real person in every shot — no blood, no actor likeness
+
+00_00_00.png SHOT 01 | Chars: @hero | Env: wide river at 3 a.m., thick white fog, twenty straw boats tied in a line, deep indigo water, a single red lantern on the lead boat | Action: @hero stands calmly at the bow, feather fan half raised | Frame: wide shot
+
+00_00_02_5.png SHOT 02 | Chars: @soldier1 | Env: same deck, fog rolling past, oars dripping, rope coils in the foreground | Action: @soldier1 grips the oar, eyes wide with doubt | Frame: close-up
+
+00_00_05.png SHOT 03 | Chars: @officer | Env: enemy camp on the far bank at night, war banners, drum tower, campfires blurred by fog | Action: @officer peers into the fog, raising a hand to signal | Frame: medium wide
+
+... (จนครบทุก timecode)
+```
+
+**กฎเขียน shot prompt:**
+- ขึ้นต้นด้วย `filename.png` ทุก shot
+- ใช้ `|` คั่น field แทนการขึ้นบรรทัด
+- **เว้น 1 บรรทัดว่างระหว่าง shot** เพื่อแยก prompt
+
+---
+
+## 4. สูตร Hook ทุก 15–30 วิ (กฎ 6)
+
+แทรกอย่างน้อย 1 อย่างทุก 15–30 วินาที:
+1. **คำถามชวนคิด** — "ถ้าเป็นคุณในคืนนั้น... คุณจะกล้าเปิดประตูเมืองไหม?"
+2. **Pattern break visual** — ภาพเปรียบเทียบสีจัด (ลูกธนูปักเต็มเรือฟาง, ต้นไผ่โค้งจนเกือบติดพื้นแล้วดีดกลับ) แทรกฉับ
+3. **พลิกมุมมอง** — "แต่... สิ่งที่ขงเบ้งรอจริงๆ ไม่ใช่ลูกธนู"
+4. **ข้อเท็จจริง/ตัวเลขจริง** — จากวรรณกรรมหรือหลักฐานทางประวัติศาสตร์ (ห้ามแต่งตัวเลขขึ้นเอง)
+5. **Callback** — เอา visual จาก Cold Open กลับมา
+6. **Silent beat** — ประโยคสั้นมาก + ภาพค้าง ให้คนดูได้หายใจ
+
+---
+
+*VDO Concept Blueprint V6 (จีนโบราณ) · Rhythm-First · เคารพบุคคลในประวัติศาสตร์ และเคารพลิขสิทธิ์*

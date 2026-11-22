@@ -1,0 +1,13 @@
+{
+  "name": "china-auto",
+  "version": "0.1.0",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/romeofiles007-arch/china"
+  },
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/check-setup.mjs"
+  }
+}

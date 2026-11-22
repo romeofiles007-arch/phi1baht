@@ -1,0 +1,9 @@
+{
+  "name": "com.china_auto.bridge",
+  "description": "ตำนานจีน Auto — เปิดโปรแกรมเมื่อกดไอคอน extension",
+  "path": "E:\\China\\native\\host.bat",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://nobgolckkkcjokecfhdmejfamdbghaoa/"
+  ]
+}

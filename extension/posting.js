@@ -1,0 +1,889 @@
+// งานประชาสัมพันธ์ · โหมดโพสต์อัตโนมัติ — หน้าจอในแผงข้าง
+// คุยกับ bridge ที่ /api/posting* เท่านั้น (ดู bridge/posting.js) · ไม่แตะสถานะของขั้นทำคลิป
+// โทเค็นเพจ/ช่องไม่เคยถูกส่งกลับมาหน้านี้ — bridge ส่งมาแค่ 4 ตัวท้าย
+
+const GULL_SVG = `<svg class="gullIcon" viewBox="0 0 64 64" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 35 24 26v26L9 43Zm15-9 24-12v50L24 52M12 44v11h8V49M48 24l8-4m-8 25 8 4M54 34h6"/></svg>`
+
+const el = (tag, props = {}, ...children) => {
+  const node = document.createElement(tag)
+  for (const [key, value] of Object.entries(props)) {
+    if (value === undefined || value === null || value === false) continue
+    if (key.startsWith('aria-') || key.startsWith('data-')) node.setAttribute(key, value === true ? '' : value)
+    else if (key === 'on') for (const [ev, fn] of Object.entries(value)) node.addEventListener(ev, fn)
+    else node[key] = value
+  }
+  node.append(...children.flat().filter((c) => c !== null && c !== undefined && c !== false))
+  return node
+}
+
+/**
+ * รูปโปรไฟล์เพจ Facebook — ลิงก์สาธารณะของ Graph (ใช้แค่ Page ID ไม่ต้องใช้โทเค็น)
+ * โหลดไม่ได้ = ตัวอักษรตัวแรกของชื่อเพจ (ข้ามสระหน้า เ แ โ ใ ไ — "ใจใส" ได้ "จ" ไม่ใช่ "ใ")
+ */
+export const pageAvatarUrl = (pageId) => `https://graph.facebook.com/${encodeURIComponent(pageId)}/picture?type=square&width=96&height=96`
+export const avatarInitial = (name) => [...String(name ?? '').trim()].find((c) => /[\p{L}\p{N}]/u.test(c) && !/[เแโใไ]/.test(c)) ?? '?'
+/** size: 'lg' = หน้าตั้งค่าเพจ · 'sm' = ป้ายเพจในรายการเลือกปลายทาง · on ใส่ก่อน src ให้จับ error ทัน */
+const pageAvatar = (a, size = 'lg') => el('img', {
+  className: `pAvatar ${size}`, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer', title: a.name,
+  on: { error: (e) => e.target.replaceWith(el('span', { className: `pAvatar pAvatarText ${size}`, 'aria-hidden': 'true' }, avatarInitial(a.name))) },
+  src: pageAvatarUrl(a.pageId),
+})
+
+const fmtWhen = (ms) => (ms ? new Date(ms).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }) : '')
+const fmtDur =(s) => (s ? `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}` : '')
+/** ค่าให้ <input type=datetime-local> (เวลาเครื่อง) */
+const toLocalInput = (ms) => {
+  const d = new Date(ms)
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+/**
+ * กด "เชื่อมต่อ" (Drive/YouTube) แล้วต้องบันทึก Google client ที่กรอกไว้ก่อนไหม
+ *   typed — ค่าในช่องตอนนี้ · saved — ค่าที่ bridge มี (secret เป็นแบบปิดบัง ••••xxxx)
+ *   คืน {} = เชื่อมต่อได้เลย · {save} = บันทึกค่านี้ก่อน · {error} = กรอกไม่ครบ
+ */
+export function clientToSave(typed, saved = {}) {
+  const clientId = String(typed.clientId ?? '').trim()
+  const clientSecret = String(typed.clientSecret ?? '').trim()
+  const newSecret = !!clientSecret && !clientSecret.startsWith('••••')
+  if (saved.ready && clientId === saved.clientId && !newSecret) return {}
+  if (!clientId && !newSecret) return { error: 'ใส่ Client ID และ Client secret ก่อน แล้วกดเชื่อมต่ออีกครั้ง' }
+  if (!clientId) return { error: 'ใส่ Client ID ด้วย (ลงท้ายด้วย .apps.googleusercontent.com)' }
+  if (!newSecret && !saved.clientSecret) return { error: 'ใส่ Client secret ด้วย (ขึ้นต้นด้วย GOCSPX-)' }
+  return { save: { clientId, clientSecret } }
+}
+
+/** ＋ เพิ่มเวลา: เวลาที่เสนอให้ — ต่อจากเวลาสุดท้าย 3 ชั่วโมง (วนข้ามเที่ยงคืน) ไม่ซ้ำของเดิม */
+export function suggestSlot(slots) {
+  const mins = slots.map((s) => { const [h, m] = s.split(':').map(Number); return h * 60 + m }).sort((a, b) => a - b)
+  if (!mins.length) return '12:00'
+  const taken = new Set(mins)
+  let t = mins.at(-1)
+  for (let i = 0; i < 8; i++) {
+    t = (t + 180) % 1440
+    if (!taken.has(t)) break
+  }
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`
+}
+
+/** ตัวเลือก "ยังไม่มีปลายทาง" ในแถบเลือกปลายทาง — คลิปที่ยังไม่ได้เพจ/ช่องไหนเลย */
+export const NO_DEST = '-'
+
+/**
+ * แบ่งคิวเป็นกลุ่มตามแท็บ (รอตั้งเวลา / ตั้งเวลาแล้ว / โพสต์แล้ว / ตีกลับ)
+ *   dest ว่าง          = มองทั้งคลิป ตามสถานะของคลิป (แบบเดิม)
+ *   dest = "fb:<id>" … = มองเฉพาะปลายทางนั้น: คลิปที่ขึ้นปลายทางนี้แล้วอยู่ "โพสต์แล้ว" ของปลายทางนี้ทันที
+ *                        แม้คลิปยังรอปลายทางอื่น (เช่น Facebook ขึ้นแล้ว รอ TikTok) · เรียงตามเวลาของปลายทางนี้เอง
+ *   dest = NO_DEST     = คลิปที่ยังไม่มีปลายทาง
+ * failed(q) บอกว่าการ์ดในกลุ่ม "โพสต์แล้ว" เป็นโพสต์พลาดไหม · postedAt(q) = เวลาที่ขึ้น (ของปลายทางที่มองอยู่)
+ */
+export function splitQueue(items, dest = null) {
+  const timeOf = (q, k) => q.targetAt?.[k] ?? q.scheduleAt ?? 0
+  if (!dest || dest === NO_DEST) {
+    const list = dest ? items.filter((q) => !(q.targets ?? []).length) : items
+    return {
+      review: list.filter((q) => q.status === 'review'),
+      scheduled: list.filter((q) => q.status === 'scheduled' || q.status === 'posting').sort((a, b) => (a.scheduleAt ?? 0) - (b.scheduleAt ?? 0)),
+      posted: list.filter((q) => q.status === 'posted' || q.status === 'failed').sort((a, b) => (b.postedAt ?? b.addedAt) - (a.postedAt ?? a.addedAt)),
+      rejected: list.filter((q) => q.status === 'rejected'),
+      failed: (q) => q.status === 'failed',
+      postedAt: (q) => q.postedAt,
+      scheduleAt: (q) => q.scheduleAt,
+    }
+  }
+  const has = (q) => (q.targets ?? []).includes(dest)
+  const done = (q) => !!q.results?.[dest]?.ok
+  const at = (q) => q.results?.[dest]?.at ?? q.postedAt ?? q.addedAt ?? 0
+  return {
+    review: items.filter((q) => q.status === 'review' && has(q) && !done(q)),
+    scheduled: items.filter((q) => (q.status === 'scheduled' || q.status === 'posting') && has(q) && !done(q)).sort((a, b) => timeOf(a, dest) - timeOf(b, dest)),
+    posted: items.filter((q) => done(q) || (q.status === 'failed' && has(q))).sort((a, b) => at(b) - at(a)),
+    rejected: items.filter((q) => q.status === 'rejected' && has(q)),
+    failed: (q) => !done(q),
+    postedAt: (q) => q.results?.[dest]?.at ?? q.postedAt,
+    scheduleAt: (q) => timeOf(q, dest) || null,
+  }
+}
+
+export function initPosting({ api, localApp }) {
+  const root = document.getElementById('posting')
+  const body = document.getElementById('postingBody')
+  const statusEl = document.getElementById('postingStatus')
+  let app = null
+  let data = null
+  let tab = 'review'
+  let dest = null // ปลายทางที่กำลังดูคิว ("fb:<id>" / "yt:<id>" / "tk:<id>" / NO_DEST) · null = ทุกปลายทาง
+  let groups = splitQueue([]) // กลุ่มของรอบวาดล่าสุด — การ์ดใช้ถามเวลา/ผลของปลายทางที่กำลังดู
+  let timer = null
+  let busy = false
+  const openVideos = new Set() // id ของคลิปที่กางดูวิดีโอไว้ — คงไว้ข้ามการวาดใหม่
+  const openCats = new Set() // บัญชีที่กางรายการหมวดไว้
+  const openSlots = new Set() // บัญชีที่กางเวลาโพสต์ของเพจไว้
+  const catTimers = new Map()
+  const drafts = new Map() // id → {title, description, hashtags} ที่พิมพ์ค้างยังไม่บันทึก
+  const saveTimers = new Map()
+
+  function setStatus(text, kind = '') {
+    statusEl.className = 'status' + (kind === 'error' ? ' err' : kind === 'ok' ? ' ok' : '')
+    statusEl.textContent = ''
+    if (kind === 'busy') statusEl.append(el('span', { className: 'spinner' }))
+    statusEl.append(text)
+  }
+
+  async function call(path, payload, okText) {
+    if (busy && payload) return
+    busy = !!payload
+    try {
+      if (payload) setStatus('กำลังบันทึก…', 'busy')
+      data = await api(app, path, payload)
+      if (payload) setStatus(okText ?? 'บันทึกแล้ว', 'ok')
+      render()
+      return data
+    } catch (err) {
+      setStatus(err.message, 'error')
+      throw err
+    } finally {
+      busy = false
+    }
+  }
+
+  /** startTab — เปิดที่แท็บไหน (เช่น 'posted' จากบรรทัด "โพสต์ล่าสุด") · ไม่ส่ง = แท็บเดิม */
+  async function open(startTab) {
+    if (startTab) tab = startTab
+    root.hidden = false
+    document.getElementById('closePosting').focus()
+    setStatus('กำลังโหลด…', 'busy')
+    try {
+      app = await localApp()
+      data = await api(app, '/api/posting')
+      setStatus('')
+      render()
+    } catch (err) {
+      setStatus(err.message, 'error')
+    }
+    clearInterval(timer)
+    timer = setInterval(refresh, 6000)
+  }
+
+  function close() {
+    root.hidden = true
+    clearInterval(timer)
+  }
+
+  /** ดึงสถานะใหม่เป็นระยะ — ไม่วาดทับตอนผู้ใช้กำลังพิมพ์/เลือกอยู่ */
+  async function refresh() {
+    if (root.hidden || busy || !app) return
+    const active = document.activeElement
+    if (active && root.contains(active) && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)) return
+    if (saveTimers.size || catTimers.size) return
+    if (typedUnsaved()) return
+    try {
+      data = await api(app, '/api/posting')
+      render()
+    } catch {}
+  }
+
+  // ── ชื่อเพจ/ช่องจากรหัสปลายทาง ──
+  function targetList() {
+    return [
+      ...(data?.facebook ?? []).map((a) => ({ key: `fb:${a.id}`, kind: 'fb', name: a.name, pageId: a.pageId })),
+      ...(data?.youtube ?? []).filter((a) => a.connected).map((a) => ({ key: `yt:${a.id}`, kind: 'yt', name: a.name })),
+      ...(data?.tiktok ?? []).map((a) => ({ key: `tk:${a.id}`, kind: 'tk', name: `${a.name} (@${a.username})` })),
+    ]
+  }
+  const targetName = (key) => targetList().find((t) => t.key === key)?.name ?? 'บัญชีที่ถูกลบ'
+  const kindTag = (kind) => el('span', { className: `kind ${kind}` }, kind === 'fb' ? 'FB' : kind === 'tk' ? 'TT' : 'YT')
+  /** รูปเล็กหน้าชื่อเพจ Facebook ในป้ายปลายทาง (ช่องอื่นไม่มีรูป) */
+  const targetAvatar = (key) => {
+    const t = targetList().find((x) => x.key === key)
+    return t?.kind === 'fb' && t.pageId ? pageAvatar(t, 'sm') : null
+  }
+
+  // ── วาดทั้งหน้า ──
+  function render() {
+    if (!data) return
+    const items = data.queue ?? []
+    // บัญชีที่กำลังดูถูกลบไปแล้ว / ไม่มีคลิปไร้ปลายทางเหลือ → กลับไปดูทุกปลายทาง
+    if (dest === NO_DEST ? !items.some((q) => !(q.targets ?? []).length && ['review', 'scheduled'].includes(q.status)) : dest && !targetList().some((t) => t.key === dest)) dest = null
+    groups = splitQueue(items, dest)
+    const failed = groups.posted.filter(groups.failed).length
+    const on = !!data.settings.enabledAt
+    const accounts = targetList().length
+
+    const hero = el('div', { className: 'pHero' })
+    hero.insertAdjacentHTML('afterbegin', GULL_SVG)
+    hero.append(
+      el('div', {},
+        el('h3', {}, 'ประชาสัมพันธ์ · เผยแพร่คลิป'),
+        el('p', {}, el('span', { className: `pState${on ? '' : ' off'}` }, on ? 'เปิดอยู่' : 'ปิดอยู่'), on ? ' · คลิปที่ทำเสร็จเข้าคิวและตั้งเวลาโพสต์เอง' : ' · เปิดได้ในแท็บตั้งค่า'),
+        el('p', {}, accounts ? `${accounts} ปลายทาง` : 'ยังไม่มีเพจหรือช่อง', data.nextSlot ? ` · ช่องเวลาว่างถัดไป ${fmtWhen(data.nextSlot)}` : '', data.uploading ? ' · กำลังอัปโหลด…' : ''),
+      ),
+    )
+
+    const tabs = el('div', { className: 'seg pTabs', role: 'tablist', 'aria-label': 'รายการโพสต์' },
+      ...[
+        ['review', 'รอตั้งเวลา', groups.review.length],
+        ['scheduled', 'ตั้งเวลาแล้ว', groups.scheduled.length],
+        ['posted', 'โพสต์แล้ว', groups.posted.length, failed],
+        ['settings', 'ตั้งค่า', null],
+      ].map(([id, label, n, warn]) =>
+        el('button', { type: 'button', role: 'tab', 'aria-pressed': String(tab === id), 'aria-selected': String(tab === id), on: { click: () => { tab = id; render() } } },
+          label, n != null ? el('span', { className: warn ? 'n bad' : 'n', title: warn ? `${n} คลิป · โพสต์พลาด ${warn}` : undefined }, warn ? `พลาด ${warn}` : String(n)) : null),
+      ),
+    )
+
+    let panel
+    if (tab === 'review') panel = renderReview(groups.review, groups.rejected)
+    else if (tab === 'scheduled') panel = renderScheduled(groups.scheduled)
+    else if (tab === 'posted') panel = renderPosted(groups.posted)
+    else panel = renderSettings()
+
+    body.replaceChildren(...[hero, tabs, tab === 'settings' ? null : destBar(items), statusEl, panel].filter(Boolean))
+    // จำค่าตอนวาด — ใช้บอกว่าผู้ใช้พิมพ์อะไรค้างไว้ที่ยังไม่บันทึก
+    for (const i of fieldsOf(body)) i.dataset.saved = i.value
+  }
+
+  /**
+   * แถบเลือกปลายทาง — ดูคิวแยกทีละเพจ Facebook / ช่อง YouTube / บัญชี TikTok (ผู้ใช้ 16 พ.ย. 2026: "แยกแต่ละเพจ tiktok youtube ให้ชัดเจน")
+   * ตัวเลขบนปุ่ม = จำนวนคลิปของปลายทางนั้นในแท็บที่เปิดอยู่ · ปลายทางเดียวและไม่มีคลิปไร้ปลายทาง = ไม่ต้องมีแถบ
+   */
+  function destBar(items) {
+    const list = targetList()
+    const orphans = items.filter((q) => !(q.targets ?? []).length && ['review', 'scheduled'].includes(q.status)).length
+    if (list.length < 2 && !orphans) return null
+    const count = (key) => splitQueue(items, key)[tab]?.length ?? 0
+    const chip = (key, label, title) => el('button', {
+      type: 'button', 'aria-pressed': String(dest === key), title,
+      on: { click: () => { dest = key; render() } },
+    }, label, el('span', { className: 'n' }, String(count(key))))
+    return el('div', { className: 'pDest', role: 'group', 'aria-label': 'ดูคิวของปลายทาง' },
+      chip(null, [el('span', { className: 'nm' }, 'ทุกปลายทาง')], 'ดูทุกคลิป ตามสถานะของคลิป'),
+      ...list.map((t) => chip(t.key, [kindTag(t.kind), targetAvatar(t.key), el('span', { className: 'nm' }, t.name)], `ดูเฉพาะคิวของ ${t.name}`)),
+      orphans ? chip(NO_DEST, [el('span', { className: 'nm' }, 'ยังไม่มีปลายทาง')], 'คลิปที่ยังไม่ได้เพจหรือช่องไหนเลย') : null,
+    )
+  }
+  /** ชื่อปลายทางที่กำลังดู (ไว้ขึ้นข้อความ) · ดูทุกปลายทาง = '' */
+  const destName = () => (!dest ? '' : dest === NO_DEST ? 'คลิปที่ยังไม่มีปลายทาง' : targetName(dest))
+  /** กำลังดูปลายทางเดียว (ไม่ใช่ทุกปลายทาง / ไม่ใช่กลุ่มไร้ปลายทาง) */
+  const oneDest = () => !!dest && dest !== NO_DEST
+
+  // ช่องข้อความในหน้าตั้งค่า (Page ID, โทเค็น, Client ID/secret, ช่องเวลา)
+  const fieldsOf = (node) => node.querySelectorAll('input[type=text], input[type=password]')
+  /** มีค่าที่พิมพ์/วางไว้แต่ยังไม่บันทึก — วาดใหม่อัตโนมัติจะลบทิ้ง (เคยลบ Client ID ที่วางไว้ทุก 6 วินาที) */
+  // เฉพาะแท็บตั้งค่า — ช่องในแท็บรอตั้งเวลาบันทึกเองอยู่แล้ว (drafts/saveTimers)
+  const typedUnsaved = () => tab === 'settings' && [...fieldsOf(body)].some((i) => i.dataset.saved !== undefined && i.value !== i.dataset.saved)
+
+  /**
+   * ปุ่มเชื่อมต่อ Drive/YouTube: บันทึก Google client ที่กรอกไว้ให้ก่อน (ไม่ต้องหาปุ่มบันทึกเอง) แล้วเปิดหน้าขอสิทธิ์
+   * note — ข้อความใต้ปุ่ม ผู้ใช้เห็นทันที (บรรทัดสถานะอยู่บนสุดของหน้า มือถือมองไม่เห็น)
+   *        หาใหม่ทุกครั้ง เพราะบันทึกสำเร็จแล้วหน้าถูกวาดใหม่
+   */
+  async function saveThenConnect({ typed, saved, savePath, connectPath, waitText, note }) {
+    const show = (text) => {
+      const msg = body.querySelector(`[data-note="${note}"]`)
+      if (msg) Object.assign(msg, { textContent: text, hidden: !text })
+      if (text) setStatus(text, 'error')
+    }
+    const plan = clientToSave(typed, saved)
+    if (plan.error) return show(plan.error)
+    try {
+      show('')
+      if (plan.save) await call(savePath, plan.save, 'บันทึก Google client แล้ว')
+      const { url } = await api(app, connectPath, {})
+      setStatus(waitText, 'busy')
+      chrome.tabs.create({ url })
+    } catch (err) {
+      show(err.message) // call() วาดหน้าใหม่ไม่ได้ตอนล้ม — ช่องที่กรอกและข้อความนี้ยังอยู่
+    }
+  }
+
+  // ── รอตั้งเวลา: ไม่มีขั้นตรวจแล้ว (ผู้ใช้ 16 พ.ย. 2026) — แท็บนี้มีแต่คลิปที่ยังขาดชื่อโพสต์/เพจ/ช่องเวลา หรือผู้ใช้พักไว้ ──
+  function renderReview(list, rejected) {
+    const wrap = el('div', { className: 'pList' })
+    if (!targetList().length) {
+      wrap.append(el('p', { className: 'pWarn' }, 'ยังไม่มีเพจ Facebook หรือช่อง YouTube — เพิ่มในแท็บตั้งค่าก่อน ระบบถึงจะตั้งเวลาโพสต์ให้ได้'))
+    }
+    wrap.append(renderLibrary())
+    // ปุ่มที่ทำกับทั้งคิว (จัดคิวใหม่) อยู่เฉพาะมุมมองทุกปลายทาง — ตอนดูเพจเดียวไม่ให้เข้าใจว่าทำแค่เพจนั้น
+    if (dest) wrap.append(el('p', { className: 'hint', style: 'margin:0' }, oneDest()
+      ? `กำลังดูเฉพาะคิวของ ${destName()} — คลิปที่ขึ้นที่นี่แล้วอยู่ในแท็บ "โพสต์แล้ว" ของปลายทางนี้ · จัดคิวใหม่กดได้ที่ "ทุกปลายทาง"`
+      : 'คลิปเหล่านี้ยังไม่มีเพจหรือช่อง — เลือกหมวดหรือติ๊กปลายทางในการ์ดของคลิป'))
+    if (!dest && list.length && targetList().length) wrap.append(reorgTools())
+    if (!list.length) wrap.append(el('p', { className: 'pEmpty' }, oneDest() ? `ไม่มีคลิปค้างรอตั้งเวลาของ ${destName()}` : 'ไม่มีคลิปค้างรอตั้งเวลา — คลิปที่เข้าคิวได้เวลาโพสต์เองทันที ดูได้ในแท็บ "ตั้งเวลาแล้ว"'))
+    const ul = el('ul', { className: 'pList' }, list.map(reviewCard))
+    wrap.append(ul)
+    if (rejected.length) {
+      wrap.append(el('details', {},
+        el('summary', {}, `ตีกลับ (${rejected.length})`),
+        el('ul', { className: 'pList', style: 'margin-top:8px' }, rejected.map((q) => el('li', { className: 'pCard' },
+          head(q),
+          el('div', { className: 'pActions' },
+            el('button', { type: 'button', className: 'ghost', on: { click: () => call('/api/posting/restore', { id: q.id }, 'ดึงกลับเข้าคิวแล้ว — ระบบตั้งเวลาโพสต์ให้เอง') } }, '↩ ดึงกลับเข้าคิว'),
+            el('button', { type: 'button', className: 'ghost', on: { click: () => call('/api/posting/remove', { id: q.id }, 'เอาออกจากคิวแล้ว') } }, 'เอาออกจากคิว'),
+          ))))))
+    }
+    return wrap
+  }
+
+  function renderLibrary() {
+    const lib = data.library ?? []
+    return el('details', { className: 'pBox' },
+      el('summary', {}, `＋ เพิ่มคลิปจากคลังวิดีโอ (${lib.length})`),
+      lib.length
+        ? el('ul', { className: 'pList pLibrary' }, lib.map((v) => el('li', {},
+          v.thumb ? el('img', { className: 'pThumb', src: `${app.url}${v.thumb.slice(1)}&k=${app.token}`, alt: '', loading: 'lazy' }) : el('span', { className: 'pThumb' }),
+          el('span', {}, v.title),
+          el('button', { type: 'button', className: 'ghost', on: { click: () => call('/api/posting/add', { slug: v.slug, file: v.file }, `เพิ่ม "${v.title}" เข้าคิวแล้ว`) } }, 'เพิ่ม'),
+        )))
+        : el('p', { className: 'hint' }, 'คลิปทุกเรื่องในคลังอยู่ในคิวแล้ว'),
+    )
+  }
+
+  // กฎห้ามโพสต์ซ้ำ: สลักแพลตฟอร์มที่คลิปนี้ลงไปแล้วไว้บนการ์ด — ลงแพลตฟอร์มนั้นซ้ำไม่ได้อีกตลอดไป
+  const LOCK_NAME = { fb: 'Facebook', yt: 'YouTube', tk: 'TikTok' }
+  function lockBadges(q) {
+    return Object.entries(q.postedOn ?? {}).map(([p, v]) => el('span', { className: 'pBadge pLock', title: `คลิปนี้ลง ${LOCK_NAME[p] ?? p} แล้วที่ ${v?.name ?? v?.key ?? ''} — ห้ามโพสต์ซ้ำในแพลตฟอร์มนี้` }, `🔒 ${LOCK_NAME[p] ?? p} แล้ว`))
+  }
+
+  function head(q, extra = []) {
+    const thumb = q.thumb ? el('img', { className: 'pThumb', src: `${app.url}${q.thumb.slice(1)}&k=${app.token}`, alt: '', loading: 'lazy' }) : el('span', { className: 'pThumb' })
+    return el('div', { className: 'pHead' }, thumb,
+      el('div', {},
+        el('p', { className: 'pTitle' }, q.title),
+        el('p', { className: 'pMeta' }, [fmtDur(q.seconds), `เข้าคิว ${fmtWhen(q.addedAt)}`].filter(Boolean).join(' · ')),
+        el('div', { className: 'pBadges' }, q.category ? el('span', { className: 'pBadge gold' }, q.category) : null, driveBadge(q), q.missing ? el('span', { className: 'pBadge bad' }, 'ไม่พบไฟล์วิดีโอ') : null, ...lockBadges(q), ...extra),
+      ))
+  }
+
+  /** สถานะคลิปบน Google Drive — แสดงเฉพาะตอนเชื่อมต่อ Drive แล้ว */
+  function driveBadge(q) {
+    const d = q.drive
+    if (d?.fileId) return el('a', { className: 'pBadge pass', href: d.link, target: '_blank', rel: 'noopener', title: 'เปิดไฟล์ใน Google Drive' }, 'อยู่บน Drive ↗')
+    if (d?.removedAt) return el('span', { className: 'pBadge', title: 'อยู่ในถังขยะของ Drive 30 วัน' }, 'ลบจาก Drive แล้ว')
+    if (!data.settings.drive?.connected) return null
+    if (d?.error) return el('span', { className: 'pBadge bad', title: d.error }, 'ขึ้น Drive ไม่สำเร็จ')
+    if (d?.uploading) return el('span', { className: 'pBadge gold' }, 'กำลังขึ้น Drive…')
+    if (['review', 'scheduled', 'failed'].includes(q.status)) return el('span', { className: 'pBadge' }, 'รอขึ้น Drive')
+    return null
+  }
+
+  /** ทำไมคลิปนี้ยังไม่ได้เวลาโพสต์ — ไม่มีขั้นตรวจแล้ว คลิปที่ค้างในแท็บนี้คือคลิปที่ยังขาดอะไรบางอย่าง หรือผู้ใช้พักไว้เอง */
+  function waitNote(q) {
+    const tries = q.postJob?.tries ?? 1
+    const why = q.hold ? ['⏸ พักไว้ (ยกเลิกเวลาเอง) — กดตั้งเวลาด้านล่างเมื่อพร้อม', true]
+      : q.missing ? ['ไม่พบไฟล์วิดีโอ — ตั้งเวลาไม่ได้', true]
+        : !q.targets?.length ? [targetList().length ? 'ยังไม่มีเพจ/ช่องที่รับหมวดของคลิปนี้ — เลือกหมวดหรือติ๊กปลายทางด้านล่าง แล้วระบบตั้งเวลาให้เอง' : 'ยังไม่ได้เชื่อมเพจหรือช่อง — เพิ่มในแท็บตั้งค่า แล้วระบบตั้งเวลาให้เอง', true]
+          : !q.post?.title ? (q.postJob?.status === 'running' ? ['ChatGPT กำลังเขียนชื่อโพสต์ — ได้แล้วตั้งเวลาเอง', false]
+            : q.postJob?.status === 'error' ? [tries < 3 ? 'ChatGPT เขียนชื่อโพสต์ไม่สำเร็จ — จะลองใหม่เองในอีก 30 นาที หรือพิมพ์ชื่อเองด้านล่าง' : 'ChatGPT เขียนชื่อโพสต์ไม่สำเร็จ 3 ครั้ง — พิมพ์ชื่อโพสต์เองด้านล่าง แล้วระบบตั้งเวลาให้เอง', true]
+              : ['รอ ChatGPT เขียนชื่อโพสต์ (ต้องเปิดแท็บ ChatGPT ไว้ และไม่มีงานทำคลิปค้าง) — ได้แล้วตั้งเวลาเอง', false])
+            : ['กำลังตั้งเวลาโพสต์ให้เอง (ภายในราว 1 นาที)', false]
+    return el('p', { className: why[1] ? 'pWarn' : 'hint', style: 'margin:0' }, why[0])
+  }
+
+  function videoBlock(q) {
+    const d = el('details', { open: openVideos.has(q.id) }, el('summary', {}, 'ดูคลิป'))
+    const mount = () => {
+      if (!d.open || d.querySelector('video') || !q.video) return
+      d.append(el('video', { controls: true, preload: 'metadata', src: `${app.url}${q.video.slice(1)}&k=${app.token}` }))
+    }
+    d.addEventListener('toggle', () => {
+      if (d.open) openVideos.add(q.id)
+      else openVideos.delete(q.id)
+      mount()
+    })
+    mount()
+    return d
+  }
+
+  /** บันทึกข้อความโพสต์ที่แก้ (หน่วง 700 ms หลังหยุดพิมพ์) */
+  function queueSave(q) {
+    clearTimeout(saveTimers.get(q.id))
+    saveTimers.set(q.id, setTimeout(async () => {
+      saveTimers.delete(q.id)
+      const post = drafts.get(q.id)
+      if (!post) return
+      try {
+        data = await api(app, '/api/posting/item', { id: q.id, post })
+        drafts.delete(q.id)
+        setStatus('บันทึกข้อความโพสต์แล้ว', 'ok')
+      } catch (err) {
+        setStatus(err.message, 'error')
+      }
+    }, 700))
+  }
+
+  async function flush(q) {
+    if (!saveTimers.has(q.id)) return
+    clearTimeout(saveTimers.get(q.id))
+    saveTimers.delete(q.id)
+    const post = drafts.get(q.id)
+    if (post) data = await api(app, '/api/posting/item', { id: q.id, post })
+    drafts.delete(q.id)
+  }
+
+  function postForm(q) {
+    const draft = drafts.get(q.id) ?? { title: q.post?.title ?? '', description: q.post?.description ?? '', hashtags: (q.post?.hashtags ?? []).join(' ') }
+    const edit = (field, value) => {
+      drafts.set(q.id, { ...(drafts.get(q.id) ?? draft), [field]: value })
+      queueSave(q)
+    }
+    const titleInput = el('input', { type: 'text', value: draft.title, maxLength: 200, on: { input: (e) => edit('title', e.target.value) } })
+    const options = (q.post?.titles ?? []).filter(Boolean)
+    const chips = options.length > 1
+      ? el('div', { className: 'pTitles', role: 'group', 'aria-label': 'ชื่อที่ ChatGPT เสนอ' }, options.map((t) => el('button', {
+        type: 'button', 'aria-pressed': String(t === draft.title),
+        on: { click: (e) => { titleInput.value = t; edit('title', t); e.currentTarget.parentElement.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))) } },
+      }, t)))
+      : null
+    return el('div', { className: 'pList', style: 'gap:8px' },
+      el('label', { className: 'pField' }, 'ชื่อโพสต์ (YouTube ใช้ได้ไม่เกิน 100 ตัวอักษร)', titleInput, chips),
+      el('label', { className: 'pField' }, 'คำบรรยาย', el('textarea', { value: draft.description, maxLength: 5000, on: { input: (e) => edit('description', e.target.value) } })),
+      el('label', { className: 'pField' }, 'แฮชแท็ก (เว้นวรรคระหว่างแท็ก)', el('input', { type: 'text', value: draft.hashtags, on: { input: (e) => edit('hashtags', e.target.value) } })),
+    )
+  }
+
+  /** หมวดของคลิป — มาจากโปรไฟล์ของคลิป หรือเลือกเอง · ใช้เลือกเพจ/ช่องที่รับหมวดนี้ */
+  function categoryPicker(q) {
+    const select = el('select', {
+      'aria-label': 'หมวดของคลิป',
+      on: { change: (e) => call('/api/posting/item', { id: q.id, category: e.target.value || null }, 'เปลี่ยนหมวดแล้ว').catch(() => {}) },
+    },
+    el('option', { value: '', selected: !q.category }, '— ยังไม่รู้หมวด —'),
+    (data.categories ?? []).map((c) => el('option', { value: c, selected: q.category === c }, c)))
+    const by = q.category ? (q.categoryBy === 'manual' ? ' · เลือกเอง' : ' · จากคลิป') : ''
+    return el('label', { className: 'pField' }, `หมวดของคลิป${by}`, select)
+  }
+
+  function targetPicker(q) {
+    const all = targetList()
+    if (!all.length) return el('p', { className: 'hint' }, 'ยังไม่มีเพจหรือช่อง — เพิ่มในแท็บตั้งค่า')
+    const chosen = new Set(q.targets ?? [])
+    // กฎห้ามโพสต์ซ้ำ: แพลตฟอร์มละ 1 เพจ/ช่อง/บัญชี · แพลตฟอร์มที่คลิปนี้ลงไปแล้วเลือกไม่ได้อีก
+    const postedOn = q.postedOn ?? {}
+    const PLATFORM = { fb: 'Facebook', yt: 'YouTube', tk: 'TikTok' }
+    const lockedNote = Object.entries(postedOn).map(([p, v]) => `ลง ${PLATFORM[p] ?? p} แล้วที่ ${v.name ?? v.key}`)
+    return el('fieldset', { className: 'pField', style: 'border:0;padding:0;margin:0' },
+      el('legend', { style: 'padding:0;margin-bottom:4px' }, 'โพสต์ลง',
+        q.targetsEdited
+          ? el('span', {}, ' · เลือกเอง ', el('button', { type: 'button', className: 'linkBtn', on: { click: () => call('/api/posting/item', { id: q.id, resetTargets: true }, 'เลือกปลายทางตามหมวดแล้ว').catch(() => {}) } }, 'เลือกตามหมวด'))
+          : el('span', {}, q.category ? ' · เลือกตามหมวดให้แล้ว' : ' · เพจ/ช่องที่รับทุกหมวด')),
+      el('div', { className: 'pTargets' }, all.map((t) => {
+        const locked = !!postedOn[t.kind] && !q.results?.[t.key]?.ok
+        return el('label', { className: `pTarget${locked ? ' pLocked' : ''}`, title: locked ? `คลิปนี้ลง ${PLATFORM[t.kind]} ไปแล้ว — ห้ามโพสต์ซ้ำ` : '' },
+          el('input', {
+            type: 'checkbox', checked: chosen.has(t.key) && !locked, disabled: locked,
+            on: { change: (e) => {
+              if (e.target.checked) {
+                // แพลตฟอร์มเดียวกันเลือกได้เพจเดียว — ติ๊กเพจนี้ = เอาเพจอื่นของแพลตฟอร์มนี้ออก
+                for (const k of [...chosen]) if (k.split(':')[0] === t.kind) chosen.delete(k)
+                chosen.add(t.key)
+              } else chosen.delete(t.key)
+              call('/api/posting/item', { id: q.id, targets: [...chosen] }, 'บันทึกปลายทางแล้ว').catch(() => {})
+            } },
+          }),
+          kindTag(t.kind), targetAvatar(t.key), t.name)
+      })),
+      el('p', { className: 'hint', style: 'margin:4px 0 0' }, `1 คลิปลงได้ 1 เพจต่อแพลตฟอร์ม (ห้ามคลิปซ้ำ)${lockedNote.length ? ` · ${lockedNote.join(' · ')}` : ''}`),
+    )
+  }
+
+  function reviewCard(q) {
+    // ช่องเวลาต่อเพจ: ช่องว่างถัดไปของเพจที่คลิปนี้จะลง (เพจอื่นช่องเดียวกันได้)
+    const slot = q.nextSlot ?? data.nextSlot
+    const when = el('input', { type: 'datetime-local', value: toLocalInput(q.scheduleAt ?? slot ?? Date.now() + 3600_000) })
+    const approve = async (whenValue, label) => {
+      try {
+        await flush(q)
+        await call('/api/posting/approve', { id: q.id, when: whenValue }, label)
+      } catch {}
+    }
+    const nextLabel = slot ? `✓ ตั้งเวลา · ${fmtWhen(slot)}` : '✓ ตั้งเวลา · ช่องเวลาถัดไป'
+    return el('li', { className: 'pCard' },
+      head(q),
+      waitNote(q),
+      videoBlock(q),
+      postForm(q),
+      categoryPicker(q),
+      targetPicker(q),
+      el('div', { className: 'pActions' },
+        el('button', { type: 'button', className: 'primary', disabled: q.missing, on: { click: () => approve('next', 'ตั้งเวลาแล้ว · ลงช่องเวลาถัดไป') } }, nextLabel),
+      ),
+      el('div', { className: 'pWhen' },
+        el('label', { className: 'pField' }, 'หรือเลือกเวลาเอง', when),
+        el('button', { type: 'button', className: 'ghost', disabled: q.missing, on: { click: () => approve(new Date(when.value).getTime(), 'ตั้งเวลาตามที่เลือกแล้ว') } }, 'ตั้งตามเวลานี้'),
+        el('button', { type: 'button', className: 'ghost', disabled: q.missing, on: { click: () => { if (confirm(`โพสต์ "${q.title}" ตอนนี้เลยไหม?`)) approve('now', 'กำลังโพสต์…') } } }, 'โพสต์ทันที'),
+      ),
+      el('div', { className: 'pActions' },
+        el('button', { type: 'button', className: 'ghost', on: { click: () => { const reason = prompt('ตีกลับเพราะอะไร (เว้นว่างได้)'); if (reason !== null) call('/api/posting/reject', { id: q.id, reason }, 'ตีกลับแล้ว').catch(() => {}) } } }, '✕ ตีกลับ'),
+      ),
+    )
+  }
+
+  /**
+   * ↻ จัดคิวใหม่ — ผู้ใช้ (8 พ.ย. 2026): "นำเพจใหม่ไปเข้าคิวด้วย โดยยังคงใช้กฎเดิม"
+   * แบ่งคลิปที่ยังไม่โพสต์ให้ทุกเพจ (รวมเพจที่เพิ่งเพิ่ม และคลิปที่เคยติ๊กเพจเอง) · แพลตฟอร์มที่คลิปลงแล้วล็อกไว้ ไม่ลงซ้ำ
+   */
+  function reorgTools() {
+    const run = async () => {
+      if (!confirm('จัดคิวใหม่ทั้งหมด?\n\n• แบ่งคลิปที่ยังไม่โพสต์ให้ทุกเพจเท่าๆ กัน รวมเพจที่เพิ่งเพิ่ม และคลิปที่เคยติ๊กเพจเอง\n• คลิปที่ลงแพลตฟอร์มไหนแล้ว ล็อกไว้ ไม่ส่งไปลงแพลตฟอร์มนั้นซ้ำ\n• คลิปที่ขึ้นบางที่ไปแล้วไม่ย้ายเพจ · เวลาที่เลือกเองไม่แตะ')) return
+      try {
+        const out = await call('/api/posting/reorganize', { all: true }, 'จัดคิวใหม่แล้ว')
+        const r = out?.reorganized
+        if (r) setStatus(`จัดคิวใหม่แล้ว — ${(r.pages ?? []).map((p) => `${p.name} ${p.count} คลิป`).join(' · ') || 'ยังไม่มีเพจ'}${r.locked ? ` · 🔒 ล็อกแพลตฟอร์มที่ลงแล้ว ${r.locked} คลิป` : ''}`, 'ok')
+      } catch {}
+    }
+    return el('div', { className: 'pReorg' },
+      el('p', { className: 'hint', style: 'margin:0' }, 'เพิ่มเพจใหม่แล้วกดปุ่มนี้ — แบ่งคลิปให้ทุกเพจ ช่องเวลาเดียวกันโพสต์พร้อมกันได้แต่คนละคลิป · คลิปที่ลงแพลตฟอร์มไหนแล้ว 🔒 ไม่ลงซ้ำ'),
+      el('button', { type: 'button', className: 'ghost', on: { click: run } }, '↻ จัดคิวใหม่'))
+  }
+
+  // ── ตั้งเวลาแล้ว ──
+  function renderScheduled(list) {
+    if (!list.length) return el('p', { className: 'pEmpty' }, oneDest() ? `ยังไม่มีคลิปที่ตั้งเวลาของ ${destName()}` : 'ยังไม่มีคลิปที่ตั้งเวลา — คลิปที่เข้าคิวจะได้เวลาโพสต์เองทันที')
+    // ช่องเวลาต่อเพจ: แต่ละเพจลงคลิปของตัวเองในช่องเวลาเดียวกันได้ · ปุ่มนี้จัดเพจและเวลาให้ใหม่ (ไม่แตะที่ติ๊กเพจเอง/เลือกเวลาเอง)
+    // ดูเพจเดียว: เรียงและโชว์ตามเวลาของเพจนั้นเอง · ปุ่มจัดคิวใหม่ (ทำกับทั้งคิว) อยู่ที่มุมมองทุกปลายทาง
+    const tools = dest ? el('p', { className: 'hint', style: 'margin:0 0 8px' }, oneDest() ? `คิวของ ${destName()} เรียงตามเวลาที่จะขึ้นปลายทางนี้` : 'คลิปที่ตั้งเวลาแล้วแต่ยังไม่มีปลายทาง') : reorgTools()
+    return el('div', {}, tools, el('ul', { className: 'pList' }, list.map((q) => {
+      const posting = q.status === 'posting'
+      const at = groups.scheduleAt(q) ?? q.scheduleAt
+      const when = el('input', { type: 'datetime-local', value: toLocalInput(at) })
+      return el('li', { className: 'pCard' },
+        head(q, [el('span', { className: 'pBadge gold' }, posting ? 'กำลังโพสต์…' : `โพสต์ ${fmtWhen(at)}`)]),
+        // เวลาต่อปลายทาง: แต่ละปลายทางลงตามช่องของตัวเอง (FB สองเพจช่องเดียวกันได้ · TikTok ตามช่องของ TikTok)
+        el('div', { className: 'pTargets' }, (q.targets ?? []).map((k) => el('span', { className: 'pTarget' }, kindTag(k.slice(0, 2)), targetAvatar(k), targetName(k),
+          el('small', { className: 'pTargetAt' }, q.results?.[k]?.ok ? ' · ✓ ขึ้นแล้ว' : ` · ${fmtWhen(q.targetAt?.[k] ?? q.scheduleAt)}`)))),
+        !q.targets?.length ? el('p', { className: 'pWarn' }, 'ยังไม่มีเพจหรือช่องปลายทาง — กดยกเลิกเวลา แล้วเลือกหมวดและเพจในแท็บรอตั้งเวลา ก่อนตั้งเวลาใหม่') : null,
+        el('p', { className: 'pMeta' }, q.post?.title ?? ''),
+        posting
+          ? el('p', { className: 'status' }, el('span', { className: 'spinner' }), 'กำลังอัปโหลด — อย่าปิดโปรแกรมในเครื่อง')
+          : el('div', { className: 'pWhen' },
+            el('label', { className: 'pField' }, 'เปลี่ยนเวลา', when),
+            el('button', { type: 'button', className: 'ghost', disabled: !q.targets?.length, on: { click: () => call('/api/posting/approve', { id: q.id, when: new Date(when.value).getTime() }, 'เปลี่ยนเวลาแล้ว').catch(() => {}) } }, 'บันทึกเวลา'),
+            el('button', { type: 'button', className: 'ghost', disabled: !q.targets?.length, on: { click: () => { if (confirm(`โพสต์ "${q.title}" ตอนนี้เลยไหม?`)) call('/api/posting/approve', { id: q.id, when: 'now' }, 'กำลังโพสต์…').catch(() => {}) } } }, 'โพสต์ตอนนี้'),
+            el('button', { type: 'button', className: 'ghost', on: { click: () => call('/api/posting/unschedule', { id: q.id }, 'ยกเลิกเวลาแล้ว — พักคลิปไว้ในแท็บรอตั้งเวลา').catch(() => {}) } }, 'ยกเลิกเวลา'),
+          ),
+      )
+    })))
+  }
+
+  // ── โพสต์แล้ว / พลาด ──
+  function renderPosted(list) {
+    if (!list.length) return el('p', { className: 'pEmpty' }, oneDest() ? `ยังไม่มีคลิปที่โพสต์ลง ${destName()}` : 'ยังไม่มีคลิปที่โพสต์')
+    return el('ul', { className: 'pList' }, list.map((q) => {
+      // ดูเพจเดียว: สำเร็จ/พลาดและเวลา = ของเพจนั้น (คลิปอาจยังรอปลายทางอื่นอยู่)
+      const fail = groups.failed(q)
+      const closed = q.status === 'posted' || q.status === 'failed'
+      const waiting = closed ? [] : (q.targets ?? []).filter((k) => !q.results?.[k]?.ok)
+      return el('li', { className: `pCard ${fail ? 'fail' : 'done'}` },
+        head(q, [el('span', { className: `pBadge ${fail ? 'bad' : 'pass'}` }, fail ? 'โพสต์ไม่สำเร็จ' : `โพสต์แล้ว ${fmtWhen(groups.postedAt(q))}`)]),
+        waiting.length ? el('p', { className: 'pMeta' }, `ขึ้น ${destName()} แล้ว · ยังรอ ${waiting.map((k) => `${targetName(k)}${q.status === 'review' ? ' (รอตั้งเวลา)' : ` ${fmtWhen(q.targetAt?.[k] ?? q.scheduleAt)}`}`).join(', ')}`) : null,
+        el('ul', { className: 'pResults' }, (q.targets ?? []).map((k) => {
+          const r = q.results?.[k]
+          return el('li', {}, kindTag(k.slice(0, 2)), el('strong', {}, r?.name ?? targetName(k)),
+            r?.ok ? r.url ? el('a', { href: r.url, target: '_blank', rel: 'noopener' }, 'เปิดโพสต์ ↗') : el('span', {}, 'ยืนยันว่าโพสต์สำเร็จแล้ว') : el('span', { className: 'err' }, r?.error ?? 'ยังไม่ได้โพสต์'),
+            r?.ok && r.privacy && r.privacy !== 'public' ? el('span', { className: 'pBadge fix' }, r.privacy === 'private' ? 'ส่วนตัว' : 'ไม่เป็นสาธารณะ') : null)
+        })),
+        // บอกเหตุผลเมื่อไม่มีปลายทางไหนแสดงผล (เช่น ไม่มีเพจ/ช่องเลย หรือผลเก่าเป็นของเพจที่ลบไปแล้ว)
+        fail && q.error && !(q.targets ?? []).some((k) => q.results?.[k]) ? el('p', { className: 'status err' }, q.error) : null,
+        // คลิปที่ยังรอปลายทางอื่น: ยังไม่ปิดงาน — ไม่มีปุ่มเอาออก (จะยกเลิกปลายทางที่รออยู่ไปด้วย) จัดการได้ในแท็บรอตั้งเวลา/ตั้งเวลาแล้ว
+        closed ? el('div', { className: 'pActions' },
+          // ไฟล์คลิปหาย: ลองใหม่ก็พลาดซ้ำ → ตัดต่อใหม่ก่อน พอไฟล์กลับมาระบบตั้งเวลาโพสต์ใหม่ให้เอง
+          q.status === 'failed' && q.missing ? el('p', { className: 'status err' }, 'ไฟล์คลิปหายไปจากเครื่อง — กดตัดต่อใหม่ เสร็จแล้วระบบตั้งเวลาโพสต์ให้เอง') : null,
+          q.status === 'failed' && q.missing ? el('button', { type: 'button', className: 'primary', on: { click: async () => {
+            try {
+              setStatus('กำลังสั่งตัดต่อใหม่…', 'busy')
+              await api(app, '/api/autopilot', { title: q.title, restartFrom: 'edit' })
+              setStatus(`เริ่มตัดต่อ "${q.title}" ใหม่แล้ว — ดูความคืบหน้าในหน้าทำคลิป`, 'ok')
+            } catch (err) { setStatus(err.message, 'error') }
+          } } }, '🎬 ตัดต่อใหม่') : null,
+          q.status === 'failed' && !q.missing && (q.targets ?? []).some(k => !q.results?.[k]?.ok && !q.results?.[k]?.needsVerification) ? el('button', { type: 'button', className: 'primary', on: { click: () => {
+            call('/api/posting/retry', { id: q.id }, 'กำลังส่งเฉพาะปลายทางที่ยังไม่ถูกส่ง…').catch(() => {})
+          } } }, '↻ ลองเฉพาะปลายทางที่ยังไม่ถูกส่ง') : null,
+          // ไม่รู้ผล (Facebook ตอบ 5xx หลังรับไฟล์): ระบบตรวจกับเพจเองทุก 10 นาที — ไม่พบ = ตั้งเวลาโพสต์ใหม่ · พบ = นับว่าโพสต์แล้ว
+          q.status === 'failed' && (q.targets ?? []).some(k => q.results?.[k]?.needsVerification) ? el('p', { className: 'pMeta' }, 'ยังไม่รู้ว่าขึ้นเพจหรือไม่ — ระบบตรวจกับเพจเองทุก 10 นาที ถ้าไม่พบจะตั้งเวลาโพสต์ใหม่ให้ (ไม่โพสต์ซ้ำ)') : null,
+          q.status === 'failed' && (q.targets ?? []).some(k => q.results?.[k]?.needsVerification && k.startsWith('fb:')) ? el('button', { type: 'button', className: 'primary', on: { click: async () => {
+            const out = await call('/api/posting/verify', { id: q.id }, 'ตรวจกับเพจแล้ว').catch(() => null)
+            if (out?.message) setStatus(out.message, 'ok')
+          } } }, '🔎 ตรวจกับเพจเดี๋ยวนี้') : null,
+          el('button', { type: 'button', className: 'ghost', on: { click: () => call('/api/posting/remove', { id: q.id }, 'เอาออกจากรายการแล้ว').catch(() => {}) } }, 'เอาออกจากรายการ'),
+        ) : null,
+      )
+    }))
+  }
+
+  // ── ตั้งค่า + บัญชี ──
+  /** หมวดที่เพจ/ช่องรับ — ไม่ติ๊กเลย = รับทุกหมวด · บันทึกเองหลังหยุดติ๊ก 0.6 วิ */
+  function catPicker(kind, a) {
+    const key = `${kind}:${a.id}`
+    const cats = new Set(a.categories ?? [])
+    const summaryText = () => (cats.size ? `รับ ${cats.size} หมวด: ${[...cats].slice(0, 2).join(', ')}${cats.size > 2 ? ' …' : ''}` : 'รับคลิปทุกหมวด')
+    const summary = el('summary', {}, summaryText())
+    const save = () => {
+      summary.textContent = summaryText()
+      clearTimeout(catTimers.get(key))
+      catTimers.set(key, setTimeout(async () => {
+        catTimers.delete(key)
+        try {
+          data = await api(app, '/api/posting/account/categories', { kind, id: a.id, categories: [...cats] })
+          setStatus(`บันทึกหมวดของ ${a.name} แล้ว — คลิปที่ยังไม่ได้ตั้งเวลาถูกเลือกปลายทางใหม่ตามหมวด`, 'ok')
+          render()
+        } catch (err) {
+          setStatus(err.message, 'error')
+        }
+      }, 600))
+    }
+    const boxes = (data.categories ?? []).map((c) => el('label', { className: 'pCat' },
+      el('input', { type: 'checkbox', checked: cats.has(c), on: { change: (e) => { if (e.target.checked) cats.add(c); else cats.delete(c); save() } } }), c))
+    const d = el('details', { className: 'pCats', open: openCats.has(key) }, summary,
+      el('p', { className: 'hint' }, 'ติ๊กหมวดที่ให้ลงบัญชีนี้ — ไม่ติ๊กเลย = ลงทุกหมวด · คลิปที่ยังไม่รู้หมวดจะลงเฉพาะบัญชีที่รับทุกหมวด'),
+      el('div', { className: 'pCatGrid' }, boxes),
+      el('button', { type: 'button', className: 'ghost', on: { click: () => { cats.clear(); boxes.forEach((b) => { b.querySelector('input').checked = false }); save() } } }, 'ล้าง = รับทุกหมวด'))
+    d.addEventListener('toggle', () => (d.open ? openCats.add(key) : openCats.delete(key)))
+    return d
+  }
+
+  // Google ขึ้น "redirect_uri_mismatch" = สร้าง client เป็นแบบ Web application (Desktop app รับที่อยู่ 127.0.0.1 ทุกพอร์ตเอง)
+  const redirectHelp = () => el('li', {}, 'ขึ้น "redirect_uri_mismatch" (คำขอของแอปนี้ไม่ถูกต้อง) = เลือกประเภทผิดเป็น Web application → สร้างใหม่เป็น Desktop app แล้ววาง Client ID/secret ใหม่ · หรือเพิ่ม Authorized redirect URI ของ client เดิมเป็น ',
+    el('code', {}, data.redirectUri ?? 'http://127.0.0.1:<พอร์ต>'), ' (ไม่มี / ท้าย)')
+
+  /** ตารางเวลาโพสต์ประจำวัน: เลือกเวลา/ลบ/เพิ่ม แล้วบันทึกเองทันที (bridge เรียงและตัดตัวซ้ำให้) · ต้องเหลืออย่างน้อย 1 เวลา */
+  function slotEditor(list, saveSlots, { head, help, label = '' }) {
+    return el('div', { className: 'pSlotBox' },
+      el('div', { className: 'pSlotHead' }, head, el('small', {}, help)),
+      el('ol', { className: 'pSlots' }, list.map((t, i) => el('li', {},
+        el('span', { className: 'pSlotN' }, `ช่อง ${i + 1}`),
+        el('input', {
+          type: 'time', value: t, step: 300, required: true, 'aria-label': `เวลาช่อง ${i + 1}${label}`,
+          on: { change: (e) => { if (e.target.value) saveSlots(list.map((x, j) => (j === i ? e.target.value : x)), `เปลี่ยนเป็น ${e.target.value} น. แล้ว`) } },
+        }),
+        el('button', {
+          type: 'button', className: 'ghost pSlotDel', 'aria-label': `ลบเวลา ${t}${label}`, title: list.length <= 1 ? 'ต้องมีอย่างน้อย 1 เวลา' : `ลบเวลา ${t}`,
+          disabled: list.length <= 1,
+          on: { click: () => saveSlots(list.filter((_, j) => j !== i), `ลบเวลา ${t} แล้ว`) },
+        }, '✕'),
+      ))),
+      el('button', { type: 'button', className: 'ghost', on: { click: () => { const t = suggestSlot(list); saveSlots([...list, t], `เพิ่มเวลา ${t} น. แล้ว — แตะที่เวลาเพื่อเปลี่ยนได้`) } } }, '＋ เพิ่มเวลา'),
+    )
+  }
+
+  /** ⏰ เวลาโพสต์ของเพจ/ช่องนี้ — ใช้เวลากลาง หรือตั้งเองต่างจากเพจอื่น (ผู้ใช้: ตั้งค่าแต่ละเพจต่างกันได้) */
+  function accountSlots(kind, a) {
+    const key = `slots:${kind}:${a.id}`
+    const own = a.slots ?? []
+    const global = data.settings.slots ?? []
+    const save = (next, ok) => call('/api/posting/account/slots', { kind, id: a.id, slots: next }, ok).catch(() => {})
+    const d = el('details', { className: 'pCats pAcctSlots', open: openSlots.has(key) },
+      el('summary', {}, own.length ? `⏰ เวลาของเพจนี้: ${own.join(', ')}` : `⏰ ใช้เวลากลาง: ${global.join(', ') || 'ยังไม่ได้ตั้ง'}`),
+      own.length
+        ? el('div', { className: 'pAcctSlotsBody' },
+          slotEditor(own, save, { head: `เวลาโพสต์ของ ${a.name}`, help: 'เพจนี้ลงคลิปตามเวลาเหล่านี้แทนเวลากลาง · คลิปที่ตั้งเวลาไว้แล้วย้ายตามให้เอง', label: ` ของ ${a.name}` }),
+          el('button', { type: 'button', className: 'linkBtn', on: { click: () => save([], `${a.name} กลับไปใช้เวลากลางแล้ว`) } }, 'กลับไปใช้เวลากลาง'))
+        : el('button', { type: 'button', className: 'ghost', on: { click: () => { openSlots.add(key); save(global.length ? [...global] : ['12:00'], `ตั้งเวลาของ ${a.name} เองแล้ว — แก้เวลาได้เลย`) } } }, 'ตั้งเวลาของเพจนี้เอง'),
+    )
+    d.addEventListener('toggle', () => (d.open ? openSlots.add(key) : openSlots.delete(key)))
+    return d
+  }
+
+  function renderSettings() {
+    const s = data.settings
+    const toggle = (key, label, help, checked) => el('label', { className: 'pSwitch' },
+      el('input', { type: 'checkbox', checked, on: { change: (e) => call('/api/posting/settings', { [key]: e.target.checked }, 'บันทึกแล้ว').catch(() => {}) } }),
+      el('span', {}, label, el('small', {}, help)))
+    // ช่องเวลาประจำวัน: ตาราง เลือกเวลา/ลบ/เพิ่ม แล้วบันทึกเองทันที (bridge เรียงและตัดตัวซ้ำให้)
+    const list = s.slots ?? []
+    const saveSlots = (next, ok) => call('/api/posting/settings', { slots: next }, ok).catch(() => {})
+    const slotTable = slotEditor(list, saveSlots, {
+      head: 'เวลาโพสต์กลาง (ทุกเพจ)',
+      help: 'เพจที่ไม่ได้ตั้งเวลาเองใช้เวลานี้ · ตั้งเวลาเฉพาะเพจได้ที่การ์ดของเพจด้านล่าง · เวลาเดียวกันทุกเพจลงคนละคลิป',
+    })
+
+    const mode = el('section', { className: 'pBox', 'aria-label': 'การทำงาน' },
+      el('h3', {}, 'การทำงาน'),
+      toggle('enabled', 'เปิดโหมดโพสต์อัตโนมัติ', 'คลิปที่ทำเสร็จหลังจากนี้เข้าคิวและตั้งเวลาโพสต์เองทันที ไม่มีขั้นตรวจ (คลิปเก่าเพิ่มจากคลังได้)', !!s.enabledAt),
+      toggle('autoPull', 'ดึงคลิปจากคลังเอง', `เติมคิวให้มีคลิปรอโพสต์ครบทุกเวลาโพสต์ของวัน (ตอนนี้ ${(s.slots ?? []).length} เวลา) · หยิบคลิปที่เก่าที่สุดที่ยังไม่เคยเข้าคิวก่อน · คลิปที่ตีกลับหรือเอาออกจะไม่ถูกดึงกลับมา`, !!s.autoPull),
+      slotTable,
+      el('p', { className: 'hint' }, 'โปรแกรมในเครื่องต้องเปิดอยู่ตอนถึงเวลาโพสต์ — ถ้าปิดไว้ คลิปจะโพสต์ทันทีที่เปิดโปรแกรมครั้งถัดไป'),
+    )
+
+    // Facebook
+    const pageId = el('input', { type: 'text', inputMode: 'numeric', placeholder: 'เช่น 102345678901234', autocomplete: 'off' })
+    const pageToken = el('input', { type: 'password', placeholder: 'EAAB…', autocomplete: 'off' })
+    const pageName = el('input', { type: 'text', placeholder: 'เว้นว่าง = ใช้ชื่อเพจจริง' })
+    // ฟอร์มแก้ไขเพจ (ซ่อนไว้จนกดแก้ไข) — เปลี่ยนชื่อเรียก/โทเค็นได้โดยไม่ต้องลบเพจ
+    const editPageForm = (a) => {
+      const name = el('input', { type: 'text', value: a.name ?? '', 'aria-label': `ชื่อเรียกของ ${a.name}` })
+      const token = el('input', { type: 'password', placeholder: 'เว้นว่าง = ใช้โทเค็นเดิม', autocomplete: 'off', 'aria-label': `โทเค็นใหม่ของ ${a.name}` })
+      return el('div', { className: 'pEditPage', hidden: true },
+        el('label', { className: 'pField' }, 'ชื่อเรียก', name),
+        el('label', { className: 'pField' }, 'โทเค็นใหม่ (Page หรือ User token)', token),
+        el('button', {
+          type: 'button', className: 'primary',
+          on: { click: () => call('/api/posting/facebook/edit', { id: a.id, name: name.value.trim(), token: token.value.trim() }, token.value.trim() ? 'ตรวจโทเค็นผ่าน · บันทึกแล้ว' : 'บันทึกแล้ว').catch(() => {}) },
+        }, 'บันทึกการแก้ไข'))
+    }
+    const fb = el('section', { className: 'pBox', 'aria-label': 'Facebook Page' },
+      el('h3', {}, kindTag('fb'), 'Facebook Page'),
+      data.facebook.length
+        ? el('ul', { className: 'pAccounts' }, data.facebook.map((a) => el('li', {},
+          pageAvatar(a), el('strong', {}, a.name), el('span', { className: 'pMeta' }, `ID ${a.pageId} · โทเค็น ${a.token}${a.tokenExpiresAt ? ` · หมดอายุ ${new Date(a.tokenExpiresAt).toLocaleString('th-TH')}` : a.tokenExpiresAt === 0 ? ' · ไม่หมดอายุ' : ''}`),
+          el('button', { type: 'button', className: 'ghost', 'aria-expanded': 'false', on: { click: (e) => { const form = e.currentTarget.parentElement.querySelector('.pEditPage'); form.hidden = !form.hidden; e.currentTarget.setAttribute('aria-expanded', String(!form.hidden)) } } }, 'แก้ไข'),
+          el('button', { type: 'button', className: 'ghost', on: { click: () => { if (confirm(`ลบเพจ "${a.name}" ออกจากโหมดโพสต์? (โทเค็นจะถูกลบจากเครื่องนี้)`)) call('/api/posting/facebook/remove', { id: a.id }, 'ลบเพจแล้ว').catch(() => {}) } } }, 'ลบ'),
+          editPageForm(a),
+          // ลง Story ทุก N โพสต์ — เป็นภาพ "ไขปริศนาธรรม" ของคลิป (คลิปไม่มีภาพปริศนา = ข้ามไปโพสต์ถัดไป)
+          el('label', { className: 'pField' }, 'ลง Story ภาพปริศนาธรรม',
+            el('select', {
+              'aria-label': `รอบลง Story ของ ${a.name}`,
+              on: { change: (e) => call('/api/posting/facebook/update', { id: a.id, storyEvery: Number(e.target.value) }, Number(e.target.value) ? 'บันทึกแล้ว · เริ่มนับรอบ Story ใหม่' : 'ปิดการลง Story แล้ว').catch(() => {}) },
+            }, [[0, 'ปิด'], [1, 'ทุกโพสต์'], [2, 'ทุก 2 โพสต์'], [3, 'ทุก 3 โพสต์'], [5, 'ทุก 5 โพสต์'], [10, 'ทุก 10 โพสต์'], [20, 'ทุก 20 โพสต์']].map(([v, t]) => el('option', { value: String(v), selected: Number(a.storyEvery ?? 0) === v }, t)))),
+          a.storyIn ? el('span', { className: 'pMeta' }, a.storyIn === 1 ? 'โพสต์ถัดไปลง Story ภาพปริศนาด้วย' : `อีก ${a.storyIn} โพสต์ถึงรอบ Story`) : null,
+          catPicker('facebook', a), accountSlots('facebook', a))))
+        : el('p', { className: 'hint' }, 'ยังไม่มีเพจ'),
+      el('div', { className: 'pGrid2' },
+        el('label', { className: 'pField' }, 'Page ID', pageId),
+        el('label', { className: 'pField' }, 'ชื่อเรียก (ไม่บังคับ)', pageName),
+      ),
+      el('label', { className: 'pField' }, 'Page access token', pageToken),
+      el('button', {
+        type: 'button', className: 'primary',
+        on: { click: async () => {
+          try {
+            await call('/api/posting/facebook', { pageId: pageId.value.trim(), token: pageToken.value.trim(), name: pageName.value.trim() }, 'ตรวจโทเค็นผ่าน · บันทึกเพจแล้ว')
+          } catch {}
+        } },
+      }, 'ตรวจโทเค็นและบันทึกเพจ'),
+      el('details', {}, el('summary', {}, 'หา Page ID และ Page access token ยังไง'),
+        el('ol', {},
+          el('li', {}, 'Page ID: เปิดเพจ → เกี่ยวกับ (About) → ความโปร่งใสของเพจ จะเห็นรหัสเพจเป็นตัวเลข'),
+          el('li', {}, 'สร้างแอปที่ developers.facebook.com (ประเภท Business) แล้วเปิด Graph API Explorer'),
+          el('li', {}, 'เลือกแอป → ติ๊กสิทธิ์ pages_show_list, pages_read_engagement, pages_manage_posts → Generate Access Token → ในหน้าต่างที่เด้งขึ้น ต้องติ๊กเลือกเพจที่จะโพสต์ด้วย (ไม่ติ๊ก = แอปโพสต์เพจนั้นไม่ได้)'),
+          el('li', {}, 'วางได้ทั้ง Page token และ User token — ถ้าเป็น User token โปรแกรมจะแลกเป็น Page token ของเพจนี้ให้เอง'),
+          el('li', {}, 'อยากให้โทเค็นไม่หมดอายุ: แลกเป็น long-lived user token ใน Access Token Debugger ก่อน แล้วค่อยขอ Page token จากโทเค็นนั้น'),
+          el('li', {}, 'คัดลอกโทเค็นของเพจมาวางด้านบน — เก็บไว้ในเครื่องนี้เท่านั้น ไม่ขึ้น GitHub ไม่อยู่ในแพ็กเกจลูกค้า'),
+        )),
+    )
+
+    // YouTube
+    const g = s.google ?? {}
+    const clientId = el('input', { type: 'text', value: g.clientId ?? '', placeholder: '….apps.googleusercontent.com', autocomplete: 'off' })
+    const clientSecret = el('input', { type: 'password', value: g.clientSecret ?? '', placeholder: 'GOCSPX-…', autocomplete: 'off' })
+    const yt = el('section', { className: 'pBox', 'aria-label': 'YouTube' },
+      el('h3', {}, kindTag('yt'), 'ช่อง YouTube'),
+      data.youtube.length
+        ? el('ul', { className: 'pAccounts' }, data.youtube.map((a) => el('li', {},
+          el('strong', {}, a.name),
+          el('select', {
+            'aria-label': `การมองเห็นของคลิปใน ${a.name}`,
+            on: { change: (e) => call('/api/posting/youtube/update', { id: a.id, privacy: e.target.value }, 'บันทึกแล้ว').catch(() => {}) },
+          }, [['public', 'สาธารณะ'], ['unlisted', 'ไม่เป็นสาธารณะ'], ['private', 'ส่วนตัว']].map(([v, t]) => el('option', { value: v, selected: a.privacy === v }, t))),
+          a.connected ? null : el('span', { className: 'pBadge bad' }, 'ต้องเชื่อมต่อใหม่'),
+          el('button', { type: 'button', className: 'ghost', on: { click: () => { if (confirm(`ลบช่อง "${a.name}" ออกจากโหมดโพสต์?`)) call('/api/posting/youtube/remove', { id: a.id }, 'ลบช่องแล้ว').catch(() => {}) } } }, 'ลบ'),
+          catPicker('youtube', a), accountSlots('youtube', a))))
+        : el('p', { className: 'hint' }, 'ยังไม่มีช่อง'),
+      el('button', {
+        type: 'button', className: 'primary',
+        on: { click: () => saveThenConnect({
+          typed: { clientId: clientId.value, clientSecret: clientSecret.value }, saved: g,
+          savePath: '/api/posting/google', connectPath: '/api/posting/youtube/connect', note: 'yt',
+          waitText: 'เลือกบัญชี/ช่องในแท็บที่เปิดขึ้น แล้วกดอนุญาต — เสร็จแล้วกลับมาที่นี่',
+        }) },
+      }, '＋ เชื่อมต่อช่อง YouTube'),
+      el('p', { className: 'pWarn', 'data-note': 'yt', role: 'alert', hidden: true }),
+      g.ready ? null : el('p', { className: 'hint' }, 'กรอก Google Client ID และ Client secret ด้านล่าง แล้วกดเชื่อมต่อได้เลย'),
+      el('div', { className: 'pGrid2' },
+        el('label', { className: 'pField' }, 'Google Client ID', clientId),
+        el('label', { className: 'pField' }, 'Client secret', clientSecret),
+      ),
+      el('button', { type: 'button', className: 'ghost', on: { click: () => call('/api/posting/google', { clientId: clientId.value.trim(), clientSecret: clientSecret.value.trim() }, 'บันทึก Google client แล้ว').catch(() => {}) } }, 'บันทึก Google client'),
+      el('details', {}, el('summary', {}, 'สร้าง Google OAuth client ยังไง'),
+        el('ol', {},
+          el('li', {}, 'เข้า console.cloud.google.com → สร้างโปรเจกต์ใหม่'),
+          el('li', {}, 'APIs & Services → Library → เปิด YouTube Data API v3'),
+          el('li', {}, 'OAuth consent screen → External → ใส่ชื่อแอป + อีเมล → เพิ่มอีเมลตัวเองเป็น Test user'),
+          el('li', {}, 'Credentials → Create credentials → OAuth client ID → ประเภท Desktop app → คัดลอก Client ID และ Client secret มาวาง'),
+          redirectHelp(),
+          el('li', {}, 'กด Publish app ในหน้า consent screen (เป็น In production) — ถ้าค้างเป็น Testing การเชื่อมต่อช่องจะหมดอายุทุก 7 วัน'),
+        )),
+      el('p', { className: 'pWarn' }, 'ข้อจำกัดของ YouTube: โปรเจกต์ Google ที่ยังไม่ผ่านการตรวจ (audit) จะถูกล็อกคลิปที่อัปโหลดผ่าน API เป็น "ส่วนตัว" และโควตาฟรีอัปโหลดได้ราววันละ 6 คลิป — ยื่นตรวจได้ที่หน้า YouTube API Services Audit'),
+    )
+
+    // Google Drive — Google client ของตัวเอง แยกจาก YouTube (อาจคนละบัญชี/คนละโปรเจกต์)
+    const dr = s.drive ?? { connected: false }
+    const dc = s.driveClient ?? { ready: false }
+    const driveId = el('input', { type: 'text', value: dc.clientId ?? '', placeholder: '….apps.googleusercontent.com', autocomplete: 'off' })
+    const driveSecret = el('input', { type: 'password', value: dc.clientSecret ?? '', placeholder: 'GOCSPX-…', autocomplete: 'off' })
+    const connectDrive = () => saveThenConnect({
+      typed: { clientId: driveId.value, clientSecret: driveSecret.value }, saved: dc,
+      savePath: '/api/posting/drive/client', connectPath: '/api/posting/drive/connect', note: 'drive',
+      waitText: 'เลือกบัญชี Google ในแท็บที่เปิดขึ้น แล้วกดอนุญาต — เสร็จแล้วกลับมาที่นี่',
+    })
+    const driveBox = el('section', { className: 'pBox', 'aria-label': 'Google Drive' },
+      el('h3', {}, el('span', { className: 'kind drive' }, 'DR'), 'Google Drive · ที่พักคลิป'),
+      el('p', { className: 'hint' }, 'คลิปที่เข้าคิวจะอัปขึ้นโฟลเดอร์ "ธรรมะ Auto · รอโพสต์" เอง และย้ายไปถังขยะของ Drive เมื่อโพสต์ครบทุกที่ (รวมคลิปที่ตีกลับหรือเอาออกจากคิว) — ไฟล์ในเครื่องไม่ถูกลบ'),
+      dr.connected
+        ? el('ul', { className: 'pAccounts' }, el('li', {},
+          el('strong', {}, dr.email || dr.name),
+          dr.folderLink ? el('a', { href: dr.folderLink, target: '_blank', rel: 'noopener', className: 'ghost' }, 'เปิดโฟลเดอร์ ↗') : el('span', { className: 'pMeta' }, 'สร้างโฟลเดอร์ตอนอัปคลิปแรก'),
+          el('button', { type: 'button', className: 'ghost', on: { click: () => { if (confirm('เลิกเชื่อมต่อ Google Drive? คลิปที่อยู่บน Drive แล้วจะไม่ถูกลบเอง ต้องลบในโฟลเดอร์เอง')) call('/api/posting/drive/remove', {}, 'เลิกเชื่อมต่อ Drive แล้ว').catch(() => {}) } } }, 'เลิกเชื่อมต่อ')))
+        : el('button', { type: 'button', className: 'primary', on: { click: connectDrive } }, '＋ เชื่อมต่อ Google Drive'),
+      dr.connected ? el('button', { type: 'button', className: 'ghost', on: { click: connectDrive } }, 'เปลี่ยนบัญชี / เชื่อมต่อใหม่') : null,
+      el('p', { className: 'pWarn', 'data-note': 'drive', role: 'alert', hidden: true }),
+      dc.ready ? null : el('p', { className: 'hint' }, 'กรอก Client ID และ Client secret ของ Drive ด้านล่าง แล้วกดเชื่อมต่อได้เลย'),
+      el('div', { className: 'pGrid2' },
+        el('label', { className: 'pField' }, 'Drive · Client ID', driveId),
+        el('label', { className: 'pField' }, 'Drive · Client secret', driveSecret),
+      ),
+      el('button', { type: 'button', className: 'ghost', on: { click: () => call('/api/posting/drive/client', { clientId: driveId.value.trim(), clientSecret: driveSecret.value.trim() }, 'บันทึก Google client ของ Drive แล้ว').catch(() => {}) } }, 'บันทึก Google client ของ Drive'),
+      el('details', {}, el('summary', {}, 'สร้าง Google client สำหรับ Drive ยังไง'),
+        el('ol', {},
+          el('li', {}, 'เข้า console.cloud.google.com ด้วยบัญชีที่จะเก็บคลิป (จะเป็นบัญชีเดียวกับ YouTube หรือคนละบัญชีก็ได้)'),
+          el('li', {}, 'สร้างโปรเจกต์ (หรือใช้โปรเจกต์เดิม) → APIs & Services → Library → เปิด Google Drive API'),
+          el('li', {}, 'OAuth consent screen → External → เพิ่มอีเมลบัญชีที่จะเก็บคลิปเป็น Test user แล้วกด Publish app'),
+          el('li', {}, 'Credentials → Create credentials → OAuth client ID → Desktop app → คัดลอก Client ID และ Client secret มาวางด้านบน'),
+          redirectHelp(),
+        )),
+      el('p', { className: 'hint' }, 'สิทธิ์ที่ขอเห็นได้เฉพาะไฟล์ที่โปรแกรมนี้อัปเอง ไม่เห็นไฟล์อื่นใน Drive · เปลี่ยน Client ID แล้วต้องกดเชื่อมต่อใหม่'),
+    )
+
+    const connection = data.tiktokConnection
+    const tiktok = el('section', { className: 'pBox', 'aria-label': 'TikTok' },
+      el('h3', {}, kindTag('tk'), 'TikTok · ผ่าน Chrome'),
+      el('p', { className: 'hint' }, 'ล็อกอิน TikTok Studio ใน Chrome เดียวกับส่วนขยาย แล้วกดเชื่อมต่อ ไม่ต้องใช้ API Key · เมื่อถึงเวลาโพสต์ เครื่องและ Chrome ต้องเปิดอยู่'),
+      el('button', { type: 'button', className: 'primary', disabled: connection?.status === 'running', on: { click: () => call('/api/posting/tiktok/connect', {}, 'กำลังตรวจบัญชี TikTok ใน Chrome…').catch(() => {}) } }, connection?.status === 'running' ? 'กำลังตรวจบัญชี TikTok…' : 'เชื่อมบัญชีที่ล็อกอินใน Chrome'),
+      connection?.status === 'error' ? el('p', { className: 'pWarn', role: 'alert' }, connection.error) : null,
+      connection?.status === 'done' ? el('p', { className: 'hint' }, `เชื่อม @${connection.username} แล้ว`) : null,
+      el('a', { className: 'ghost', href: 'https://www.tiktok.com/tiktokstudio/upload', target: '_blank', rel: 'noopener' }, 'เปิด TikTok Studio ↗'),
+      ...(data.tiktok ?? []).map(a => {
+        const visibility = el('select', { 'aria-label': `การมองเห็น TikTok @${a.username}` },
+          el('option', { value: 'private', selected: a.privacy === 'private' || !a.privacy }, 'เฉพาะฉัน'),
+          el('option', { value: 'public', selected: a.privacy === 'public' }, 'สาธารณะ'),
+          el('option', { value: 'friends', selected: a.privacy === 'friends' }, 'เพื่อน'),
+        )
+        const aigc = el('input', { type: 'checkbox', checked: a.aigc !== false })
+        const save = () => call('/api/posting/tiktok/update', { id: a.id, privacy: visibility.value, aigc: aigc.checked }, 'บันทึกการโพสต์ TikTok แล้ว').catch(() => {})
+        visibility.addEventListener('change', save)
+        aigc.addEventListener('change', save)
+        return el('div', { className: 'pTikTokAccount' },
+          el('strong', {}, `${a.name} · @${a.username}`),
+          el('label', { className: 'pField' }, 'การมองเห็นของคลิป', visibility),
+          el('label', { className: 'pSwitch' }, aigc, el('span', {}, 'เปิดป้ายกำกับเนื้อหาที่สร้างด้วย AI')),
+          catPicker('tiktok', a),
+          accountSlots('tiktok', a),
+          el('button', { type: 'button', className: 'ghost', on: { click: () => { if (confirm(`เอา @${a.username} ออกจากปลายทางโพสต์?`)) call('/api/posting/tiktok/remove', { id: a.id }, 'เอาบัญชี TikTok ออกจากปลายทางแล้ว').catch(() => {}) } } }, 'เอาบัญชีออก'),
+        )
+      }),
+      el('p', { className: 'pWarn' }, 'บัญชีใหม่เริ่มเป็น “เฉพาะฉัน” เปลี่ยนเป็นสาธารณะได้ด้านบน · จำหลายบัญชีได้ แต่ต้องล็อกอินบัญชีที่จะโพสต์อยู่จริง หากไม่ตรง ระบบจะหยุดให้สลับบัญชี · หากเจอ CAPTCHA ให้แก้ใน TikTok เอง'),
+    )
+    return el('div', { className: 'pList' }, mode, fb, yt, tiktok, driveBox)
+  }
+
+  document.getElementById('closePosting').addEventListener('click', close)
+  document.getElementById('refreshPosting').addEventListener('click', () => refresh())
+  root.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') close()
+  })
+  // กลับมาจากแท็บเชื่อมต่อ Google → ดึงรายการช่องใหม่
+  window.addEventListener('focus', () => refresh())
+
+  return { open }
+}

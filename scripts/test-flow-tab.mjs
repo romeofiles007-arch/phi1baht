@@ -1,0 +1,229 @@
+// เทสต์: งาน Flow เปิดเป็นแท็บในหน้าต่างเดิม ไม่เปิดหน้าต่างใหม่ (ผู้ใช้ 31 ต.ค. 2026: "ให้เปิดเป็นแท็บใหม่นะ")
+//   node scripts/test-flow-tab.mjs
+// โหลด extension/background.js จริงใน vm พร้อม chrome จำลอง — ไม่เปิดเบราว์เซอร์
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import vm from 'node:vm'
+import { fileURLToPath } from 'node:url'
+import * as flowNavigation from '../extension/flow-navigation.js'
+import { insertTikTokCaption } from '../extension/tiktok-caption.js'
+
+const EXT = join(fileURLToPath(new URL('..', import.meta.url)), 'extension')
+const bgSource = readFileSync(join(EXT, 'background.js'), 'utf8')
+const manifest = JSON.parse(readFileSync(join(EXT, 'manifest.json'), 'utf8'))
+
+let passed = 0
+const test = async (name, fn) => {
+  await fn()
+  passed++
+  console.log(`  ✓ ${name}`)
+}
+
+/** chrome จำลอง: tabs = [{ id, windowId, url, incognito }] · windows = [{ id, incognito }] · focused = id หน้าต่างล่าสุด */
+function makeChrome({ tabs, windows, focused, session = {}, translated = false }) {
+  const calls = []
+  const rec = (name, value) => (...args) => {
+    calls.push([name, ...args])
+    return Promise.resolve(typeof value === 'function' ? value(...args) : value)
+  }
+  const event = () => ({ addListener: () => {}, removeListener: () => {} })
+  const onUpdated = {
+    addListener: (fn) => queueMicrotask(() => fn(tabs[0]?.id, { status: 'complete' })),
+    removeListener: () => {},
+  }
+  const chrome = {
+    runtime: { onInstalled: event(), onStartup: event(), onMessage: event(), getManifest: () => manifest, reload: () => {} },
+    alarms: { onAlarm: event(), create: () => {} },
+    notifications: { onClicked: event() },
+    storage: {
+      local: { get: async () => ({}), set: rec('storage.local.set') },
+      session: { get: async () => ({ ...session }), set: rec('storage.session.set') },
+    },
+    sidePanel: { setPanelBehavior: async () => {}, setOptions: rec('sidePanel.setOptions'), open: async () => {} },
+    tabs: {
+      query: rec('tabs.query', (q) => (q.windowId != null ? tabs.filter((t) => t.windowId === q.windowId) : tabs)),
+      update: rec('tabs.update', (id) => tabs.find((t) => t.id === id)),
+      create: rec('tabs.create', () => tabs[0]),
+      move: rec('tabs.move', (id, { windowId }) => Object.assign(tabs.find((t) => t.id === id), { windowId })),
+      sendMessage: rec('tabs.sendMessage', { ok: true }),
+      onUpdated,
+    },
+    windows: {
+      create: rec('windows.create', { id: 999 }),
+      getAll: rec('windows.getAll', () => windows),
+      getLastFocused: rec('windows.getLastFocused', () => windows.find((w) => w.id === focused) ?? null),
+      get: rec('windows.get', (id) => windows.find((w) => w.id === id)),
+    },
+    scripting: { executeScript: rec('scripting.executeScript', [{ result: translated }]) },
+  }
+  return { chrome, calls }
+}
+
+function loadBackground(env) {
+  const { chrome, calls } = makeChrome(env)
+  const ctx = vm.createContext({ ...flowNavigation, insertTikTokCaption, chrome, console: { log() {}, warn() {} }, setTimeout, clearTimeout, setInterval, clearInterval, queueMicrotask, URL, fetch: async () => ({ ok: false, status: 500 }) })
+  vm.runInContext(bgSource.replace(/^import \{[^\n]+\} from '\.\/(?:flow-(?:navigation|account-switch)|tiktok-caption)\.js'\r?\n/gm, ''), ctx)
+  return { ctx, calls }
+}
+const names = (calls) => calls.map((c) => c[0])
+// ออบเจกต์ที่สร้างใน vm มี prototype ต่างกับของเทสต์ — เทียบผ่าน JSON
+const args = (calls, name) => JSON.parse(JSON.stringify(calls.find((c) => c[0] === name)?.slice(1) ?? null))
+
+await test('แท็บ Flow ในหน้าต่างหลัก: ปิดแผงข้างเฉพาะแท็บนี้ ไม่ย้าย ไม่เปิดหน้าต่างใหม่', async () => {
+  const tabs = [
+    { id: 7, windowId: 1, url: 'https://flow.google.com/' },
+    { id: 3, windowId: 1, url: 'https://github.com/' },
+  ]
+  const { ctx, calls } = loadBackground({ tabs, windows: [{ id: 1 }], focused: 1 })
+  await ctx.keepFlowInTab(tabs[0])
+  assert.deepEqual(args(calls, 'sidePanel.setOptions'), [{ tabId: 7, enabled: false }])
+  assert.ok(!names(calls).includes('tabs.move'))
+  assert.ok(!names(calls).includes('windows.create'))
+})
+
+await test('แท็บ Flow ที่รุ่นก่อนย้ายไปอยู่หน้าต่างแยก → ย้ายกลับเป็นแท็บท้ายสุดของหน้าต่างที่ใช้ล่าสุด', async () => {
+  const tabs = [
+    { id: 7, windowId: 2, url: 'https://flow.google.com/' },
+    { id: 3, windowId: 1, url: 'https://github.com/' },
+    { id: 4, windowId: 5, url: 'https://example.com/' },
+  ]
+  const { ctx, calls } = loadBackground({ tabs, windows: [{ id: 5 }, { id: 1 }, { id: 2 }], focused: 1 })
+  await ctx.keepFlowInTab(tabs[0])
+  assert.deepEqual(args(calls, 'tabs.move'), [7, { windowId: 1, index: -1 }])
+  assert.ok(!names(calls).includes('windows.create'))
+})
+
+await test('หน้าต่างล่าสุดคือหน้าต่างของ Flow เอง → ย้ายไปหน้าต่างปกติอื่น · ไม่มีหน้าต่างอื่น → อยู่ที่เดิม', async () => {
+  const tabs = [
+    { id: 7, windowId: 2, url: 'https://flow.google.com/' },
+    { id: 3, windowId: 1, url: 'https://github.com/' },
+  ]
+  const a = loadBackground({ tabs, windows: [{ id: 2 }, { id: 1 }], focused: 2 })
+  await a.ctx.keepFlowInTab(tabs[0])
+  assert.deepEqual(args(a.calls, 'tabs.move'), [7, { windowId: 1, index: -1 }])
+
+  const only = [{ id: 7, windowId: 2, url: 'https://flow.google.com/' }]
+  const b = loadBackground({ tabs: only, windows: [{ id: 2 }], focused: 2 })
+  await b.ctx.keepFlowInTab(only[0])
+  assert.ok(!names(b.calls).includes('tabs.move'))
+})
+
+await test('ไม่ย้ายข้ามหน้าต่างไม่ระบุตัวตน (incognito) กับหน้าต่างปกติ', async () => {
+  const tabs = [
+    { id: 7, windowId: 2, url: 'https://flow.google.com/', incognito: false },
+    { id: 3, windowId: 1, url: 'https://github.com/', incognito: true },
+  ]
+  const { ctx, calls } = loadBackground({ tabs, windows: [{ id: 2 }, { id: 1, incognito: true }], focused: 1 })
+  await ctx.keepFlowInTab(tabs[0])
+  assert.ok(!names(calls).includes('tabs.move'))
+})
+
+await test('งานสร้างภาพ: ปิดแผงข้างก่อนใช้แท็บ Flow เดิม โดยไม่โหลดหน้าแรกทับบัญชีที่เลือก', async () => {
+  const tabs = [
+    { id: 7, windowId: 1, url: 'https://flow.google.com/' },
+    { id: 3, windowId: 1, url: 'https://github.com/' },
+  ]
+  const { ctx, calls } = loadBackground({ tabs, windows: [{ id: 1 }], focused: 1 })
+  await ctx.handleJob({ id: 'j1', agent: 'flow', kind: 'generate-images', payload: { agent: 'flow' } })
+  const order = names(calls)
+  assert.ok(!order.includes('windows.create'), 'ห้ามเปิดหน้าต่างใหม่')
+  const panelOff = order.indexOf('sidePanel.setOptions')
+  const load = order.indexOf('tabs.update')
+  assert.ok(panelOff >= 0 && load > panelOff, 'ต้องปิดแผงข้างก่อนโหลดหน้า Flow')
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[load].slice(1))), [7, { active: true }])
+  assert.equal(calls.find((c) => c[0] === 'tabs.sendMessage')[1], 7)
+})
+
+await test('ทำต่อ: ใช้แท็บบัญชีใหม่ที่เลือก ไม่กลับแท็บหรือโปรเจกต์ของบัญชีเก่า', async () => {
+  const tabs = [
+    { id: 7, windowId: 1, url: 'https://flow.google.com/project/old?authuser=0', lastAccessed: 10 },
+    { id: 8, windowId: 1, url: 'https://flow.google.com/?authuser=1', active: true, lastAccessed: 20 },
+  ]
+  const { ctx, calls } = loadBackground({ tabs, windows: [{ id: 1 }], focused: 1, session: { flowTabId: 7 } })
+  await ctx.handleJob({ id: 'resume', agent: 'flow', kind: 'generate-images', payload: { projectUrl: tabs[0].url } })
+  assert.equal(calls.find(c => c[0] === 'tabs.sendMessage')[1], 8)
+  assert.ok(!calls.some(c => c[0] === 'tabs.update' && c[2]?.url))
+  assert.ok(calls.some(c => c[0] === 'storage.session.set' && c[1]?.flowTabId === 8))
+})
+await test('ทำต่อบนหน้าที่แปลอยู่: หยุดพร้อมเหตุผลแทนโหลดบัญชีเก่ากลับมาหรือสั่งสร้างภาพ', async () => {
+  const tabs = [{ id: 7, windowId: 1, url: 'https://flow.google.com/?authuser=1', active: true }]
+  const { ctx, calls } = loadBackground({ tabs, windows: [{ id: 1 }], focused: 1, translated: true })
+  await assert.rejects(ctx.handleJob({ id: 'resume-translated', agent: 'flow', kind: 'generate-images', payload: { projectUrl: 'https://flow.google.com/project/old' } }), /ปิดการแปล/)
+  assert.ok(!calls.some(c => c[0] === 'tabs.update' && c[2]?.url))
+  assert.ok(!calls.some(c => c[0] === 'tabs.sendMessage'))
+})
+
+await test('โค้ดไม่มีการเปิดหน้าต่างใหม่แล้ว · ไม่ขอสิทธิ์อ่านจอ (system.display) ที่ไม่ใช้แล้ว', () => {
+  assert.doesNotMatch(bgSource, /chrome\.windows\.create/)
+  assert.doesNotMatch(bgSource, /ensureWideFlow|flowWindowBounds/)
+  assert.ok(!manifest.permissions.includes('system.display'))
+  assert.ok(manifest.permissions.includes('sidePanel'))
+})
+
+await test('read-only TikTok inspection preserves the uploaded form; posting always starts fresh', async () => {
+  for (const kind of ['tiktok-inspect', 'tiktok-post']) {
+    const tabs = [{ id: 7, windowId: 1, url: 'https://www.tiktok.com/tiktokstudio/upload' }]
+    const { ctx, calls } = loadBackground({ tabs, windows: [{ id: 1 }], focused: 1, session: { tiktokTabId: 7 } })
+    ctx.fetch = async () => ({ ok: true, json: async () => ({}) })
+    await ctx.handleJob({ id: 'tk1', agent: 'tiktok', kind, payload: { preserve: true } })
+    assert.equal(calls.some(c => c[0] === 'tabs.update' && c[2]?.url), false, 'never navigate over an old upload form')
+    if (kind === 'tiktok-post') assert.ok(calls.some(c => c[0] === 'tabs.create' && c[1]?.url === 'https://www.tiktok.com/tiktokstudio/upload'), 'every post gets a fresh dedicated tab, even if a remembered tab exists')
+    if (kind === 'tiktok-inspect') {
+      assert.ok(calls.some(c => c[0] === 'scripting.executeScript'), 'inspection reads existing TikTok tabs directly')
+      assert.ok(!calls.some(c => c[0] === 'tabs.create'), 'inspection cannot replace a user upload with a new tab')
+    }
+  }
+})
+
+await test('ตรวจคำบรรยายหลังโพสต์: อ่านรายการโพสต์ในแท็บแยก แยกชื่อไฟล์/คำบรรยาย แล้วปิดแท็บ', async () => {
+  for (const [page, want] of [
+    ['Posts\n6b9cc68e-edae-4fca-bc46-12505118e9e5\nNov 7, 11:40 PM\nเก่า... คำบรรยายอื่น', 'filename'],
+    ['Posts\nเช้าวันหนึ่ง... ไม่มีโทรศัพท์ให้หยิบ แต่ทำไมใจกลับกระวนกระวาย? ความอยาก\nNov 7', 'ok'],
+  ]) {
+    const { ctx, calls } = loadBackground({ tabs: [{ id: 5, windowId: 1, url: 'about:blank' }], windows: [{ id: 1 }], focused: 1 })
+    ctx.document = { body: { innerText: page } }
+    ctx.chrome.tabs.remove = async (id) => { calls.push(['tabs.remove', id]) }
+    ctx.chrome.scripting.executeScript = async ({ func, args }) => [{ result: func(...args) }]
+    let posted
+    ctx.fetch = async (url, init) => { if (String(url).endsWith('/result')) posted = JSON.parse(init.body); return { ok: true, json: async () => ({ ok: true }) } }
+    await ctx.handleJob({ id: 'v1', agent: 'tiktok', kind: 'tiktok-verify', payload: { caption: 'เช้าวันหนึ่ง...\nไม่มีโทรศัพท์ให้หยิบ แต่ทำไมใจกลับกระวนกระวาย?\nความอยาก', stems: ['6b9cc68e-edae-4fca-bc46-12505118e9e5'] } })
+    assert.equal(posted?.meta?.status, want)
+    assert.ok(calls.some(c => c[0] === 'tabs.create' && c[1]?.url === 'https://www.tiktok.com/tiktokstudio/content' && c[1]?.active === false), 'เปิดหน้ารายการโพสต์ในแท็บเบื้องหลัง')
+    assert.ok(calls.some(c => c[0] === 'tabs.remove' && c[1] === 5), 'ปิดแท็บตรวจเสมอ')
+  }
+})
+await test('หน้า Flow แคบ (แผงข้างบีบเหลือ 778px) → ซูมแท็บนี้ออกจนกว้างพอมีปุ่ม Agent · หน้ากว้างพอไม่แตะซูม', async () => {
+  const run = async (width, zoom = 1) => {
+    const { ctx, calls } = loadBackground({ tabs: [{ id: 7, windowId: 1, url: 'https://flow.google.com/u/2/project/x' }], windows: [{ id: 1 }], focused: 1 })
+    ctx.chrome.scripting.executeScript = async ({ func }) => [{ result: func.toString().includes('innerWidth') ? width : false }]
+    ctx.chrome.tabs.getZoom = async () => zoom
+    ctx.chrome.tabs.setZoomSettings = async (...a) => { calls.push(['tabs.setZoomSettings', ...a]) }
+    ctx.chrome.tabs.setZoom = async (...a) => { calls.push(['tabs.setZoom', ...a]) }
+    const result = JSON.parse(JSON.stringify(await ctx.widenFlowTab(7)))
+    return { result, calls }
+  }
+  const narrow = await run(778)
+  assert.deepEqual(args(narrow.calls, 'tabs.setZoomSettings'), [7, { mode: 'automatic', scope: 'per-tab' }])
+  assert.deepEqual(args(narrow.calls, 'tabs.setZoom'), [7, 0.7])
+  assert.ok(narrow.result.width >= 1040, `กว้างหลังซูม ${narrow.result.width}px`)
+
+  const wide = await run(1280)
+  assert.ok(!names(wide.calls).includes('tabs.setZoom'), 'หน้ากว้างพอ ไม่ซูม')
+
+  // ซูมไว้แล้ว 70% แต่ยังแคบ (แผงกว้างขึ้นอีก) → ซูมเพิ่มจากความกว้างจริงที่ 100%
+  const again = await run(900, 0.7)
+  assert.deepEqual(args(again.calls, 'tabs.setZoom'), [7, 0.6])
+
+  // แคบมากจนซูมต่ำสุด 50% ก็ไม่พอ → ไม่ซูมซ้ำ ให้ตัวขับแจ้งผู้ใช้
+  const tiny = await run(500, 0.5)
+  assert.ok(!names(tiny.calls).includes('tabs.setZoom'))
+})
+
+await test('ตัวขับ Flow: ไม่เจอปุ่ม Agent ตอนหน้าแคบ → ขอ background ซูมหน้าก่อนแจ้งผู้ใช้', () => {
+  const driver = readFileSync(join(EXT, 'content-flow-agent.js'), 'utf8')
+  assert.match(driver, /sendMessage\(\{ type: 'FLOW_WIDEN' \}\)/)
+  assert.match(bgSource, /msg\.type === 'FLOW_WIDEN'[\s\S]{0,200}flow\\\.google\\\.com/, 'รับคำขอจากแท็บ Flow เท่านั้น')
+})
+
+console.log(`\nผ่าน ${passed} ข้อ`)
