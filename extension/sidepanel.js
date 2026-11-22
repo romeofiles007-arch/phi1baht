@@ -13,6 +13,7 @@ import { portrait, DEPARTMENTS, HANDOFF, AGENT_WORD, elapsed, SEA_ASSETS } from 
 import { initPosting } from './posting.js'
 import { applyCategoryTheme, categoryGenre } from './category-themes.js'
 import { preferredFlowTab, flowHomeUrl } from './flow-navigation.js'
+import { preferredChatTab } from './chat-tabs.js'
 import { scheduleFromFields, scheduleFields, scheduleCopy } from './production-schedule.js'
 
 initIcons()
@@ -77,7 +78,10 @@ async function reuseTab(key, patterns) {
     if (tab) await chrome.storage.session.set({ [key]: tab.id })
     return tab
   }
-  return savedId ? await chrome.tabs.get(savedId).catch(() => null) : null
+  // ChatGPT: แท็บที่จำไว้ หรือแท็บ ChatGPT ที่เปิดอยู่แล้ว — ไม่มีจริงๆ ค่อยเปิดใหม่
+  const tab = preferredChatTab(await chrome.tabs.query({ url: patterns }), savedId)
+  if (tab) await chrome.storage.session.set({ [key]: tab.id })
+  return tab
 }
 
 async function freshChatTab() {

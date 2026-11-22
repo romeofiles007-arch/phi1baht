@@ -8,6 +8,7 @@ import vm from 'node:vm'
 import { fileURLToPath } from 'node:url'
 import * as flowNavigation from '../extension/flow-navigation.js'
 import { insertTikTokCaption } from '../extension/tiktok-caption.js'
+import { preferredChatTab } from '../extension/chat-tabs.js'
 
 const EXT = join(fileURLToPath(new URL('..', import.meta.url)), 'extension')
 const bgSource = readFileSync(join(EXT, 'background.js'), 'utf8')
@@ -62,8 +63,8 @@ function makeChrome({ tabs, windows, focused, session = {}, translated = false }
 
 function loadBackground(env) {
   const { chrome, calls } = makeChrome(env)
-  const ctx = vm.createContext({ ...flowNavigation, insertTikTokCaption, chrome, console: { log() {}, warn() {} }, setTimeout, clearTimeout, setInterval, clearInterval, queueMicrotask, URL, fetch: async () => ({ ok: false, status: 500 }) })
-  vm.runInContext(bgSource.replace(/^import \{[^\n]+\} from '\.\/(?:flow-(?:navigation|account-switch)|tiktok-caption)\.js'\r?\n/gm, ''), ctx)
+  const ctx = vm.createContext({ ...flowNavigation, insertTikTokCaption, preferredChatTab, chrome, console: { log() {}, warn() {} }, setTimeout, clearTimeout, setInterval, clearInterval, queueMicrotask, URL, fetch: async () => ({ ok: false, status: 500 }) })
+  vm.runInContext(bgSource.replace(/^import \{[^\n]+\} from '\.\/(?:flow-(?:navigation|account-switch)|tiktok-caption|chat-tabs)\.js'\r?\n/gm, ''), ctx)
   return { ctx, calls }
 }
 const names = (calls) => calls.map((c) => c[0])
