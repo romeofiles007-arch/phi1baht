@@ -458,8 +458,8 @@ async function scriptDepartment() {
       throw new Error(`ChatGPT เขียนบทยาว ${saved.minutes.toFixed(1)} นาที ห่างจากเป้า ${saved.target} นาทีเกินไป 3 รอบ — ลองกดทำคลิปอัตโนมัติอีกครั้ง หรือเพิ่มความยาวเป้าหมาย`)
     }
     const chars = (saved.script.match(/[฀-๿]/g) || []).length
-    revise = reviseLengthPrompt(config.script.language, { minutes: saved.minutes, target: saved.target, wordsPerMinute: config.script.wordsPerMinute, chars, pace: paceOf(profile) })
-    console.warn(`   บทยาว ${saved.minutes.toFixed(1)} นาที ห่างจากเป้า ${saved.target} นาทีเกินไป — สั่งปรับความยาวในแชตเดิม`)
+    revise = reviseLengthPrompt(config.script.language, { minutes: saved.minutes, target: saved.target, wordsPerMinute: config.script.wordsPerMinute, chars, pace: paceOf(profile), script: saved.script })
+    console.warn(`   บทยาว ${saved.minutes.toFixed(1)} นาที ห่างจากเป้า ${saved.target} นาทีเกินไป — สั่งปรับความยาว (แนบบทเดิมไปด้วย ไม่พึ่งประวัติแชต)`)
   }
 }
 

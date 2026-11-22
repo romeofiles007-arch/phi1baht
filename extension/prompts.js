@@ -578,7 +578,7 @@ export function lengthTarget(language, targetMinutes, wordsPerMinute = 150, pace
 }
 
 /** บทยาว/สั้นผิดเป้า → สั่งปรับต่อในแชตเดิม (สั้น เร็ว ไม่ต้องส่ง Blueprint ทั้งก้อนซ้ำ) */
-export function reviseLengthPrompt(language, { minutes, target, wordsPerMinute = 150, chars, pace = 'normal' }) {
+export function reviseLengthPrompt(language, { minutes, target, wordsPerMinute = 150, chars, pace = 'normal', script = '' }) {
   const shorter = minutes > target
   const words = target * wordsPerMinute * paceFactor(pace)
   const goal = language === 'th' ? `${Math.round(words * THAI_CHARS_PER_WORD)} ตัวอักษรไทย` : `${Math.round(words)} words`
@@ -586,7 +586,10 @@ export function reviseLengthPrompt(language, { minutes, target, wordsPerMinute =
   return `บทนี้ยาวประมาณ ${minutes.toFixed(1)} นาที${now} แต่เป้าคือ ${target} นาที — ${shorter ? 'ตัดให้สั้นลง' : 'เพิ่มเนื้อหาให้ยาวขึ้น'} เหลือประมาณ ${goal}
 ${shorter ? 'เก็บประโยคเปิด ปมของเรื่อง ฉากเด็ด จุดพลิก และประโยคปิดไว้ ตัดบรรทัดบรรยากาศ ส่วนที่ซ้ำ หรือส่วนที่ไม่ดันเรื่องไปข้างหน้าออก' : 'เพิ่มอุปสรรคอีกขั้น เหตุประหลาดหรือรายละเอียดที่เห็นภาพ และบทสนทนาสั้นๆ ของตัวละคร — ห้ามยืดด้วยบรรยากาศล้วน คำสอน หรือการโยงชีวิตคนยุคนี้ · เรื่องยังต้องจบในคลิปเดียว'}
 ตอบเป็น narration ฉบับใหม่ทั้งหมดอย่างเดียว รูปแบบเดิม (1 บรรทัด = 1 ช่วงลมหายใจ) ไม่มีคำนำหรือคำปิดท้าย
-ห้ามใส่หัวข้อ (เช่น "บทพากย์ ${target} นาที — …") และห้ามบอกว่าแก้อะไรไป (เช่น "ตัดให้กระชับแล้ว", "ครบ ${target} นาที") — ทุกบรรทัดที่ตอบจะถูกอ่านออกเสียงในคลิป`
+ห้ามใส่หัวข้อ (เช่น "บทพากย์ ${target} นาที — …") และห้ามบอกว่าแก้อะไรไป (เช่น "ตัดให้กระชับแล้ว", "ครบ ${target} นาที") — ทุกบรรทัดที่ตอบจะถูกอ่านออกเสียงในคลิป${script ? `
+
+=== บทเดิม ===
+${String(script).trim()}` : ''}`
 }
 
 /**
