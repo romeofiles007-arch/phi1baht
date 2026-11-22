@@ -1,7 +1,7 @@
 /**
  * โปรไฟล์ของคลิป — หมวดเนื้อหา + ลายเส้น + ระดับความสยอง
  *
- * เก็บที่ projects/<slug>/00_ref/profile.json   { category, title, artStyle, scare }
+ * เก็บที่ projects/<slug>/00_ref/profile.json   { category, title, artStyle, scare, inkify }
  *
  * หมวดมาจาก: แนวที่เลือก/คอลัมน์ Genre ของหัวข้อ → ถ้าไม่รู้ ดูจากชื่อเรื่อง
  */
@@ -30,6 +30,7 @@ export function readProfile(slug) {
     const profile = migrateProfile(existsSync(profileFile(slug)) ? JSON.parse(readFileSync(profileFile(slug), 'utf8')) : null)
     // ลายเส้นที่เลิกใช้แล้ว (doodle/inkwash/...) หรือไม่มีค่า → อ่านเป็น lemlabaht ไม่แก้ไฟล์ของคลิป
     if (profile && !ART_STYLES[profile.artStyle]) profile.artStyle = RETIRED_ART_STYLES[profile.artStyle] ?? 'lemlabaht'
+    if (profile && typeof profile.inkify !== 'boolean') profile.inkify = true // คลิปเก่าที่ไม่มีค่า = เปิด
     return profile
   } catch {
     return null
@@ -76,7 +77,7 @@ export async function ensureProfile(slug, { title, genre, log = console.log } = 
   if (!profile) {
     const category = categoryOf(genre)?.id ?? detectCategory(title)
     // ระดับความสยอง: autopilot สุ่มไว้แล้วตอนคิดหัวข้อ (CLIP_SCARE) → หัวข้อ บท และภาพเป็นระดับเดียวกัน
-    profile = { category, title, ...clipStyle(), scare: resolveScare(process.env.CLIP_SCARE || loadConfig().script?.scare) }
+    profile = { category, title, ...clipStyle(), scare: resolveScare(process.env.CLIP_SCARE || loadConfig().script?.scare), inkify: loadConfig().render?.inkify !== false }
     saveProfile(slug, profile)
     log(`   หมวดของคลิป: ${profile.category}${scareApplies(profile.category) ? ` · ความสยอง${SCARE_LEVELS[profile.scare].label}` : ''}`)
   }

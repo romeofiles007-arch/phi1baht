@@ -8,8 +8,8 @@
  *   node pipeline/5_images.mjs <slug>
  *   node pipeline/5_images.mjs <slug> --rename   สั่ง agent เปลี่ยนชื่อ shot ก่อนโหลดด้วย
  */
-import { readFileSync, existsSync, readdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { readFileSync, existsSync, readdirSync, writeFileSync, rmSync } from 'node:fs'
+import { join, basename } from 'node:path'
 import { loadConfig, projectDir } from './lib/config.mjs'
 import { requireBridge, runJob } from './lib/bridge.mjs'
 import { flowPrompt, aspectOf, stripSafeArea, tagNames, untagShotPrompt, recolorBrief, recolorShotPrompt } from './lib/prompts.mjs'
@@ -22,6 +22,7 @@ import { collectImages } from './lib/shotfile.mjs'
 import { generateWithFailover } from './lib/flow-failover.mjs'
 import { sanitizeShotPrompt } from './lib/shot-safety.mjs'
 import { styleKitAttachments } from './lib/style-kit.mjs'
+import { inkifyAll } from './lib/inkify.mjs'
 
 const slug = process.argv[2]
 if (!slug) {
@@ -160,6 +161,14 @@ const result = await generateWithFailover({
 console.log(`\nเซฟแล้ว ${result.files.length} ไฟล์`)
 if (result.meta && result.meta.generated !== result.meta.expected) {
   console.warn(`เตือน: Flow gen มา ${result.meta.generated} ใบ แต่สั่งไป ${result.meta.expected} ช็อต`)
+}
+
+// แปลงภาพเป็นงานพิมพ์เล่มละบาท (inkify) — ทุกช็อต + ปก ยกเว้นภาพปริศนา · ปิดได้ที่โปรไฟล์ของคลิป (inkify: false)
+if (profile?.inkify !== false && config.render?.inkify !== false) {
+  // ภาพที่เพิ่งโหลดใหม่ทับชื่อเดิม = ภาพดิบใหม่ ต้องแปลงใหม่ (ทิ้งต้นฉบับเก่าใน _original)
+  for (const f of result.files ?? []) rmSync(join(imagesDir, '_original', basename(f.name ?? String(f))), { force: true })
+  const n = await inkifyAll(imagesDir, { categoryId: profile?.category })
+  if (n) console.log(`แปลงเป็นงานพิมพ์เล่มละบาท ${n} ภาพ (ต้นฉบับอยู่ใน 05_images/_original/)`)
 }
 
 const { images } = collectImages(imagesDir)

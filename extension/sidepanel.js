@@ -1628,6 +1628,18 @@ function renderClipSettings() {
     }
   }
   for (const b of engage.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.value === clip.engage))
+  // แปลงเป็นงานพิมพ์ (inkify) — โปรแกรมรุ่นเก่าไม่ส่งมา → ซ่อน
+  const inkify = $('clipInkify')
+  const inkifyOptions = clip.options.inkify ?? []
+  inkify.parentElement.hidden = !inkifyOptions.length
+  if (!inkify.childElementCount) {
+    for (const o of inkifyOptions) {
+      const b = Object.assign(document.createElement('button'), { type: 'button', textContent: o.label })
+      b.dataset.value = o.id
+      inkify.append(b)
+    }
+  }
+  for (const b of inkify.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.value === clip.inkify))
   // ระดับความสยอง: เบา · กลาง · เข้ม · สุ่ม — แสดงเฉพาะเมื่อเลือกหมวดผีไทย ไสยศาสตร์ หรือคละหมวด (หมวดอื่นไม่สยอง)
   const scare = $('clipScare')
   const scareOptions = clip.options.scare ?? []
@@ -1817,6 +1829,10 @@ $('writerGeminiKey').addEventListener('paste', () => setTimeout(saveWriterKey, 0
 $('clipEngage').addEventListener('click', (e) => {
   const b = e.target.closest('button')
   if (b && !localBusy()) saveClipSettings({ engage: b.dataset.value })
+})
+$('clipInkify').addEventListener('click', (e) => {
+  const b = e.target.closest('button')
+  if (b && !localBusy()) saveClipSettings({ inkify: b.dataset.value })
 })
 $('clipMotion').addEventListener('click', (e) => {
   const b = e.target.closest('button')

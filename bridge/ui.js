@@ -930,6 +930,8 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
             if (MOTION_PRESETS[body.motion]) c.render.motion = body.motion
             // ชวนคุยท้ายคลิป: 'on' (ค่าเริ่มต้น) | 'off' — ใช้กับบทที่เขียนหลังจากนี้
             if (['on', 'off'].includes(body.engage)) c.script.engage = body.engage === 'on'
+            // แปลงเป็นงานพิมพ์เล่มละบาท (inkify): 'on' (ค่าเริ่มต้น) | 'off' — ใช้กับภาพที่โหลดจาก Flow หลังจากนี้ · คลิปใหม่เก็บค่านี้ใน profile
+            if (['on', 'off'].includes(body.inkify)) c.render.inkify = body.inkify === 'on'
             // ระดับความสยอง (หมวดผี/ไสย): light เบา | medium กลาง | strong เข้ม | random สุ่มต่อคลิป — ใช้กับคลิปใหม่
             if (SCARE_LEVELS[body.scare]) {
               c.script.scare = body.scare
@@ -976,6 +978,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
           pause: PAUSE_PRESETS[c.tts.pause] ? c.tts.pause : 'normal',
           motion: MOTION_PRESETS[c.render.motion] ? c.render.motion : 'off',
           engage: c.script.engage === false ? 'off' : 'on',
+          inkify: c.render.inkify === false ? 'off' : 'on',
           scare: SCARE_LEVELS[c.script.scare] ? c.script.scare : 'medium',
           writer: writerOf(c),
           gemini: { hasKey: hasKey('GEMINI_API_KEY') },
@@ -994,6 +997,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
             kieTier: Object.entries(KIE_TIERS).map(([id, t]) => ({ id, label: t.label, name: t.name, credits: t.credits, detail: t.detail })),
             motion: Object.entries(MOTION_PRESETS).map(([id, m]) => ({ id, label: m.label })),
             engage: [{ id: 'on', label: 'ชวนคุย' }, { id: 'off', label: 'ไม่ชวน' }],
+            inkify: [{ id: 'on', label: 'เปิด' }, { id: 'off', label: 'ปิด' }],
             scare: Object.entries(SCARE_LEVELS).map(([id, s]) => ({ id, label: s.label })),
             writer: Object.entries(WRITERS).map(([id, w]) => ({ id, label: w.label })),
             bgmLevel: Object.entries(BGM_LEVELS).map(([id, l]) => ({ id, label: l.label })),
