@@ -226,10 +226,10 @@ OUTPUT 4 ภาพปก              → prompt ภาพปกแบบปก�
 ### OUTPUT 4 — Thumbnail (ภาพปกแบบปกการ์ตูนเล่มละบาท)
 
 - เลือก **คอนเซปต์ที่ดีที่สุดแบบเดียว** แล้วเขียนเป็น prompt ภาพ 1 บรรทัด
-- **วาดแบบปกการ์ตูนเล่มละบาทยุค 2520:** เส้นหมึกดำแล้วลงสีไม้หรือสีน้ำสีสด เห็นรอยสีและเนื้อกระดาษ · ผีหรือตัวละครหลัก **ครึ่งตัวขนาดใหญ่อยู่ด้านหน้า** และมี **ฉากเล็กอยู่ด้านหลัง** (คนวิ่งหนีกลางทุ่ง เรือนไทยใต้แสงจันทร์ ต้นตะเคียน)
+- **วาดแบบปกการ์ตูนเล่มละบาทยุค 2520:** เส้นหมึกดำแล้วลงสีไม้หรือสีน้ำสีสด เห็นรอยสีบนกระดาษขาวสะอาด · **สีสดใส ขาวต้องขาว ห้ามโทนกระดาษเก่า ห้ามซีเปีย ห้ามเหลืองคลุมทั้งภาพ** · ผีหรือตัวละครหลัก **ครึ่งตัวขนาดใหญ่อยู่ด้านหน้า** และมี **ฉากเล็กอยู่ด้านหลัง** (คนวิ่งหนีกลางทุ่ง เรือนไทยใต้แสงจันทร์ ต้นตะเคียน)
 - **องค์ประกอบปก:** แถบลายเฉียงแดง–น้ำเงินที่ขอบบน · โลโก้ "ผี 1 บาท" มุมซ้ายบน (โลโก้ของเราเอง **ห้ามเลียนโลโก้สำนักพิมพ์จริง** เช่น ตัว "N") · ชื่อเรื่องตัวหนาสีแดงใหญ่ (หรือม่วง/เขียว) แบบตัวเขียนมือ · ป้าย "1 บาท" มุมขวาล่าง · มีลูกโป่งคำพูดเขียนมือได้ 1 อัน คำสั้นๆ
 - **ภาพปกเป็นภาพเดียวที่มีตัวหนังสือได้** — ตัวหนังสือภาษาเดียวกับคลิป สะกดถูก อยู่ในภาพครบ ไม่ล้นขอบ ไม่ทับหน้าตัวละคร
-- ชุดสีตามหมวด: ปกผี/ไสยโทนมืดกว่า (แดงเลือด เขียวป่า ม่วงกลางคืน บนพื้นเข้ม) · ปกนิทาน/ดราม่า/ตลกโทนสว่าง พื้นเหลืองหรือฟ้าอ่อน
+- ชุดสีตามหมวด: ปกผี/ไสยโทนมืดกว่าแต่สีสด (แดงเลือดสด เขียวป่า ม่วงกลางคืน บนพื้นเข้ม) · ปกนิทาน/ดราม่า/ตลกโทนสว่างสด พื้นหลังเหลืองสดหรือฟ้าสด
 - หน้าผีบนปกน่ากลัวแบบเล่มละบาท (ตาโปน ฟันแหลม ผมกระเซิง) แต่ยังทำตามกฎ 9 — ไม่เปลือย ไม่มีไส้ ไม่มีบาดแผล เลือดแค่หยดเล็กน้อย
 - ชวนสงสัยแต่ตรงกับเนื้อหาจริง · สไตล์และตัวละครเดียวกับ Style Bible / Character Bible · อ่านรู้เรื่องแม้เห็นภาพเล็กบนมือถือ
 
@@ -247,8 +247,8 @@ OUTPUT 4 ภาพปก              → prompt ภาพปกแบบปก�
 ART STYLE:
 - Thai one-baht comic book art from the 1977–1997 golden era (การ์ตูนเล่มละบาท), FULLY COLORED
 - Lines: bold black ink, heavy solid-black fills in hair and shadows, parallel-line hatching for shading; thin pen lines for faces and clothing; dense cross-hatching and wild flowing hair for ghosts
-- Color: vivid colored pencil / watercolor laid over the ink like the real one-baht covers, visible strokes and warm yellowish paper grain across the whole image, in the cover palette of the clip's category (see COLOR PALETTE: ghost/saiyasat = dark blood red, forest green, night purple on aged-paper yellow · folk/drama/comedy = bright yellow, pink, sky blue, green, red on a yellow or pale-blue ground) — NOT digital gradients, NOT flat anime cel colors
-- Style Kit: when the app attaches its own Style Kit reference images in Flow, match their ink line, hatching, coloring and paper texture (never copy their characters or scenes)
+- Color: vivid colored pencil / watercolor laid over the ink like the real one-baht covers, visible strokes, bright, vivid, saturated colors on clean white paper, crisp whites, neutral white balance; no overall yellow, brown or sepia cast, no aged-paper tint, no vintage warm filter (yellow is fine as the color of an object or a sky, never as a tint over the whole image); in the cover palette of the clip's category (see COLOR PALETTE: ghost/saiyasat = dark but vivid blood red, forest green, night purple with a moonlight-blue or amulet-gold accent and clean whites · folk/drama/comedy = bright yellow, pink, sky blue, green, red, often on a vivid yellow or sky-blue background) — NOT digital gradients, NOT flat anime cel colors
+- Style Kit: when the app attaches its own Style Kit reference images in Flow, match their ink line, hatching and colored-pencil / watercolor strokes only — never their overall color tone or paper color (the result stays bright on clean white paper), and never copy their characters or scenes
 - Each image is ONE full-frame cartoon scene drawn edge to edge (full-bleed) in the one-baht drawing and coloring style — the story is told as a cartoon, not as comic-book pages: no panel borders, no panel grids, no page layout, no page numbers, no gutters, no frames
 - NOT anime, NOT manga, NOT western comics, NOT 3D, NOT a doodle, NOT black-and-white
 
@@ -277,15 +277,15 @@ ON-SCREEN TEXT:
 - The cover (OUTPUT 4) is the only image with text
 
 COLOR PALETTE (per category — use the palette of the clip's category):
-- หมวด 1 · ผีไทย (dark): ink black #141012 · blood red #8e1b1b · deep blood #5c0f12 · forest green #1d3a26 / #3f6b3a · night purple #2a1f45 / #5a3f7a · aged-paper yellow #c9b27a
-- หมวด 2 · ไสยศาสตร์ & หมอผี (dark): ink black #121110 · blood red #7d2216 · forest green #203a2a · night purple #33244f / #6a4a86 · amulet gold #a5802f · aged-paper yellow #d1bd82
-- หมวด 3 · นิทานพื้นบ้าน & จักรๆ วงศ์ๆ (bright): yellow #f2d23c · pink #f4a6c0 · sky blue #8fd0ee · green #5fb36a · red #d8342c · purple #7a4fa0 · ink black #1a1a1a · paper cream #f5ecd2
-- หมวด 4 · ชีวิตสอนใจ (bright): yellow #f5d66b · pink #f29bb0 · sky blue #9ccbe8 · green #7cb87a · red #c8322e · ink black #1a1a1a · paper cream #f3e8cc
-- หมวด 5 · ตลกบ้านทุ่ง (bright): yellow #ffd93b · pink #ff9ec4 · sky blue #7fd3f5 · green #5cc46a · red #e8392f · orange #ff8a2a · ink black #1a1a1a · paper cream #fbf1d6
+- หมวด 1 · ผีไทย (dark, vivid): ink black #141012 / #2b1d24 · deep blood #5c0f12 · blood red #8e1b1b / #c8102e · forest green #1d3a26 / #2f8f4e · night purple #2a1f45 / #6a3fa0 · moonlight blue #4a86d8 · clean white #f5f7fa
+- หมวด 2 · ไสยศาสตร์ & หมอผี (dark, vivid): ink black #121110 / #2e2418 · blood red #4a1410 / #7d2216 / #c0392b · forest green #203a2a / #2e8b57 · night purple #33244f / #7a4ab0 · amulet gold #e8a317 · clean white #f5f7fa
+- หมวด 3 · นิทานพื้นบ้าน & จักรๆ วงศ์ๆ (bright): yellow #ffd23f · pink #ff8fb8 / #e0457b · sky blue #5cc8f2 / #2f7fd1 · green #4cb860 · red #e5322d · purple #8048b8 · ink black #1a1a1a · clean white #ffffff
+- หมวด 4 · ชีวิตสอนใจ (bright): yellow #ffcf3a · pink #ff9ab5 / #c9446e · sky blue #7cc6ef / #3a78c2 · green #5fb85f · red #d6302c · purple #6d47a6 · ink black #1a1a1a · clean white #ffffff
+- หมวด 5 · ตลกบ้านทุ่ง (bright): yellow #ffd93b · pink #ff9ec4 · sky blue #7fd3f5 / #2f7fd1 · green #5cc46a · red #e8392f · orange #ff8a2a · purple #9b5de5 · ink black #1a1a1a · clean white #ffffff
 
 COLOR MOOD (pick per scene from that part of the narration — the clip keeps its category palette):
-- Calm setup / daylight village → warm paper light, sky blue and green
-- Night / something is wrong → night purple and forest green, one oil-lamp glow
+- Calm setup / daylight village → bright clean daylight, sky blue and green
+- Night / something is wrong → night purple and forest green, one oil-lamp glow (a local light, never a yellow tint over the whole image)
 - Ghost appears / jump scare → near-black with blood red accents, the ghost face lit from below
 - Karma / reveal → deep red and black, strong contrast
 - Relief / punchline / folk-tale happy end → bright yellow, pink and sky blue

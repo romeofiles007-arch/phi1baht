@@ -6,7 +6,7 @@ import { spawnSync, execFileSync } from 'node:child_process'
 import { mkdtempSync, existsSync, rmSync, readFileSync, writeFileSync, utimesSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { inkifyFilter, inkify, inkifyAll, inkifyEnabled, paletteOf } from '../pipeline/lib/inkify.mjs'
+import { inkifyFilter, inkify, inkifyAll, inkifyEnabled, paletteOf, paperGains, paperGainsOf, colorMatrix, SATURATION } from '../pipeline/lib/inkify.mjs'
 import { CATEGORIES } from '../extension/prompts.js'
 
 const hasFfmpeg = spawnSync('ffmpeg', ['-version']).status === 0
@@ -18,6 +18,18 @@ test('inkifyFilter: เส้นดำ + ลดสีตามชุดสี + 
   assert.match(f, /multiply/)
   assert.match(f, /c0392b/i)
   assert.match(f, /s=1080x1920/)
+  assert.match(f, /colorchannelmixer=/) // ปรับขาวเป็นกลาง + เพิ่มความสดของสี ก่อนแปลงเป็นงานพิมพ์
+  // กระดาษเป็นกลาง: เกรนขาว/เทา (สร้างเป็นภาพเทาแล้วค่อยเป็นสี = ทุกช่องเท่ากัน) ไม่มีสีครีม ไม่มีขอบหมอง
+  assert.ok(!/fffaf0|vignette/i.test(f), f)
+  assert.match(f, /color=c=0xffffff[^;]*format=gray,noise=/)
+})
+
+test('inkifyFilter: เมทริกซ์สีอยู่ต้นกราฟ (ก่อนแยกไปทำเส้น/ลดสี) · gains = null ก็ยังเพิ่มความสด', () => {
+  const f = inkifyFilter({ palette: ['#c0392b', '#ffffff'], width: 64, height: 64, seed: 1, gains: { r: 1, g: 1.05, b: 1.25 } })
+  assert.match(f, /\[0:v\]colorchannelmixer=[^;]*split=3/)
+  const g = inkifyFilter({ palette: ['#c0392b', '#ffffff'], width: 64, height: 64, seed: 1 })
+  assert.match(g, /\[0:v\]colorchannelmixer=/)
+  assert.notEqual(f, g)
 })
 
 test('inkifyFilter: seed เดียวกัน = กราฟเดียวกัน', () => {
@@ -149,5 +161,115 @@ test('inkify: ภาพดิบที่ Flow โหลดทับใหม่
     const raw = readFileSync(f)
     assert.equal(await inkify(f, { categoryId: 'folk' }), true)
     assert.deepEqual(readFileSync(keep), raw)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+// ── ผู้ใช้ตัดสิน 22 พ.ย.: "อย่าให้ภาพออกเหลืองเอาสีสดใส" — ปรับขาวให้เป็นกลาง (port จาก paper-tone ของแอปต้นแบบ) + เพิ่มความสด ──
+/** ภาพจำลอง: n พิกเซลสีเดียว ต่อกันเป็น rgb24 */
+const fill = (parts) => Buffer.from(parts.flatMap(([rgb, n]) => Array.from({ length: n }, () => rgb).flat()))
+
+test('paperGains: พื้นกระดาษเหลืองนวล → ยกเขียว/ฟ้าขึ้นให้พื้นเป็นขาวกลาง (แดงไม่ถูกลด)', () => {
+  const g = paperGains(fill([[[226, 212, 182], 700], [[60, 80, 110], 300]])) // กระดาษ 70% + ชุดคราม 30%
+  assert.ok(g, 'ต้องปรับ')
+  assert.equal(g.r, 1)
+  assert.ok(g.g > 1 && g.b > g.g, JSON.stringify(g))
+  const [r, gg, b] = [226 * g.r, 212 * g.g, 182 * g.b]
+  assert.ok(Math.max(r, gg, b) - Math.min(r, gg, b) <= 2, `${r} ${gg} ${b}`)
+})
+
+test('paperGains: ภาพที่พื้นเป็นกลาง/โทนเย็นอยู่แล้ว → ไม่แตะ', () => {
+  assert.equal(paperGains(fill([[[240, 242, 244], 600], [[40, 70, 60], 400]])), null)
+  assert.equal(paperGains(fill([[[205, 222, 236], 800], [[30, 40, 70], 200]])), null)
+  assert.equal(paperGains(fill([[[250, 250, 250], 500], [[200, 40, 40], 500]])), null) // ขาวจริง + แดงสด
+})
+
+test('paperGains: ฉากกลางคืน จุดสว่างเป็นเปลวตะเกียง (สีจัด) ไม่ใช่กระดาษ → ไม่แตะ ไม่ทำให้ฉากอมฟ้า', () => {
+  assert.equal(paperGains(fill([[[255, 150, 40], 40], [[20, 30, 60], 900], [[90, 100, 130], 60]])), null)
+})
+
+test('paperGains: เหลืองจัดมากก็ปรับแค่พอดี (เพดาน ×1.35) · ไม่ลดช่องใด · เขียวนำแดงก็ไม่ลดเขียว', () => {
+  const g = paperGains(fill([[[236, 214, 170], 900], [[50, 50, 50], 100]])) // ฟ้าขาด ×1.39 → เพดาน
+  assert.ok(g && g.b === 1.35 && g.g <= 1.35 && g.r === 1, JSON.stringify(g))
+  const lime = paperGains(fill([[[220, 232, 190], 900], [[50, 50, 50], 100]]))
+  assert.ok(lime && lime.r === 1 && lime.g === 1 && lime.b > 1, JSON.stringify(lime))
+})
+
+test('paperGains: เหลืองเป็นสีของสิ่งของ (เสื้อเหลืองสด ท้องฟ้าเหลืองจัด) ไม่ใช่กระดาษ → ไม่แตะ', () => {
+  assert.equal(paperGains(fill([[[245, 200, 40], 600], [[250, 250, 250], 200], [[40, 60, 120], 200]])), null)
+})
+
+test('colorMatrix: ไม่มี gains + ความสด 1 = เมทริกซ์เอกลักษณ์ · ความสดคงสีเทา · gains คูณเข้าคอลัมน์', () => {
+  assert.deepEqual(colorMatrix(null, 1), [1, 0, 0, 0, 1, 0, 0, 0, 1])
+  const apply = (m, [r, g, b]) => [m[0] * r + m[1] * g + m[2] * b, m[3] * r + m[4] * g + m[5] * b, m[6] * r + m[7] * g + m[8] * b]
+  for (const v of apply(colorMatrix(null, SATURATION), [128, 128, 128])) assert.ok(Math.abs(v - 128) < 0.05, 'เทาต้องคงเป็นเทา') // ปัดทศนิยม 4 ตำแหน่ง
+  const wb = apply(colorMatrix({ r: 1, g: 1.05, b: 1.25 }, SATURATION), [200, 200 / 1.05, 160])
+  assert.ok(Math.max(...wb) - Math.min(...wb) < 0.5, `ขาวหลังปรับ ${wb}`)
+  assert.ok(SATURATION >= 1.1 && SATURATION <= 1.2, `ความสด ${SATURATION}`)
+})
+
+const ff = (args) => execFileSync('ffmpeg', ['-v', 'error', '-y', ...args], { stdio: 'pipe' })
+const hex = ([r, g, b]) => [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')
+function meanRect(file, W, [x0, y0, x1, y1]) {
+  const px = rawPixels(file), sum = [0, 0, 0]
+  let n = 0
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { for (let c = 0; c < 3; c++) sum[c] += px[(y * W + x) * 3 + c]; n++ }
+  return sum.map((v) => v / n)
+}
+const satOf = ([r, g, b]) => (Math.max(r, g, b) - Math.min(r, g, b)) / Math.max(r, g, b)
+
+test('inkify: ภาพที่ Flow วาดบนกระดาษเหลือง (#efe2bf) → พื้นเป็นขาวกลาง ไม่มืดลง · สีกลางสดขึ้น · ผิวยังเป็นสีผิว', { skip: !hasFfmpeg && 'ไม่มี ffmpeg' }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inkify-'))
+  try {
+    const f = join(dir, '00_00_01.png')
+    const paper = [239, 226, 191], mid = [70, 130, 190], skin = [232, 183, 150]
+    // พื้นกระดาษเหลือง 240x240 + แถบสีกลาง (ซ้ายล่าง) + แถบผิว (ขวาล่าง) + สี่เหลี่ยมแดง (ขวาบน)
+    ff(['-f', 'lavfi', '-i', `color=c=0x${hex(paper)}:s=240x240`, '-vf',
+      `drawbox=x=0:y=150:w=110:h=90:color=0x${hex(mid)}:t=fill,drawbox=x=130:y=150:w=110:h=90:color=0x${hex(skin)}:t=fill,drawbox=x=170:y=20:w=60:h=60:color=0xc8322e:t=fill`,
+      '-frames:v', '1', f])
+    assert.ok(await paperGainsOf(f), 'ต้องตรวจเจอว่าพื้นเหลือง')
+    assert.equal(await inkify(f, { categoryId: 'folk' }), true)
+    const bg = meanRect(f, 240, [20, 20, 140, 120])
+    assert.ok(Math.abs(bg[2] - bg[0]) <= 6, `พื้นยังเหลือง: R ${bg[0].toFixed(1)} B ${bg[2].toFixed(1)}`)
+    assert.ok(luma(bg) >= luma(paper), `พื้นมืดลง: ${luma(bg).toFixed(1)} vs ${luma(paper).toFixed(1)}`)
+    const m = meanRect(f, 240, [20, 170, 90, 225])
+    assert.ok(satOf(m) > satOf(mid), `สีกลางต้องสดขึ้น: ${satOf(m).toFixed(3)} vs ${satOf(mid).toFixed(3)}`)
+    const s = meanRect(f, 240, [150, 170, 220, 225])
+    assert.ok(s[0] > s[1] && s[1] >= s[2] && s[0] - s[2] >= 25 && hueOf(s) <= 40, `ผิวเพี้ยน: ${s.map((v) => v.toFixed(0))}`)
+    assert.ok(luma(s) >= luma(skin) * 0.92, 'ผิวมืดลง')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('inkify: ขาวจริงยังขาวกลาง (|R−B| ≤ 6) ทุกหมวด · สีกลางบนพื้นขาวสดขึ้น', { skip: !hasFfmpeg && 'ไม่มี ffmpeg' }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inkify-'))
+  try {
+    const f = join(dir, '00_00_01.png')
+    const mid = [70, 130, 190]
+    for (const categoryId of ['ghost', 'saiyasat', 'folk', 'drama', 'comedy']) {
+      rmSync(join(dir, '_original'), { recursive: true, force: true })
+      ff(['-f', 'lavfi', '-i', 'color=c=0xffffff:s=200x200', '-vf', `drawbox=x=100:y=0:w=100:h=200:color=0x${hex(mid)}:t=fill`, '-frames:v', '1', f])
+      assert.equal(await inkify(f, { categoryId }), true)
+      const w = meanRect(f, 200, [15, 15, 85, 185])
+      assert.ok(Math.abs(w[0] - w[2]) <= 6 && Math.abs(w[0] - w[1]) <= 6, `${categoryId} ขาวไม่กลาง: ${w.map((v) => v.toFixed(1))}`)
+      assert.ok(luma(w) >= 240, `${categoryId} ขาวหม่น: ${luma(w).toFixed(1)}`)
+      const m = meanRect(f, 200, [115, 15, 185, 185])
+      assert.ok(satOf(m) > satOf(mid), `${categoryId} สีกลางต้องสดขึ้น: ${satOf(m).toFixed(3)}`)
+    }
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('inkify: ฉากกลางคืนไม่มีพื้นกระดาษ → ไม่ปรับขาว (paperGainsOf = null) และสีไม่ถูกดันไปฟ้า', { skip: !hasFfmpeg && 'ไม่มี ffmpeg' }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inkify-'))
+  try {
+    const f = join(dir, '00_00_01.png')
+    const night = [20, 30, 60]
+    ff(['-f', 'lavfi', '-i', `color=c=0x${hex(night)}:s=200x200`, '-vf', 'drawbox=x=90:y=90:w=12:h=12:color=0xff9628:t=fill', '-frames:v', '1', f])
+    assert.equal(await paperGainsOf(f), null)
+    // ภาพที่ควรได้ = กราฟเดียวกันแต่ไม่มีตัวปรับขาว (gains = null)
+    const want = join(dir, 'want.png')
+    ff(['-i', f, '-filter_complex', inkifyFilter({ palette: paletteOf('ghost'), width: 200, height: 200, seed: 1 }), '-map', '[out]', '-frames:v', '1', want])
+    assert.equal(await inkify(f, { categoryId: 'ghost' }), true)
+    const m = meanRect(f, 200, [10, 10, 70, 70]), w = meanRect(want, 200, [10, 10, 70, 70])
+    for (let c = 0; c < 3; c++) assert.ok(Math.abs(m[c] - w[c]) <= 2, `ช่อง ${c}: ${m[c].toFixed(1)} vs ${w[c].toFixed(1)}`)
+    assert.ok(m[2] - m[0] <= night[2] - night[0] + 8, 'ฉากกลางคืนถูกดันไปฟ้า')
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
