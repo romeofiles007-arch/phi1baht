@@ -604,7 +604,9 @@ $('startFlow').addEventListener('click', async () => {
     const tabId = await flowHomeTab()
     $('flowLinks').hidden = false
     setStatus('flowStatus', `สร้าง project ใหม่ → ตรวจว่า ${FLOW_MODEL} · x1 ใช้ 0 credits → ตั้งค่า Agent → ส่ง prompt…`, 'busy')
-    const res = await flowMessage(tabId, { type: 'FLOW_AGENT_RUN', prompt: shotsData.flowPrompt, expected, model: FLOW_MODEL, aspect: shotsData.aspect ?? '16:9', attachments: (await api(await localApp(), `/api/character?attachments=1&slug=${encodeURIComponent(slugify(S.selected?.title ?? ''))}`).catch(() => ({}))).attachments ?? [] })
+    // รูปแนบชุดเดียวกับ autopilot: ตัวละครของฉัน + Style Kit ฉากของหมวด (flowPrompt บอก agent ตามชุดนี้)
+    const { attachments = [] } = await api(await localApp(), '/api/flow/attachments')
+    const res = await flowMessage(tabId, { type: 'FLOW_AGENT_RUN', prompt: shotsData.flowPrompt, expected, model: FLOW_MODEL, aspect: shotsData.aspect ?? '9:16', attachments })
     if (!res?.ok) throw new Error(res?.error ?? 'Google Flow ไม่ตอบกลับ')
     setStatus('flowStatus', `ส่ง prompt ${expected} ช็อตแล้ว · ${res.credits} credits · Agent: ${res.agent.model} ${res.agent.ratio} ${res.agent.count}`, 'ok')
     watchFlow(tabId, { expected, imagesBefore: res.imagesBefore, started: Date.now() })
@@ -659,13 +661,22 @@ async function saveFlowImages(tabId) {
       saved++
     }
 
+    // แปลงเป็นงานพิมพ์เล่มละบาท (inkify) แบบเดียวกับ autopilot — ตามสวิตช์ในตั้งค่าคลิป · ภาพที่แปลงแล้วไม่ทำซ้ำ
+    let inked = 0
+    if (saved) {
+      setStatus('flowStatus', `แปลงภาพเป็นงานพิมพ์เล่มละบาท ${saved} ใบ…`, 'busy')
+      const ink = await api(app, '/api/images/inkify', {})
+      inked = ink.inkified ?? 0
+      for (const w of ink.warnings ?? []) console.warn(w)
+    }
+
     const missing = [...wanted].filter((f) => !picks.has(f))
     const unnamed = list.images.filter((i) => !i.filename).length
     if (missing.length) {
       $('flowMissing').hidden = false
       $('flowMissing').textContent = `ไม่มีภาพของ ${missing.length} ช็อต: ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? '…' : ''}${unnamed ? ` · มีภาพที่ยังไม่ได้ตั้งชื่อ ${unnamed} ใบ (กดตั้งชื่อ + บันทึกภาพอีกครั้งได้)` : ''}`
     }
-    setStatus('flowStatus', `บันทึกภาพ ${saved}/${wanted.size} ใบลง 05_images/ แล้ว`, missing.length ? 'error' : 'ok')
+    setStatus('flowStatus', `บันทึกภาพ ${saved}/${wanted.size} ใบลง 05_images/ แล้ว${inked ? ` · แปลงเป็นงานพิมพ์ ${inked} ใบ` : ''}`, missing.length ? 'error' : 'ok')
   } catch (err) {
     setStatus('flowStatus', err.message, 'error')
   } finally {

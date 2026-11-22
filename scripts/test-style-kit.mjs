@@ -107,8 +107,12 @@ test('kit.json จริงอยู่ใน extension/style-kit/ ใช้ไ�
 
 test('5_images.mjs แนบ Style Kit ของหมวดคลิปต่อท้ายรูปตัวละคร', () => {
   const src = readFileSync(new URL('../pipeline/5_images.mjs', import.meta.url), 'utf8')
-  assert.match(src, /import \{ styleKitAttachments \} from '\.\/lib\/style-kit\.mjs'/)
-  assert.match(src, /attachments: \[\.\.\.characterAttachments\(activeCharacter\(slug\)\), \.\.\.styleKitAttachments\(profile\?\.category\)\]/)
+  // ชุดรูปแนบอยู่ที่ flowAttachments (prompts.mjs) — ใช้ร่วมกับแผงข้าง (/api/flow/attachments) · ดู test-manual-flow.mjs
+  assert.match(src, /import \{ flowPrompt, flowAttachments,[^}]*\} from '\.\/lib\/prompts\.mjs'/)
+  assert.match(src, /attachments: flowAttachments\(slug, profile\?\.category\)/)
+  const prompts = readFileSync(new URL('../pipeline/lib/prompts.mjs', import.meta.url), 'utf8')
+  assert.match(prompts, /character: characterAttachments\(activeCharacter\(slug\)\), kit: styleKitAttachments\(categoryId\)/)
+  assert.match(prompts, /return \[\.\.\.character, \.\.\.kit\]/)
 })
 
 test('kit.json จริง: ไฟล์ครบ < 400 KB ไม่อ้าง references/ · ghost ได้ฉาก ≤2 ไม่มีปก · ทุกหมวดได้ฉาก ≥1', () => {

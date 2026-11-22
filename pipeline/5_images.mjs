@@ -12,8 +12,7 @@ import { readFileSync, existsSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { loadConfig, projectDir } from './lib/config.mjs'
 import { requireBridge, runJob } from './lib/bridge.mjs'
-import { flowPrompt, aspectOf, stripSafeArea, tagNames, untagShotPrompt, recolorBrief, recolorShotPrompt } from './lib/prompts.mjs'
-import { characterAttachments, activeCharacter } from './lib/character.mjs'
+import { flowPrompt, flowAttachments, aspectOf, stripSafeArea, tagNames, untagShotPrompt, recolorBrief, recolorShotPrompt } from './lib/prompts.mjs'
 import { ensureProfile } from './lib/clip_profile.mjs'
 import { coverShot, coverBriefLines, hasCover, COVER_NAME } from './lib/cover.mjs'
 import { riddleShot, riddleBriefLines, hasRiddleImage, RIDDLE_NAME } from './lib/riddle.mjs'
@@ -21,7 +20,6 @@ import { probeSize } from './lib/ffmpeg.mjs'
 import { collectImages } from './lib/shotfile.mjs'
 import { generateWithFailover } from './lib/flow-failover.mjs'
 import { sanitizeShotPrompt } from './lib/shot-safety.mjs'
-import { styleKitAttachments } from './lib/style-kit.mjs'
 import { inkifyAll, inkifyEnabled } from './lib/inkify.mjs'
 
 const slug = process.argv[2]
@@ -129,7 +127,8 @@ const result = await generateWithFailover({
     aspect, // 16:9 แนวนอน | 9:16 แนวตั้ง
     projectTitle: title, // ตั้งชื่อ project ใน Flow เป็นชื่อเรื่อง แทนชื่อวันที่ของ Flow
     // รูปตัวละครของฉัน (ถ้ามี) + ภาพ Style Kit ของหมวด 1–2 ภาพ (kit ว่าง = ไม่มี) — แนบเป็น ingredient กับ prompt แรก
-    attachments: [...characterAttachments(activeCharacter(slug)), ...styleKitAttachments(profile?.category)],
+    // ชุดเดียวกับที่แผงข้างแนบ (/api/flow/attachments) และที่ flowPrompt บอก agent
+    attachments: flowAttachments(slug, profile?.category),
     outDir: imagesDir,
     newProject: !savedProject?.url,
     projectUrl: savedProject?.url ?? null,

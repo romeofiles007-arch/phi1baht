@@ -46,7 +46,7 @@ export const STEPS = {
     label: 'ทำคลิปอัตโนมัติ',
     cmd: (_slug, { title, autoTopic, genre, language, titleLanguage, minutes, restartFrom } = {}) => [
       process.execPath,
-      // ส่งหมวดทั้งแบบคิดหัวข้อเองและแบบพิมพ์หัวข้อ — หัวข้อที่พิมพ์เองในโหมดพระสอนธรรมต้องเป็นโหมดนั้น ไม่ใช่เดาจากชื่อเรื่อง
+      // ส่งหมวดทั้งแบบคิดหัวข้อเองและแบบพิมพ์หัวข้อ — หัวข้อที่พิมพ์เองต้องได้หมวดที่เลือกไว้ ไม่ใช่เดาจากชื่อเรื่อง
       [P('autopilot.mjs'), ...(autoTopic ? ['--auto-topic'] : [title]), ...(genre ? ['--genre', genre] : []), '--lang', language, '--title-lang', titleLanguage, '--minutes', String(minutes), ...(restartFrom ? ['--restart', restartFrom] : [])],
     ],
   },

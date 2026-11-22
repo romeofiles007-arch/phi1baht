@@ -2,10 +2,10 @@ import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { ROOT, loadConfig, slugify } from './config.mjs'
 import { recentThemes, themeOf } from './topics.mjs'
-import { characterFlowNote, bodyStyleRule, bodyStyleFlowNote, activeCharacter } from './character.mjs'
+import { characterFlowNote, bodyStyleRule, bodyStyleFlowNote, activeCharacter, characterAttachments } from './character.mjs'
 import { SHOT_VARIETY_RULE } from './continuity.mjs'
 import { readProfile } from './clip_profile.mjs'
-import { styleKitFiles } from './style-kit.mjs'
+import { styleKitFiles, styleKitAttachments } from './style-kit.mjs'
 
 import * as shared from '../../extension/prompts.js'
 
@@ -125,13 +125,28 @@ export function orientationRule(config = loadConfig()) {
 }
 
 /**
- * ภาพ Style Kit ที่แนบให้ Flow (5_images.mjs แนบต่อท้ายรูปตัวละคร) — บอก agent ว่าเป็นแบบลายเส้นเท่านั้น ไม่ใช่ตัวละคร
- * characterCount = จำนวนรูปตัวละครหลักที่แนบก่อนหน้า (ให้บอกลำดับได้ชัด) · kit ว่าง = ไม่มีบรรทัดนี้
+ * รูปที่แนบไปกับคำสั่ง Flow — ทุกทางที่ส่งภาพให้ Flow ใช้ชุดนี้ (autopilot 5_images และแผงข้างแบบทำเองผ่าน /api/flow/attachments)
+ *   character = รูปตัวละครของฉัน (ถ้ามี) · kit = ภาพ Style Kit ของหมวด (เฉพาะ kind 'scene' — ปกมีตัวหนังสือ ไม่แนบ)
+ * flowPrompt บอก agent ตามรายการนี้ จึงไม่พูดถึงภาพที่ไม่ได้แนบ
  */
-export function styleKitFlowNote(categoryId, characterCount = 0) {
-  const files = styleKitFiles(categoryId)
+export function flowAttachmentParts(slug = null, categoryId = readProfile(slug)?.category) {
+  return { character: characterAttachments(activeCharacter(slug)), kit: styleKitAttachments(categoryId) }
+}
+/** รูปที่แนบทั้งหมดตามลำดับ: ตัวละครก่อน แล้ว Style Kit (ลำดับเดียวกับที่ styleKitFlowNote บอก agent) */
+export function flowAttachments(slug = null, categoryId = readProfile(slug)?.category) {
+  const { character, kit } = flowAttachmentParts(slug, categoryId)
+  return [...character, ...kit]
+}
+
+/**
+ * ภาพ Style Kit ที่แนบให้ Flow (ต่อท้ายรูปตัวละคร) — บอก agent ว่าเป็นแบบลายเส้นเท่านั้น ไม่ใช่ตัวละคร
+ * characterCount = จำนวนรูปตัวละครหลักที่แนบก่อนหน้า (ให้บอกลำดับได้ชัด) · kit ว่าง = ไม่มีบรรทัดนี้
+ * attached = ชื่อภาพ kit ที่แนบจริง (flowPrompt ส่งจาก flowAttachmentParts) · ไม่ส่ง = ตามรายการใน kit.json
+ */
+export function styleKitFlowNote(categoryId, characterCount = 0, attached = null) {
+  const files = attached ?? styleKitFiles(categoryId).map((f) => f.file.split(/[\\/]/).pop())
   if (!files.length) return ''
-  const names = files.map((f) => f.file.split(/[\/]/).pop()).join(', ')
+  const names = files.join(', ')
   const where = characterCount > 0 ? `รูปที่แนบลำดับที่ ${characterCount + 1}–${characterCount + files.length} (ท้ายสุด)` : `รูปที่แนบทั้ง ${files.length} รูป`
   return `${where} (${names}) เป็นภาพอ้างอิงลายเส้นเท่านั้น (Style Kit) — ใช้เป็นแบบเทคนิคเส้นหมึก การแรเงา และรอยสีไม้/สีน้ำ ไม่ใช่ตัวละคร: ห้ามวาดตัวละคร ฉาก หรือองค์ประกอบจากภาพเหล่านี้ลงในผลงาน · ห้ามเลียนโทนสีรวมหรือสีกระดาษของภาพอ้างอิง — ผลงานต้องสีสดบนกระดาษขาวสะอาด ขาวต้องขาว ไม่มีเหลืองคลุมทั้งภาพ${characterCount > 0 ? ` ตัวละครหลักคือ ${characterCount} รูปแรกเท่านั้น` : ''}`
 }
@@ -142,7 +157,8 @@ export function flowPrompt(agentBrief, config = loadConfig(), slug = null) {
   const character = activeCharacter(slug)
   const profile = readProfile(slug)
   const charNote = characterFlowNote(character, profile)
-  const kitNote = styleKitFlowNote(profile?.category, character?.images?.length ?? 0)
+  const attached = flowAttachmentParts(slug, profile?.category) // ภาพที่แนบจริง — บอก agent เฉพาะภาพที่แนบไปเท่านั้น
+  const kitNote = styleKitFlowNote(profile?.category, attached.character.length, attached.kit.map((a) => a.name))
   return `สร้างรูป ตามนี้ อย่าลืม lock ตัวละครต่างๆ ด้วยนะ
 เริ่มสร้างภาพทุกช็อตทันทีจนครบ ไม่ต้องสรุปแผน Storyboard และไม่ต้องถามยืนยันก่อน
 ${bodyStyleFlowNote(character, profile)}

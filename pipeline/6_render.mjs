@@ -18,6 +18,8 @@ import { probeDuration, probeSize, renderVideo, MOTION_PRESETS } from './lib/ffm
 import { hhmmss } from './lib/timecode.mjs'
 import { buildAss, SUBTITLE_STYLES } from './lib/subtitles.mjs'
 import { clipSettings, collectClips } from './lib/clips.mjs'
+import { inkifyAll, inkifyEnabled } from './lib/inkify.mjs'
+import { readProfile } from './lib/clip_profile.mjs'
 
 const [slug, ...rest] = process.argv.slice(2)
 if (!slug) {
@@ -39,6 +41,16 @@ const cover = existsSync(coverFile) ? coverFile : null
 if (!existsSync(voiceover)) {
   console.error(`ไม่พบไฟล์เสียง: ${voiceover}\nรันขั้นที่ 2 (TTS) ก่อน`)
   process.exit(1)
+}
+
+// แปลงเป็นงานพิมพ์เล่มละบาท — ด่านเดียวที่ภาพทุกทางต้องผ่านก่อนตัดต่อ (autopilot · แผงข้างแบบทำเอง · ช็อตที่เติมด้วยภาพข้างเคียง · ภาพที่วางเอง)
+// ภาพที่แปลงแล้วจำด้วย hash (ไม่ทำซ้ำ) · ปิดสวิตช์ = ไม่แตะ · riddle ข้าม
+{
+  const profile = readProfile(slug)
+  if (existsSync(imagesDir) && inkifyEnabled(config, profile)) {
+    const n = await inkifyAll(imagesDir, { categoryId: profile?.category })
+    if (n) console.log(`แปลงเป็นงานพิมพ์เล่มละบาท ${n} ภาพที่ยังไม่ได้แปลง (ต้นฉบับอยู่ใน 05_images/_original/)`)
+  }
 }
 
 const { images, ignored } = collectImages(imagesDir)

@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, createRea
 import { pipeline as pipeStreams } from 'node:stream/promises'
 import { join, resolve, sep, extname } from 'node:path'
 import { ROOT, loadConfig, updateConfig, slugify } from '../pipeline/lib/config.mjs'
-import { topicsPrompt, scriptPrompt, parseTopics, cleanScript, GENRES } from '../pipeline/lib/prompts.mjs'
+import { topicsPrompt, scriptPrompt, parseTopics, cleanScript, GENRES, flowAttachments } from '../pipeline/lib/prompts.mjs'
 import { SCARE_LEVELS } from '../extension/prompts.js'
 import { createProduction } from './production.js'
 import { saveScript, loadScript } from '../pipeline/lib/stage2.mjs'
@@ -33,7 +33,8 @@ import { listVideos, trashVideo, renameProject, revealVideo } from './videos.js'
 import { clipSource, postPrompt, parsePost, savePost } from '../pipeline/lib/post.mjs'
 import { checklist } from './checklist.js'
 import { autopilotProgress } from '../pipeline/lib/progress.mjs'
-import { ensureProfile } from '../pipeline/lib/clip_profile.mjs'
+import { ensureProfile, readProfile } from '../pipeline/lib/clip_profile.mjs'
+import { inkifyAll, inkifyEnabled } from '../pipeline/lib/inkify.mjs'
 import { readCharacter, updateCharacter, addCharacterImage, removeCharacterImage, clearCharacter, characterAttachments, activeCharacter, CHARACTER_DIR } from '../pipeline/lib/character.mjs'
 import { PAUSE_PRESETS, MOTION_PRESETS } from '../pipeline/lib/ffmpeg.mjs'
 import { SUBTITLE_STYLES } from '../pipeline/lib/subtitles.mjs'
@@ -691,6 +692,28 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
         return json(res, 200, { saved: name }), true
       }
 
+      // แผงข้างบันทึกภาพครบแล้ว → แปลงเป็นงานพิมพ์เล่มละบาท (inkify) แบบเดียวกับ autopilot ขั้น 5
+      // ตามสวิตช์ในแผงข้าง + โปรไฟล์คลิป (inkifyEnabled) · ภาพที่แปลงแล้วไม่ทำซ้ำ (hash) · riddle ข้าม
+      if (req.method === 'POST' && path === '/api/images/inkify') {
+        const slug = selectedSlug()
+        if (!slug) return json(res, 400, { error: 'ยังไม่ได้เลือกหัวข้อ' }), true
+        const profile = readProfile(slug)
+        if (!inkifyEnabled(loadConfig(), profile)) return json(res, 200, { inkified: 0, enabled: false }), true
+        const dir = join(ROOT, 'projects', slug, '05_images')
+        if (!existsSync(dir)) return json(res, 200, { inkified: 0, enabled: true }), true
+        const warnings = []
+        const inkified = await inkifyAll(dir, { categoryId: profile?.category, log: (m) => warnings.push(m) })
+        return json(res, 200, { inkified, enabled: true, warnings }), true
+      }
+
+      // รูปที่แนบไปกับคำสั่ง Flow ของแผงข้าง — ชุดเดียวกับ autopilot (ตัวละครของฉัน + Style Kit ฉากของหมวด)
+      // และตรงกับที่ flowPrompt ของ /api/shotlist บอก agent (คลิปที่เลือกอยู่)
+      if (req.method === 'GET' && path === '/api/flow/attachments') {
+        const slug = selectedSlug()
+        if (!slug) return json(res, 400, { error: 'ยังไม่ได้เลือกหัวข้อ' }), true
+        return json(res, 200, { attachments: flowAttachments(slug) }), true
+      }
+
       // ── ขั้นที่ 4: prompt ภาพสำหรับ Google Flow (OUTPUT 5) — แผงข้างส่ง prompt ให้ ChatGPT ทีละรอบ ──
       if (path === '/api/shotlist' || path.startsWith('/api/shotlist/')) {
         const slug = selectedSlug()
@@ -903,7 +926,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
         })
         if (req.method === 'GET' && path === '/api/character') {
           if (url.searchParams.has('attachments')) {
-            // ส่ง slug มา = รูปตามหมวดของคลิปนั้น (เช่น โหมดพระสอนธรรมแนบหน้าพระของฉัน) · slug ต้องเป็นชื่อโฟลเดอร์ล้วน
+            // ส่ง slug มา = รูปตัวละครของคลิปนั้น · slug ต้องเป็นชื่อโฟลเดอร์ล้วน
             const slug = /^[\p{L}\p{N}_]{1,80}$/u.test(url.searchParams.get('slug') ?? '') ? url.searchParams.get('slug') : undefined
             return json(res, 200, { attachments: characterAttachments(activeCharacter(slug)) }), true
           }
@@ -930,7 +953,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
             if (MOTION_PRESETS[body.motion]) c.render.motion = body.motion
             // ชวนคุยท้ายคลิป: 'on' (ค่าเริ่มต้น) | 'off' — ใช้กับบทที่เขียนหลังจากนี้
             if (['on', 'off'].includes(body.engage)) c.script.engage = body.engage === 'on'
-            // แปลงเป็นงานพิมพ์เล่มละบาท (inkify): 'on' (ค่าเริ่มต้น) | 'off' — ใช้กับภาพที่โหลดจาก Flow หลังจากนี้ · คลิปใหม่เก็บค่านี้ใน profile
+            // แปลงเป็นงานพิมพ์เล่มละบาท (inkify): 'on' (ค่าเริ่มต้น) | 'off' — อ่านตอนรันจริงทุกครั้ง (inkifyEnabled) · profile.inkify === false ปิดเฉพาะคลิปนั้น
             if (['on', 'off'].includes(body.inkify)) c.render.inkify = body.inkify === 'on'
             // ระดับความสยอง (หมวดผี/ไสย): light เบา | medium กลาง | strong เข้ม | random สุ่มต่อคลิป — ใช้กับคลิปใหม่
             if (SCARE_LEVELS[body.scare]) {

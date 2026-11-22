@@ -141,7 +141,7 @@ if (autoTopic) {
   writeFileSync(join(projectDir(slug, 'script'), 'topics_scored.json'), JSON.stringify(topicPick, null, 2))
 }
 
-// ── หมวดของคลิป (ตามหมวดของคลิป) — หมวดพระเกจิดึงประวัติ + ภาพอ้างอิงจากวิกิพีเดียให้เอง ──
+// ── หมวดของคลิป (ตามหมวดของคลิป) — ผี · ไสยศาสตร์ · นิทานพื้นบ้าน · ชีวิต · ตลก (ทำครั้งเดียว เก็บใน 00_ref/profile.json) ──
 const profile = await ensureProfile(slug, { title, genre: topicPick?.chosen?.genre || config.script.genre })
 
 // ── สถานะของแต่ละแผนก ──
@@ -529,6 +529,7 @@ async function artDepartment() {
   if (merged.withPrompt < merged.total) throw new Error(`prompt ภาพยังไม่ครบ ${merged.withPrompt}/${merged.total}`)
   if (!merged.hasBible) console.warn('   เตือน: ไม่พบ Style/Character Bible ในคำตอบ — ภาพอาจไม่ต่อเนื่อง')
   if (merged.continuityNote) console.warn(`   เตือน: ${merged.continuityNote}`)
+  for (const s of merged.sanitized ?? []) console.log(`   ตัดคำรุนแรงออกจาก ${s.filename}: ${s.removed.join(", ")}`)
   if (merged.problems?.length) console.warn(`   ยังมีช็อตที่ภาพซ้ำกับข้างเคียง ${merged.problems.length} ช็อต (ขอเขียนใหม่ไปแล้วช็อตละครั้ง)`)
   dept('art', { status: 'done', detail: `prompt ภาพครบ ${merged.total} ช็อต` })
 }

@@ -18,6 +18,7 @@ import { riddleRequest, parseRiddle, parseRiddleDraft, riddleProblem, saveRiddle
 import { themeOf } from './topics.mjs'
 import { orientationOf } from './prompts.mjs'
 import { continuityProblems, continuityReport, SHOT_VARIETY_RULE } from './continuity.mjs'
+import { sanitizeShotPrompt } from './shot-safety.mjs'
 
 export const SHOTS_PER_ROUND = 40
 const SHOT_LIST_MARK = /^\s*=+\s*SHOT LIST\s*=+\s*$/m
@@ -233,7 +234,16 @@ export function mergeRounds(slug) {
   const parsed = parseShotList(all, slots)
   const missing = parsed.missing
   // prompt ที่ส่งไป Flow ต้องไม่มีคำสั่งเว้นพื้นที่ว่าง (ภาพจะมีแถบว่าง)
-  const shots = parsed.shots.map((s) => (s.prompt ? { ...s, prompt: stripSafeArea(s.prompt).trim() } : s))
+  // และตัดคำรุนแรง/เปลือยตั้งแต่ตรงนี้ (lib/shot-safety.mjs) — shots.json / agent_brief.txt / flowPrompt ของแผงข้าง
+  // จึงผ่านตัวกรองเดียวกับ autopilot (5_images ยังกรองซ้ำเป็นด่านสุดท้าย)
+  const sanitized = []
+  const safe = (s) => {
+    if (!s?.prompt) return s
+    const { text, removed } = sanitizeShotPrompt(s.prompt)
+    if (removed.length) sanitized.push({ filename: s.filename, removed })
+    return { ...s, prompt: text }
+  }
+  const shots = parsed.shots.map((s) => (s.prompt ? safe({ ...s, prompt: stripSafeArea(s.prompt).trim() }) : s))
   const head = stripSafeArea(bibleOf(raws))
 
   // ต่อ shot ด้วยชื่อไฟล์ที่เราคำนวณไว้เอง กันกรณี AI พิมพ์ชื่อไฟล์ตกหล่น
@@ -253,7 +263,7 @@ export function mergeRounds(slug) {
   // ปกคลิปต่อท้ายคำสั่ง Flow — สร้างเป็นภาพสุดท้าย (5_images.mjs ตัด brief ที่หัว SHOT LIST แล้วใส่ปกเองอีกที)
   const titleFile = join(projectDir(slug, 'script'), 'title.txt')
   const title = existsSync(titleFile) ? readFileSync(titleFile, 'utf8').trim() : slug
-  const briefWithCover = [agentBrief, ...coverBriefLines(coverShot(slug, title), aspectOf() === '9:16')].join('\n\n')
+  const briefWithCover = [agentBrief, ...coverBriefLines(safe(coverShot(slug, title)), aspectOf() === '9:16')].join('\n\n')
 
   writeFileSync(f.raw, all, 'utf8')
   writeFileSync(f.shots, JSON.stringify(shots, null, 2))
@@ -263,6 +273,7 @@ export function mergeRounds(slug) {
   return {
     total: slots.length,
     withPrompt: shots.length - missing.length,
+    sanitized, // [{ filename, removed: [คำที่ตัดออก] }]
     missing,
     problems,
     continuityNote: continuityReport(shots),
