@@ -1,5 +1,58 @@
 {
-  "_about": "Style Kit ของผี 1 บาท — ภาพสีที่เราวาดเอง (ฉากการ์ตูนลงสีเต็มเฟรม · ปก · แถบชุดสีของหมวด) แนบให้ Flow เป็นแบบลายเส้นทุกช็อต · ห้ามใส่ภาพเล่มจริงจาก references/ · จดที่มาของทุกภาพในช่อง source",
-  "_entry": { "file": "ghost_scene_1.png", "categories": ["ghost", "saiyasat"], "kind": "scene | cover | palette", "source": "วาดใหม่ใน ChatGPT web บัญชีผู้ใช้ วันที่ ..." },
-  "files": []
+  "_about": "Style Kit ของผี 1 บาท — ภาพสีที่เราวาดเอง แนบให้ Flow เป็นแบบลายเส้นของช็อตในเรื่อง (เฉพาะ kind scene) · ปก (kind cover) มีตัวหนังสือ ไม่แนบให้ช็อต · ห้ามใส่ภาพเล่มจริงจาก references/ · จดที่มาในช่อง source",
+  "files": [
+    {
+      "file": "kit-ghost-house.jpg",
+      "categories": [
+        "ghost"
+      ],
+      "kind": "scene",
+      "source": "วาดใหม่ใน ChatGPT web บัญชีเจ้าของ 22 พ.ย. 2026 — prompt ใน docs/design/phi-style-kit.prompt.txt (ภาพอ้างอิงเล่มจริงใช้เป็นแบบเทคนิคเท่านั้น ไม่ได้ส่งไปกับแอป)"
+    },
+    {
+      "file": "kit-drama-village.jpg",
+      "categories": [
+        "drama"
+      ],
+      "kind": "scene",
+      "source": "วาดใหม่ใน ChatGPT web บัญชีเจ้าของ 22 พ.ย. 2026 — prompt ใน docs/design/phi-style-kit.prompt.txt (ภาพอ้างอิงเล่มจริงใช้เป็นแบบเทคนิคเท่านั้น ไม่ได้ส่งไปกับแอป)"
+    },
+    {
+      "file": "kit-saiyasat-forest.jpg",
+      "categories": [
+        "saiyasat",
+        "ghost"
+      ],
+      "kind": "scene",
+      "source": "วาดใหม่ใน ChatGPT web บัญชีเจ้าของ 22 พ.ย. 2026 — prompt ใน docs/design/phi-style-kit.prompt.txt (ภาพอ้างอิงเล่มจริงใช้เป็นแบบเทคนิคเท่านั้น ไม่ได้ส่งไปกับแอป)"
+    },
+    {
+      "file": "kit-comedy-yard.jpg",
+      "categories": [
+        "comedy"
+      ],
+      "kind": "scene",
+      "source": "วาดใหม่ใน ChatGPT web บัญชีเจ้าของ 22 พ.ย. 2026 — prompt ใน docs/design/phi-style-kit.prompt.txt (ภาพอ้างอิงเล่มจริงใช้เป็นแบบเทคนิคเท่านั้น ไม่ได้ส่งไปกับแอป)"
+    },
+    {
+      "file": "kit-folk-river.jpg",
+      "categories": [
+        "folk"
+      ],
+      "kind": "scene",
+      "source": "วาดใหม่ใน ChatGPT web บัญชีเจ้าของ 22 พ.ย. 2026 — prompt ใน docs/design/phi-style-kit.prompt.txt (ภาพอ้างอิงเล่มจริงใช้เป็นแบบเทคนิคเท่านั้น ไม่ได้ส่งไปกับแอป)"
+    },
+    {
+      "file": "kit-cover.jpg",
+      "categories": [
+        "ghost",
+        "drama",
+        "saiyasat",
+        "comedy",
+        "folk"
+      ],
+      "kind": "cover",
+      "source": "วาดใหม่ใน ChatGPT web บัญชีเจ้าของ 22 พ.ย. 2026 — prompt ใน docs/design/phi-style-kit.prompt.txt (ภาพอ้างอิงเล่มจริงใช้เป็นแบบเทคนิคเท่านั้น ไม่ได้ส่งไปกับแอป)"
+    }
+  ]
 }

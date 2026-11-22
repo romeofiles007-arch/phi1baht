@@ -14,11 +14,16 @@ import { ROOT } from './config.mjs'
 
 export const STYLE_KIT_DIR = join(ROOT, 'extension', 'style-kit')
 const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' }
-/** ภาพฉากมาก่อน (ตรงกับช็อตในเรื่อง) → แถบชุดสี → ปก (มีตัวหนังสือ/โลโก้ ใช้เมื่อไม่มีอย่างอื่น) */
+/** ลำดับชนิดภาพ — ใช้เรียงเท่านั้น ช็อตในเรื่องรับแค่ kind 'scene' (ดู styleKitFiles) */
 const KIND_RANK = { scene: 0, palette: 1, cover: 2 }
 
-/** ไฟล์ของ kit ที่ใช้กับหมวดนี้ (ยังไม่อ่านเนื้อไฟล์) — dir ใช้ตอนทดสอบ */
-export function styleKitFiles(categoryId, { max = 2, dir = STYLE_KIT_DIR } = {}) {
+/**
+ * ไฟล์ของ kit ที่ใช้กับหมวดนี้ (ยังไม่อ่านเนื้อไฟล์) — dir ใช้ตอนทดสอบ
+ * kinds เริ่มต้น ['scene']: ภาพปก (kind 'cover') มีตัวหนังสือ/โลโก้ ห้ามแนบให้ช็อตในเรื่อง
+ *   (ปกกับช็อตส่งใน Flow request เดียวกัน ใช้ attachments ชุดเดียวกัน → ไม่แนบปกเลย)
+ * หมวดที่ไม่มีฉากของตัวเอง → ใช้ฉากของหมวดอื่นแทน (ไม่เกิน max) ไม่เอาปก
+ */
+export function styleKitFiles(categoryId, { max = 2, dir = STYLE_KIT_DIR, kinds = ['scene'] } = {}) {
   let kit
   try {
     kit = JSON.parse(readFileSync(join(dir, 'kit.json'), 'utf8'))
@@ -27,11 +32,11 @@ export function styleKitFiles(categoryId, { max = 2, dir = STYLE_KIT_DIR } = {})
   }
   const root = resolve(dir)
   const entries = Array.isArray(kit?.files) ? kit.files : []
-  return entries
+  const all = entries
     .map((entry, order) => ({ ...entry, order, path: resolve(root, String(entry?.file ?? '')) }))
     .filter((f) => {
       if (typeof f.file !== 'string' || !MIME[extname(f.file).toLowerCase()]) return false
-      if (!Array.isArray(f.categories) || !f.categories.includes(categoryId)) return false // ชุดสีหมวดอื่นไม่ปน
+      if (!Array.isArray(f.categories) || !kinds.includes(f.kind ?? 'scene')) return false
       const rel = relative(root, f.path)
       if (!rel || rel.startsWith('..') || isAbsolute(rel) || /(^|[\\/])references([\\/]|$)/i.test(rel)) return false
       try {
@@ -41,6 +46,8 @@ export function styleKitFiles(categoryId, { max = 2, dir = STYLE_KIT_DIR } = {})
       }
     })
     .sort((a, b) => (KIND_RANK[a.kind] ?? 0) - (KIND_RANK[b.kind] ?? 0) || a.order - b.order)
+  const own = all.filter((f) => f.categories.includes(categoryId))
+  return (own.length ? own : all)
     .slice(0, Math.max(0, max))
     .map(({ file, categories, kind, path }) => ({ file, categories, kind: KIND_RANK[kind] === undefined ? 'scene' : kind, path }))
 }

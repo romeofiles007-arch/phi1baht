@@ -7,6 +7,8 @@
 export const EXCLUDE = [
   /^\.impeccable\//,
   /^docs\/design\//,
+  /^references\//, // ภาพเล่มจริง (ลิขสิทธิ์นักวาด) ใช้ในเครื่องเท่านั้น
+  /^assets\/style-kit-raw\//, // ต้นฉบับ PNG ใหญ่ — เก็บใน git เท่านั้น ไม่ส่งลูกค้า
   /^scripts\/(test-|preview-|selftest|build-icons|build-package|build-setup|build-installer)/,
   /^docs\/superpowers\//,
   /^installer\//, // สคริปต์สร้าง Setup.exe — ของนักพัฒนา

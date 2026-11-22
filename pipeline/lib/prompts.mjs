@@ -125,14 +125,15 @@ export function orientationRule(config = loadConfig()) {
 }
 
 /**
- * ภาพ Style Kit ที่แนบให้ Flow (5_images.mjs แนบต่อท้ายรูปตัวละคร) — บอก agent ว่าเป็นแบบลายเส้น ไม่ใช่ตัวละคร
- * kit ว่าง = ไม่มีบรรทัดนี้
+ * ภาพ Style Kit ที่แนบให้ Flow (5_images.mjs แนบต่อท้ายรูปตัวละคร) — บอก agent ว่าเป็นแบบลายเส้นเท่านั้น ไม่ใช่ตัวละคร
+ * characterCount = จำนวนรูปตัวละครหลักที่แนบก่อนหน้า (ให้บอกลำดับได้ชัด) · kit ว่าง = ไม่มีบรรทัดนี้
  */
-export function styleKitFlowNote(categoryId) {
+export function styleKitFlowNote(categoryId, characterCount = 0) {
   const files = styleKitFiles(categoryId)
   if (!files.length) return ''
-  const names = files.map((f) => f.file.split(/[\\/]/).pop()).join(', ')
-  return `ภาพอ้างอิงลายเส้น ${files.length} ภาพที่แนบท้าย (Style Kit: ${names}) เป็นแบบเส้นหมึก การแรเงา การลงสี และเนื้อกระดาษ — วาดทุกภาพด้วยเทคนิคเดียวกับภาพนี้ แต่ห้ามลอกตัวละคร ฉาก หรือองค์ประกอบจากภาพนั้น`
+  const names = files.map((f) => f.file.split(/[\/]/).pop()).join(', ')
+  const where = characterCount > 0 ? `รูปที่แนบลำดับที่ ${characterCount + 1}–${characterCount + files.length} (ท้ายสุด)` : `รูปที่แนบทั้ง ${files.length} รูป`
+  return `${where} (${names}) เป็นภาพอ้างอิงลายเส้นเท่านั้น (Style Kit) — ใช้เป็นแบบเทคนิคเส้นหมึก การแรเงา การลงสี และเนื้อกระดาษ ไม่ใช่ตัวละคร: ห้ามวาดตัวละคร ฉาก หรือองค์ประกอบจากภาพเหล่านี้ลงในผลงาน${characterCount > 0 ? ` ตัวละครหลักคือ ${characterCount} รูปแรกเท่านั้น` : ''}`
 }
 
 /** ข้อความที่วางลง Flow — คำกำกับข้างบนตามที่ผู้ใช้ระบุในข้อ 5 ของสเปก */
@@ -141,7 +142,7 @@ export function flowPrompt(agentBrief, config = loadConfig(), slug = null) {
   const character = activeCharacter(slug)
   const profile = readProfile(slug)
   const charNote = characterFlowNote(character, profile)
-  const kitNote = styleKitFlowNote(profile?.category)
+  const kitNote = styleKitFlowNote(profile?.category, character?.images?.length ?? 0)
   return `สร้างรูป ตามนี้ อย่าลืม lock ตัวละครต่างๆ ด้วยนะ
 เริ่มสร้างภาพทุกช็อตทันทีจนครบ ไม่ต้องสรุปแผน Storyboard และไม่ต้องถามยืนยันก่อน
 ${bodyStyleFlowNote(character, profile)}

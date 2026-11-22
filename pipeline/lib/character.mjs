@@ -110,5 +110,6 @@ export function bodyStyleFlowNote(c = activeCharacter(), profile = null) {
 /** ข้อความต่อท้ายคำสั่ง Flow เมื่อแนบรูปตัวละคร (ตัวละครหลักตามลายเส้นของคลิป) */
 export function characterFlowNote(c = activeCharacter(), profile = null) {
   if (!c?.images.length) return ''
-  return 'รูปที่แนบคือตัวละครหลัก ล็อกหน้าตา ทรงผม สี และชุดตามรูปนี้ในทุกภาพ'
+  const n = c.images.length
+  return `รูปที่แนบ ${n} รูปแรก (ลำดับที่ 1–${n}) คือตัวละครหลักของคลิป — ล็อกหน้าตา ทรงผม สี และชุดตามรูปเหล่านี้ในทุกภาพ (รูปที่แนบหลังจากนั้นเป็นแค่ภาพอ้างอิงลายเส้น ไม่ใช่ตัวละคร)`
 }
