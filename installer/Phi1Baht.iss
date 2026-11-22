@@ -40,7 +40,7 @@ Name: "thai"; MessagesFile: "compiler:Languages\Thai.isl"
 
 [Messages]
 thai.FinishedHeadingLabel=ติดตั้ง {#AppName} เสร็จแล้ว
-thai.FinishedLabel=เหลือขั้นสุดท้ายใน Chrome ทำครั้งเดียว (Chrome ไม่ให้โปรแกรมทำแทน):%n%n1. ในหน้า chrome://extensions ที่เปิดไว้ให้ เปิดสวิตช์ "Developer mode" มุมขวาบน%n2. กด "Load unpacked"%n3. คลิกช่องที่อยู่ด้านบนของหน้าต่าง กด Ctrl+V (คัดลอกไว้ให้แล้ว) แล้ว Enter → Select Folder%n4. กดไอคอนจิ๊กซอว์บนแถบ Chrome → ปักหมุด {#AppName} → กดไอคอน%n%nก่อนใช้งาน ล็อกอิน ChatGPT และ Google Flow ใน Chrome ไว้%nเคยติดตั้งแล้ว (อัปเดต) ข้ามขั้นนี้ได้ · ทำซ้ำได้จากไอคอน "{#AppName} - ตั้งค่า Chrome" บนเดสก์ท็อป
+thai.FinishedLabel=เหลือขั้นสุดท้ายใน Chrome ทำครั้งเดียว (Chrome ไม่ให้โปรแกรมทำแทน):%n%n0. ใช้ Chrome profile ของบัญชีผี 1 บาท (แยกจากแอปอื่น — จะได้ใช้พร้อมกันได้โดยแท็บไม่ชนกัน) แล้วทำข้อ 1-4 ใน profile นั้น%n1. ในหน้า chrome://extensions ที่เปิดไว้ให้ เปิดสวิตช์ "Developer mode" มุมขวาบน%n2. กด "Load unpacked"%n3. คลิกช่องที่อยู่ด้านบนของหน้าต่าง กด Ctrl+V (คัดลอกไว้ให้แล้ว) แล้ว Enter → Select Folder%n4. กดไอคอนจิ๊กซอว์บนแถบ Chrome → ปักหมุด {#AppName} → กดไอคอน%n%nก่อนใช้งาน ล็อกอิน ChatGPT และ Google Flow ใน Chrome profile นั้นไว้ (TikTok/Facebook ถ้าจะโพสต์)%nเคยติดตั้งแล้ว (อัปเดต) ข้ามขั้นนี้ได้ · ทำซ้ำได้จากไอคอน "{#AppName} - ตั้งค่า Chrome" บนเดสก์ท็อป
 
 [Tasks]
 Name: "desktopicon"; Description: "สร้างไอคอนบนเดสก์ท็อป"

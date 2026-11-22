@@ -241,7 +241,8 @@ export function createPackageUpdater({ log = () => {}, busy = () => false, cwd, 
 
       // ตรวจก่อนแตะเครื่องลูกค้า — ไม่ครบ = ไม่เปลี่ยนอะไรเลย
       const missing = MUST_HAVE.filter((f) => !existsSync(join(src, f)))
-      const bad = [...missing.map((f) => `ไม่มี ${f}`), ...installerProblems((f) => (existsSync(join(src, f)) ? readFileSync(join(src, f)) : null))]
+      const bad = [...missing.map((f) => `ไม่มี ${f}`), ...installerProblems((f) => (existsSync(join(src, f)) ? readFileSync(join(src, f)) : null), { requireSetupExe: false })]
+      // (setup.exe ไม่ขึ้น git — มีในเครื่องลูกค้าอยู่แล้ว จึงไม่ถือว่าขาด)
       if (bad.length) throw new Error(`รุ่นใหม่บน GitHub ไม่ครบ ระบบไม่ได้เปลี่ยนอะไร: ${bad.join(' · ')}`)
 
       const { changed, removed, failed, shipped } = installTree(src, cwd, v.files ?? [])

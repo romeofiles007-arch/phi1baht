@@ -72,6 +72,10 @@ for (const rel of tracked) {
 }
 console.log(`  ${copied} ไฟล์`)
 
+// setup.exe คอมไพล์จาก native/setup.cs (scripts/build-setup.mjs) และไม่ขึ้น git — ต้องหยิบจากรากโปรเจกต์เอง
+if (!existsSync(join(ROOT, 'setup.exe'))) throw new Error('ไม่พบ setup.exe — รัน node scripts/build-setup.mjs ก่อน (build-installer.mjs ทำให้เอง)')
+copyFileSync(join(ROOT, 'setup.exe'), join(OUT, 'setup.exe'))
+
 // การตั้งค่า: ส่งเป็น default.config.json เท่านั้น — ไม่ส่ง project.config.json (ไฟล์ค่าของลูกค้า)
 // ลูกค้าวางแพ็กเกจรุ่นใหม่ทับโฟลเดอร์เดิม ค่าที่ตั้งไว้จึงไม่ถูกทับ (ดู loadConfig ใน pipeline/lib/config.mjs)
 // ใช้ค่าปัจจุบันของเราเป็นค่าเริ่มต้น แต่ล้างสิ่งที่ผูกกับบัญชี/เครื่องของเรา
@@ -154,27 +158,12 @@ if (!repo) console.warn('  ⚠️ ไม่พบ repo GitHub ที่ push ข
 if (dirty) console.warn('  ⚠️ มีงานที่ยังไม่ commit — ลูกค้าอัปเดตเองได้เฉพาะของที่ push ขึ้น GitHub แล้ว')
 writeFileSync(join(OUT, 'VERSION.json'), JSON.stringify({ commit, sha, dirty, builtAt: new Date().toISOString(), repo, branch, files: shipped.sort() }, null, 2) + '\n')
 
-writeFileSync(join(OUT, 'อ่านก่อนใช้งาน.txt'), [
-  'ผี 1 บาท — ระบบทำคลิปการ์ตูนอัตโนมัติ',
-  '',
-  'สิ่งที่ต้องมี: Windows 10/11 · Google Chrome ที่ล็อกอิน ChatGPT และ Google Flow ไว้',
-  '(ไม่ต้องติดตั้ง Node.js / ffmpeg / Python — แถมมาในโฟลเดอร์ runtime แล้ว)',
-  '',
-  'วิธีติดตั้ง (ครั้งเดียว)',
-  '  1. วางโฟลเดอร์นี้ไว้ที่ไหนก็ได้ เช่น D:\\Phi1Baht (อย่าวางใน Downloads ที่อาจถูกลบ)',
-  '  2. ดับเบิลคลิก ติดตั้งครั้งแรก.bat — Chrome จะเปิดหน้า extensions ให้เอง',
-  '  3. ทำตามขั้นที่ขึ้นในหน้าต่างดำ (เปิด Developer mode → Load unpacked → วางที่อยู่ที่คัดลอกไว้ให้)',
-  '  4. กดไอคอน ผี 1 บาท บนแถบ Chrome — โปรแกรมเปิดเอง',
-  '',
-  'ย้ายโฟลเดอร์ทีหลัง → ดับเบิลคลิก ติดตั้งครั้งแรก.bat อีกครั้ง',
-  'อัปเดตเป็นรุ่นใหม่ → โปรแกรมตรวจเองทุก 30 นาที มีรุ่นใหม่จะขึ้นแถบ "มีอัปเดตใหม่" ในแผงข้าง กด "อัปเดต" ได้เลย',
-  '                    (การตั้งค่า งานคลิป และเสียงที่ทำไว้ไม่หาย · อัปเดตได้เมื่อไม่ได้ทำคลิปอยู่)',
-  'ถอนการติดตั้ง → ดับเบิลคลิก ถอนการติดตั้ง.bat — ปิดโปรแกรม ตัดการเชื่อมกับ Chrome ลบ shortcut และถามก่อนลบโฟลเดอร์นี้',
-  '                    (ลบโฟลเดอร์ = งานคลิปและการตั้งค่าหายด้วย · extension ใน Chrome ต้องกด Remove เอง ระบบเปิดหน้าให้)',
-  '',
-  `รุ่น ${commit}${dirty ? ' (+ งานที่ยังไม่ commit)' : ''} · สร้างเมื่อ ${new Date().toLocaleString('th-TH')}`,
-  '',
-].join('\r\n'))
+// คู่มือลูกค้า = ไฟล์ อ่านก่อนใช้งาน.txt ที่รากโปรเจกต์ (ถูกคัดลอกมาแล้วในขั้นโค้ด) + บรรทัดรุ่น
+{
+  const guide = join(OUT, 'อ่านก่อนใช้งาน.txt')
+  const body = existsSync(guide) ? readFileSync(guide, 'utf8').replace(/\s+$/, '') : 'ผี 1 บาท'
+  writeFileSync(guide, `${body}\r\n\r\nรุ่น ${commit}${dirty ? ' (+ งานที่ยังไม่ commit)' : ''} · สร้างเมื่อ ${new Date().toLocaleString('th-TH')}\r\n`)
+}
 
 // ── ตัวติดตั้งต้องอยู่ครบและอ่านได้บนเครื่องลูกค้า ──
 step('ตรวจไฟล์ตัวติดตั้ง')

@@ -57,3 +57,7 @@ music/
 references/
 # พื้นที่ทำงานของ superpowers (ledger/brief/review)
 .superpowers/
+
+# ไฟล์ลงทะเบียน native host ที่ตัวติดตั้งสร้างต่อเครื่อง (มี path ของเครื่อง)
+native/com.phi1baht.bridge.json
+.env.*

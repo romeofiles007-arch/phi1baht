@@ -24,6 +24,9 @@ if (!iscc) throw new Error('ไม่พบ Inno Setup 6 — winget install --id
 
 const version = JSON.parse(readFileSync(join(ROOT, 'extension', 'manifest.json'), 'utf8')).version
 
+console.log('▸ คอมไพล์ setup.exe')
+execFileSync(process.execPath, [join(ROOT, 'scripts', 'build-setup.mjs')], { cwd: ROOT, stdio: 'inherit' })
+
 console.log('▸ สร้างแพ็กเกจ')
 execFileSync(process.execPath, [join(ROOT, 'scripts', 'build-package.mjs')], { cwd: ROOT, stdio: 'inherit' })
 

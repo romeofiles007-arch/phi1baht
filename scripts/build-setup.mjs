@@ -1,6 +1,6 @@
 // คอมไพล์ native/setup.cs → setup.exe ที่รากโปรเจกต์ (ด้วย csc.exe ที่มากับ Windows — ไม่ต้องลงอะไรเพิ่ม)
 // ใช้: node scripts/build-setup.mjs
-// setup.exe ขึ้น repo ด้วย เพราะลูกค้าดาวน์โหลดจาก GitHub ตรง ๆ — แก้ setup.cs แล้วต้องรันสคริปต์นี้ใหม่ทุกครั้ง
+// setup.exe ไม่ขึ้น repo (.gitignore) — build-package.mjs หยิบจากรากโปรเจกต์ใส่แพ็กเกจเอง · ตัวอัปเดตไม่แตะมัน
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'

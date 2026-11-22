@@ -9,6 +9,12 @@ export const EXCLUDE = [
   /^docs\/design\//,
   /^references\//, // ภาพเล่มจริง (ลิขสิทธิ์นักวาด) ใช้ในเครื่องเท่านั้น
   /^assets\/style-kit-raw\//, // ต้นฉบับ PNG ใหญ่ — เก็บใน git เท่านั้น ไม่ส่งลูกค้า
+  /^assets\/phi-raw\//, // ต้นฉบับภาพ PNG ใหญ่ของนักพัฒนา — ไม่ส่งลูกค้า
+  /^\.env$/,
+  /^native\/\.keys\//, // คีย์ลงนาม extension
+  /^native\/com\.phi1baht\.bridge\.json$/, // ไฟล์ลงทะเบียนที่ตัวติดตั้งสร้างต่อเครื่อง (มี path ของเครื่องนั้น)
+  /^\.superpowers\//,
+  /^projects\/(?!(topics|_topic_history)\.json$)/, // งานคลิปของผู้ใช้ — ลูกค้าได้เฉพาะไฟล์ค่าว่างใน RESET
   /^scripts\/(test-|preview-|selftest|build-icons|build-package|build-setup|build-installer)/,
   /^docs\/superpowers\//,
   /^installer\//, // สคริปต์สร้าง Setup.exe — ของนักพัฒนา
@@ -63,7 +69,7 @@ export function customerDefaults(config) {
 }
 
 /** ไฟล์ที่ cmd.exe / PowerShell 5 ต้องอ่านได้ — คืนรายการปัญหา (ว่าง = ผ่าน) */
-export function installerProblems(read) {
+export function installerProblems(read, { requireSetupExe = true } = {}) {
   const bad = []
   for (const bat of ['ติดตั้งครั้งแรก.bat', 'เปิดโปรแกรม.bat', 'ปิดโปรแกรม.bat', 'ถอนการติดตั้ง.bat']) {
     const buf = read(bat)
@@ -75,7 +81,7 @@ export function installerProblems(read) {
   if (read('ติดตั้งครั้งแรก.bat')?.some((b) => b > 0x7f)) bad.push('ติดตั้งครั้งแรก.bat มีอักษรที่ไม่ใช่ ASCII')
   const ps = read('native/bootstrap.ps1')
   if (!ps || !(ps[0] === 0xef && ps[1] === 0xbb && ps[2] === 0xbf)) bad.push('native/bootstrap.ps1 ต้องเป็น UTF-8 แบบมี BOM (PowerShell 5 อ่านภาษาไทยเพี้ยน)')
-  for (const f of ['native/install.mjs', 'native/host.mjs', 'native/extension-id.txt', 'setup.exe']) if (!read(f)) bad.push(`ไม่มี ${f}`)
+  for (const f of ['native/install.mjs', 'native/host.mjs', 'native/extension-id.txt', ...(requireSetupExe ? ['setup.exe'] : [])]) if (!read(f)) bad.push(`ไม่มี ${f}`)
   return bad
 }
 
