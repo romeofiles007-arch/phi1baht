@@ -27,8 +27,7 @@ import { shotlistFiles, readRounds, resetRounds, mergeRounds, saveRound, nextRou
 import { collectImages } from './lib/shotfile.mjs'
 import { characterAttachments, activeCharacter } from './lib/character.mjs'
 import { ensureProfile } from './lib/clip_profile.mjs'
-import { reviseLengthPrompt, paceOf, categoryOf, resolveMood } from '../extension/prompts.js'
-import { selfNarratorReady, SELF_NOT_READY } from './lib/self_narrator.mjs'
+import { reviseLengthPrompt, paceOf, resolveMood } from '../extension/prompts.js'
 import { hasCover } from './lib/cover.mjs'
 import { clipSettings, clipTarget, clipScopeLabel, clipsDir, collectClips, scenes } from './lib/clips.mjs'
 import { kieKey, kieTier, kieBalance } from './lib/kie.mjs'
@@ -61,12 +60,6 @@ if (!title && !autoTopic) {
   process.exit(1)
 }
 
-// โหมดพระสอนธรรมต้องมีรูปหน้าพระก่อน — เช็คก่อนเสียเวลาคิดหัวข้อ/เขียนบท
-if (categoryOf(config.script.genre)?.id === 'self' && !selfNarratorReady()) {
-  console.error(`❌ ${SELF_NOT_READY}`)
-  process.exit(1)
-}
-
 // แนวเนื้อหา (ตั้งค่าคลิป): "สุ่ม" → เลือกครั้งเดียวตอนนี้ ให้หัวข้อ บท และโปรไฟล์ของคลิปเป็นแนวเดียวกัน
 process.env.CLIP_MOOD = resolveMood(process.env.CLIP_MOOD || config.script.mood)
 
@@ -75,7 +68,7 @@ let topicPick = null
 if (autoTopic) {
   const { listDoneTitles, listSeenTitles, addSeenTitles } = await import('./lib/topics.mjs')
   const { recentTopics, screenTopics, GUARD_WINDOW } = await import('./lib/topic-guard.mjs')
-  const { pickVaried, storyTitlesFirst } = await import('../extension/prompts.js')
+  const { storyTitlesFirst } = await import('../extension/prompts.js')
   const done = listDoneTitles()
   // ตัวกันทำเรื่องซ้ำ: เทียบกับเรื่องที่ทำไปแล้ว 100 เรื่องล่าสุด (ดู lib/topic-guard.mjs)
   const recent = recentTopics(GUARD_WINDOW)
@@ -121,9 +114,8 @@ if (autoTopic) {
     if (!screened.judged && recent.length && screened.fresh.length) console.warn(`   ⚠ ChatGPT ตรวจเรื่องซ้ำไม่สำเร็จ${screened.error ? ` (${screened.error.message})` : ''} — ใช้ผลตรวจชื่อเรื่องในเครื่องอย่างเดียว`)
     rejected.push(...screened.rejected)
     guard = { window: recent.length, judged: screened.judged }
-    // คะแนนสูงสุดมักเป็นคนดังคนเดิม (ขงเบ้ง) — เรียงใหม่ให้หลีกคน/เรื่องที่เพิ่งทำ
     // ชื่อแนวสอน/ฮาวทูไม่เอา (บทเล่าเรื่องอย่างเดียวแล้ว) — ทุกข้อเป็นแนวสอนก็ยังใช้ ไม่ให้งานค้าง
-    topics = pickVaried(storyTitlesFirst(screened.fresh), recent.map((r) => r.title))
+    topics = storyTitlesFirst(screened.fresh)
     if (!topics.length) console.warn(`   หัวข้อที่เสนอซ้ำกับเรื่องที่ทำไปแล้วทุกข้อ — ขอชุดใหม่ (${attempt}/3)`)
   }
   if (!topics.length) {
@@ -674,7 +666,7 @@ async function editDepartment() {
 const WORK = { script: scriptDepartment, voice: voiceDepartment, art: artDepartment, images: imagesDepartment, clips: clipsDepartment, edit: editDepartment }
 
 console.log(`🎬 ทำคลิปอัตโนมัติ: ${title}`)
-console.log(`   ${({ en: 'อังกฤษ', zh: 'จีน' })[config.script.language] ?? 'ไทย'} · ${config.script.targetMinutes} นาที · เสียง ${config.tts.engine}`)
+console.log(`   ${config.script.language === 'en' ? 'อังกฤษ' : 'ไทย'} · ${config.script.targetMinutes} นาที · เสียง ${config.tts.engine}`)
 await requireBridge()
 
 // ข้อความโพสต์ (ชื่อคลิป คำบรรยาย แฮชแท็ก) — เริ่มคิดตอน Flow วาดภาพ (ChatGPT ว่างช่วงนั้น) ไม่ต้องรอตอนท้าย

@@ -14,7 +14,7 @@ import { pipeline as pipeStreams } from 'node:stream/promises'
 import { join, resolve, sep, extname } from 'node:path'
 import { ROOT, loadConfig, updateConfig, slugify } from '../pipeline/lib/config.mjs'
 import { topicsPrompt, scriptPrompt, parseTopics, cleanScript, GENRES } from '../pipeline/lib/prompts.mjs'
-import { ART_STYLES, RETIRED_ART_STYLES, NARRATIONS, MOODS, categoryOf } from '../extension/prompts.js'
+import { ART_STYLES, RETIRED_ART_STYLES, MOODS } from '../extension/prompts.js'
 import { createProduction } from './production.js'
 import { saveScript, loadScript } from '../pipeline/lib/stage2.mjs'
 import { createRunner } from './runner.js'
@@ -35,8 +35,6 @@ import { checklist } from './checklist.js'
 import { autopilotProgress } from '../pipeline/lib/progress.mjs'
 import { ensureProfile } from '../pipeline/lib/clip_profile.mjs'
 import { readCharacter, updateCharacter, addCharacterImage, removeCharacterImage, clearCharacter, characterAttachments, activeCharacter, CHARACTER_DIR } from '../pipeline/lib/character.mjs'
-import { readSelfMonk, updateSelfMonk, addSelfMonkImage, removeSelfMonkImage, selfMime, selfMonkReady, SELF_NOT_READY, SELF_DIR, MAX_SELF_IMAGES } from '../pipeline/lib/self_monk.mjs'
-import { readMyBuddha, updateMyBuddha, addMyBuddhaImage, removeMyBuddhaImage, MY_BUDDHA_DIR, MAX_MY_BUDDHA_IMAGES } from '../pipeline/lib/my_buddha.mjs'
 import { PAUSE_PRESETS, MOTION_PRESETS } from '../pipeline/lib/ffmpeg.mjs'
 import { SUBTITLE_STYLES } from '../pipeline/lib/subtitles.mjs'
 import { bgmMode, bgmTracks, bgmLevel, BGM_LEVELS } from '../pipeline/lib/bgm.mjs'
@@ -338,7 +336,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
         const { topics, n, script, language, targetMinutes } = await readBody(req)
         const topic = (topics ?? []).find((t) => t.n === Number(n))
         if (!topic || !String(script ?? '').trim()) return json(res, 400, { error: 'ต้องมีหัวข้อที่เลือกและบทพากย์' }), true
-        if (!['th', 'en', 'zh'].includes(language)) return json(res, 400, { error: 'ภาษาต้องเป็น th, en หรือ zh' }), true
+        if (!['th', 'en'].includes(language)) return json(res, 400, { error: 'ภาษาต้องเป็น th หรือ en' }), true
         const cleanTopics = topics.map((t) => ({ n: Number(t.n), title: String(t.title) }))
         mkdirSync(join(ROOT, 'projects'), { recursive: true })
         writeFileSync(TOPICS_FILE, JSON.stringify(cleanTopics, null, 2))
@@ -626,7 +624,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
       // ── นำเข้าเสียงพากย์จากที่อื่น → ถอดเสียง → timecode (แทนขั้นทำเสียงด้วย TTS) ──
       if (req.method === 'POST' && path === '/api/audio/import') {
         const name = String(url.searchParams.get('name') ?? '').replace(/[\\/:*?"<>|]+/g, '_').slice(-120)
-        const language = ['en', 'zh'].includes(url.searchParams.get('language')) ? url.searchParams.get('language') : 'th'
+        const language = url.searchParams.get('language') === 'en' ? url.searchParams.get('language') : 'th'
         const title = String(url.searchParams.get('title') ?? '').trim()
         const ext = name.split('.').pop().toLowerCase()
         if (!['wav', 'mp3', 'm4a', 'aac', 'flac', 'ogg', 'opus', 'webm', 'mp4'].includes(ext)) {
@@ -702,10 +700,8 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
           title: readFileSync(join(ROOT, 'projects', slug, '01_script', 'title.txt'), 'utf8').trim(),
           timecodeText: readFileSync(join(ROOT, 'projects', slug, '03_timecode', 'timecode.txt'), 'utf8'),
         })
-        // หมวด + ภาพอ้างอิงพระเกจิ ต้องมีก่อนขอ prompt ภาพรอบแรก (ทำครั้งเดียว เก็บใน 00_ref/)
-        // โหมดพระสอนธรรมเลือกไว้ → คลิปที่ทำทีละขั้นเป็นโหมดนั้น (ไม่เดาจากชื่อเรื่อง ซึ่งไม่มีวันได้โหมดนี้)
-        const chosen = loadConfig().script.genre
-        await ensureProfile(slug, { title: context().title, genre: categoryOf(chosen)?.exclusive ? chosen : undefined }).catch(() => null)
+        // หมวดของคลิปต้องมีก่อนขอ prompt ภาพรอบแรก (ทำครั้งเดียว เก็บใน 00_ref/)
+        await ensureProfile(slug, { title: context().title }).catch(() => null)
         const withNext = (merged) => {
           const next = nextRoundPrompt(loadConfig(), slug, context())
           // รอบแรกที่ใช้ตัวละครของฉัน → แผงข้างแนบรูปไปกับ prompt ด้วย
@@ -819,11 +815,10 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
         if (clipSettings(config).enabled && !hasKey('KIE_API_KEY')) {
           return json(res, 400, { error: 'เปิดแอนิเมชัน Kie อยู่ แต่ยังไม่มี API key — กรอกในตั้งค่าม้าน้ำ หรือเลือกปิดเพื่อใช้ภาพนิ่ง' }), true
         }
-        const language = ['th', 'en', 'zh'].includes(body.language) ? body.language : config.script.language
-        const titleLanguage = ['th', 'en', 'zh'].includes(body.titleLanguage) ? body.titleLanguage : (config.script.titleLanguage ?? language)
+        const language = ['th', 'en'].includes(body.language) ? body.language : config.script.language
+        const titleLanguage = ['th', 'en'].includes(body.titleLanguage) ? body.titleLanguage : (config.script.titleLanguage ?? language)
         const minutes = Number(body.minutes) > 0 ? Number(body.minutes) : config.script.targetMinutes
         const genre = GENRES.includes(body.genre) ? body.genre : 'mix'
-        if (categoryOf(genre)?.id === 'self' && !selfMonkReady()) return json(res, 400, { error: SELF_NOT_READY }), true
         // เริ่มใหม่ตั้งแต่แผนกที่เลือก (ไม่ใส่ = ทำต่อจากที่ค้าง) — ต้องมีหัวข้อ ใช้กับคลิปที่มีอยู่แล้ว
         const restartFrom = title && ['script', 'voice', 'art', 'images', 'clips', 'edit'].includes(body.restartFrom) ? body.restartFrom : null
         const slug = autoTopic ? null : slugify(title)
@@ -923,40 +918,6 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
         if (req.method === 'POST' && path === '/api/character/clear') return json(res, 200, view(clearCharacter())), true
       }
 
-      // ── พระของฉัน (โหมดพระสอนธรรม) — รูปหน้าพระ + ชื่อที่ใช้ในคลิป · เก็บในเครื่อง characters/self/ ──
-      if (path === '/api/self-monk' || path.startsWith('/api/self-monk/')) {
-        const view = (m) => ({
-          ...m,
-          ready: m.images.length > 0,
-          max: MAX_SELF_IMAGES,
-          previews: m.images.map((name) => ({ name, dataUrl: `data:${selfMime(name)};base64,${readFileSync(join(SELF_DIR, name)).toString('base64')}` })),
-        })
-        if (req.method === 'GET' && path === '/api/self-monk') return json(res, 200, view(readSelfMonk())), true
-        if (req.method === 'POST' && path === '/api/self-monk') return json(res, 200, view(updateSelfMonk(await readBody(req)))), true
-        if (req.method === 'POST' && path === '/api/self-monk/image') return json(res, 200, view(addSelfMonkImage(await readBody(req)))), true
-        if (req.method === 'POST' && path === '/api/self-monk/image/delete') {
-          const { name } = await readBody(req)
-          return json(res, 200, view(removeSelfMonkImage(String(name)))), true
-        }
-      }
-
-      // ── พระพุทธเจ้าของฉัน (หมวด 1) — ภาพอ้างอิงที่ผู้ใช้เลือกเอง แทนพระพุทธรูปจากวิกิพีเดีย · เก็บที่ characters/buddha/ ──
-      if (path === '/api/my-buddha' || path.startsWith('/api/my-buddha/')) {
-        const view = (m) => ({
-          ...m,
-          ready: m.images.length > 0,
-          max: MAX_MY_BUDDHA_IMAGES,
-          previews: m.images.map((name) => ({ name, dataUrl: `data:${selfMime(name)};base64,${readFileSync(join(MY_BUDDHA_DIR, name)).toString('base64')}` })),
-        })
-        if (req.method === 'GET' && path === '/api/my-buddha') return json(res, 200, view(readMyBuddha())), true
-        if (req.method === 'POST' && path === '/api/my-buddha') return json(res, 200, view(updateMyBuddha(await readBody(req)))), true
-        if (req.method === 'POST' && path === '/api/my-buddha/image') return json(res, 200, view(addMyBuddhaImage(await readBody(req)))), true
-        if (req.method === 'POST' && path === '/api/my-buddha/image/delete') {
-          const { name } = await readBody(req)
-          return json(res, 200, view(removeMyBuddhaImage(String(name)))), true
-        }
-      }
-
       // ── ตั้งค่าคลิป: แนวภาพ · ซับไตเติล · ช่วงเงียบระหว่างประโยค ──
       if (path === '/api/clip-settings') {
         if (req.method === 'POST') {
@@ -965,7 +926,6 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
             if (['landscape', 'portrait'].includes(body.orientation)) c.render.orientation = body.orientation
             // ลายเส้น + วิธีเล่าหมวด 1 — ใช้กับคลิปใหม่ (คลิปเดิมจำแบบที่ใช้ไว้ใน 00_ref/profile.json)
             if (ART_STYLES[body.artStyle]) c.art = { ...(c.art ?? {}), style: body.artStyle }
-            if (NARRATIONS[body.narration]) c.script.narration = body.narration
             // หมวดเนื้อหาที่เลือกในแผงข้าง — ผลิตต่อเนื่องใช้ค่านี้ (เดิมแผงข้างไม่ได้บันทึก ผลิตต่อเนื่องเลยไม่รู้หมวดที่เลือก)
             if (body.genre === 'mix' || GENRES.includes(body.genre)) c.script.genre = body.genre
             if (MOTION_PRESETS[body.motion]) c.render.motion = body.motion
@@ -1010,7 +970,6 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
         return json(res, 200, {
           orientation: c.render.orientation === 'portrait' ? 'portrait' : 'landscape',
           artStyle: ART_STYLES[RETIRED_ART_STYLES[c.art?.style] ?? c.art?.style] ? RETIRED_ART_STYLES[c.art.style] ?? c.art.style : 'doodle',
-          narration: NARRATIONS[c.script.narration] ? c.script.narration : 'novel',
           subtitles: SUBTITLE_STYLES[c.render.subtitles?.style] ? c.render.subtitles.style : 'off',
           pause: PAUSE_PRESETS[c.tts.pause] ? c.tts.pause : 'normal',
           motion: MOTION_PRESETS[c.render.motion] ? c.render.motion : 'off',
@@ -1029,7 +988,6 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
           kie: { hasKey: hasKey('KIE_API_KEY'), ...kieTier(clips.tier) },
           options: {
             artStyle: Object.entries(ART_STYLES).map(([id, s]) => ({ id, label: s.label })),
-            narration: Object.entries(NARRATIONS).map(([id, s]) => ({ id, label: s.label })),
             aiCoverage: aiCoverageOptions,
             aiClips: aiCoverageOptions,
             kieTier: Object.entries(KIE_TIERS).map(([id, t]) => ({ id, label: t.label, name: t.name, credits: t.credits, detail: t.detail })),
@@ -1084,7 +1042,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
         const config = loadConfig()
         if (GENRES.includes(genre)) config.script.genre = genre
         if (titleLanguage) {
-          if (!['th', 'en', 'zh'].includes(titleLanguage)) return json(res, 400, { error: 'ภาษาต้องเป็น th, en หรือ zh' }), true
+          if (!['th', 'en'].includes(titleLanguage)) return json(res, 400, { error: 'ภาษาต้องเป็น th หรือ en' }), true
           config.script.titleLanguage = titleLanguage
         }
         const job = enqueue('chatgpt', 'prompt', {
@@ -1109,7 +1067,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
         const { language, minutes } = await readBody(req)
         const config = loadConfig()
         if (language) {
-          if (!['th', 'en', 'zh'].includes(language)) return json(res, 400, { error: 'ภาษาต้องเป็น th, en หรือ zh' }), true
+          if (!['th', 'en'].includes(language)) return json(res, 400, { error: 'ภาษาต้องเป็น th หรือ en' }), true
           config.script.language = language
         }
         if (minutes !== undefined) {

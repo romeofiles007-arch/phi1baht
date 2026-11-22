@@ -14,11 +14,9 @@ const LESSON_ASKS = [/ถอดข้อคิด/, /ข้อคิด 1 อย
   /ปิดด้วยข้อคิด/, /สุภาษิตนี้จึงหมายถึง/, /พาเรื่องกลับมาสู่ชีวิตคนดู/, /โยงเป็นวิธีคิดที่ใช้กับงานและชีวิต/, /reframe ใหม่ด้วยข้อคิด/]
 
 const PROFILES = {
-  novel: { category: 'sanguo', narration: 'novel' },
-  history: { category: 'sanguo', narration: 'history' },
+  sanguo: { category: 'sanguo' },
   sage: { category: 'sage' },
   tale: { category: 'tale' },
-  self: { category: 'self', self: { name: 'ทดสอบ' } },
 }
 
 for (const [name, profile] of Object.entries(PROFILES)) {

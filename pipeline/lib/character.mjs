@@ -12,9 +12,8 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, readdirSync } from 'node:fs'
 import { join, extname, basename } from 'node:path'
 import { ROOT } from './config.mjs'
-import { readProfile, profileImages, refDir } from './clip_profile.mjs'
-import { ART_STYLES, figureStyle, selfNarratorName } from '../../extension/prompts.js'
-import { readSelfNarrator, SELF_DIR } from './self_narrator.mjs'
+import { readProfile } from './clip_profile.mjs'
+import { ART_STYLES } from '../../extension/prompts.js'
 
 export const CHARACTER_DIR = join(ROOT, 'characters', 'current')
 const FILE = join(CHARACTER_DIR, 'character.json')
@@ -69,29 +68,18 @@ export function clearCharacter() {
 
 /**
  * ตัวละครหลักของคลิป
- *   - หมวดที่มีบุคคลจริงและมีภาพอ้างอิง → ภาพบุคคลนั้นของคลิปนั้น (projects/<slug>/00_ref/)
  *   - หมวดสามก๊ก / ปราชญ์จีนที่ไม่มีภาพ → ไม่ใช้ตัวละครของฉัน (ตัวหลักคือบุคคลในเรื่อง)
  *   - อื่นๆ → ตัวละครของฉัน ถ้าเปิดไว้และมีรูปหรือคำอธิบาย
  */
 export function activeCharacter(slug) {
   const profile = slug ? readProfile(slug) : null
-  // โหมดผู้เล่าเรื่อง: ตัวหลักคือเจ้าของช่องเอง (รูปจาก "ผู้เล่าของฉัน") — ไม่ใช้ตัวละครของฉัน
-  if (profile?.category === 'self') {
-    const m = readSelfNarrator()
-    const name = selfNarratorName(profile)
-    return { enabled: true, description: [`ผู้เล่าเรื่องในคลิป: ${name} (ตัวละคร @host)`, m.description].filter(Boolean).join(' · '), images: m.images, dir: SELF_DIR, selfHost: name, selfNote: m.description }
-  }
-  const refs = profileImages(profile, slug)
-  if (refs.length && profile.figure) {
-    return { enabled: true, description: `บุคคลหลักของคลิปนี้: ${profile.figure.name} (ตัวละคร @hero)`, images: refs.map((f) => basename(f)), dir: refDir(slug), figure: profile.figure.name }
-  }
   if (profile?.category === 'sanguo' || profile?.category === 'sage') return null
   const c = readCharacter()
   return c.enabled && (c.images.length || c.description) ? c : null
 }
 
 /** หมวดที่ตัวละครหลักต้องเป็นการ์ตูนเต็มตัวเสมอ (บุคคลในประวัติศาสตร์ ห้ามเป็นตัวก้าง) */
-const fullBodyOf = (c, profile) => !!c?.images.length || ['sanguo', 'sage', 'self'].includes(profile?.category)
+const fullBodyOf = (c, profile) => !!c?.images.length || ['sanguo', 'sage'].includes(profile?.category)
 
 /** รูปสำหรับแนบไปกับงาน (ChatGPT / Flow) */
 export function characterAttachments(c = activeCharacter()) {
@@ -106,21 +94,7 @@ export function characterAttachments(c = activeCharacter()) {
 /** กฎตัวละครสำหรับ ChatGPT รอบแรก — แทนตัวละครตัวอย่างของ Blueprint (ตัวละครหลักตามลายเส้นของคลิป) */
 export function characterRule(c = activeCharacter(), profile = null) {
   if (!c) return ''
-  const figure = figureStyle(profile)
   const lines = ['- ตัวละครหลักของคลิปนี้กำหนดไว้แล้ว — ใช้ตัวละครนี้แทนตัวละครตัวอย่างใน Blueprint (กฎอื่นของ Blueprint ใช้เหมือนเดิม)']
-  if (c.selfHost) {
-    lines.push(c.images.length
-      ? `- รูปที่แนบ ${c.images.length} รูปคือภาพจริงของ${c.selfHost} ผู้เล่าเรื่องในคลิปนี้: เขียน Character Bible ของ @host ตามรูปหน้า ใบหน้า วัย ทรงผม แว่นตา (ถ้ามี) ให้ละเอียด สวมชุดจีนโบราณเรียบๆ เป็นการ์ตูนเต็มตัวหน้าเหมือนท่าน อย่างเคารพตามกฎ SACRED FIGURES`
-      : `- ${c.selfHost} ผู้เล่าเรื่องในคลิปนี้ (@host): การ์ตูนเต็มตัว สวมชุดจีนโบราณเรียบๆ ท่าทางเป็นมิตร`)
-    if (c.selfNote) lines.push(`- รายละเอียดเพิ่มเติมของท่าน: ${c.selfNote}`)
-    lines.push('- ตัวละครอื่น (คนในเรื่องที่ยกตัวอย่าง) ออกแบบให้เข้ากับสไตล์เดียวกัน')
-    return lines.join('\n')
-  }
-  if (c.figure) {
-    lines.push(`- รูปที่แนบ ${c.images.length} รูปคือภาพวาด/รูปปั้นโบราณของ${c.figure}: เขียน Character Bible ของ @hero ตามใบหน้า เครา ทรงผม หมวก และสีชุดในรูป ทำเป็น${figure}อย่างให้เกียรติตามกฎ HISTORICAL FIGURES · ห้ามวาดเลียนแบบนักแสดง`)
-    lines.push('- ตัวละครอื่น (ขุนศึก ทหาร ชาวบ้าน ลูกศิษย์) ออกแบบให้เข้ากับสไตล์เดียวกัน')
-    return lines.join('\n')
-  }
   if (c.images.length) lines.push(`- รูปที่แนบ ${c.images.length} รูปคือตัวละครหลัก: เขียน Character Bible ตามหน้าตา ทรงผม สีผิว ชุด สี และสัดส่วนในรูปให้ละเอียด ให้ภาพทุกช็อตออกมาเป็นตัวเดียวกับในรูป`)
   if (c.description) lines.push(`- คำอธิบายตัวละครหลัก: ${c.description}`)
   lines.push('- ตัวละครรองอื่นที่เรื่องต้องใช้ ออกแบบให้เข้ากับสไตล์ของตัวละครหลัก')
@@ -149,8 +123,5 @@ export function bodyStyleFlowNote(c = activeCharacter(), profile = null) {
 /** ข้อความต่อท้ายคำสั่ง Flow เมื่อแนบรูปตัวละคร (ตัวละครหลักตามลายเส้นของคลิป) */
 export function characterFlowNote(c = activeCharacter(), profile = null) {
   if (!c?.images.length) return ''
-  const figure = figureStyle(profile)
-  if (c.selfHost) return `รูปที่แนบคือภาพจริงของ${c.selfHost} ผู้เล่าเรื่องในคลิป (ตัวละคร @host) — ทำเป็น${figure}หน้าเหมือนท่าน ห่มจีวร อย่างเคารพ ล็อกใบหน้า วัย รูปร่าง และสีจีวรตามรูปในทุกภาพ ห้ามล้อเลียน`
-  if (c.figure) return `รูปที่แนบคือภาพวาด/รูปปั้นโบราณของ${c.figure} (ตัวละคร @hero) — ทำเป็น${figure}อย่างให้เกียรติ ล็อกใบหน้า เครา ทรงผม หมวก และสีชุดตามรูปในทุกภาพ ห้ามวาดล้อเลียน ห้ามวาดเลียนแบบนักแสดง`
   return 'รูปที่แนบคือตัวละครหลัก ล็อกหน้าตา ทรงผม สี และชุดตามรูปนี้ในทุกภาพ'
 }

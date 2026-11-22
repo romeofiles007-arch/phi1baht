@@ -10,11 +10,9 @@ const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 const BLUEPRINT = read('extension/VDO Concept.txt')
 
 const PROFILES = {
-  novel: { category: 'sanguo', narration: 'novel' },
-  history: { category: 'sanguo', narration: 'history' },
+  sanguo: { category: 'sanguo' },
   sage: { category: 'sage' },
   tale: { category: 'tale' },
-  self: { category: 'self', self: { name: 'ทดสอบ' } },
 }
 
 for (const [name, profile] of Object.entries(PROFILES)) {

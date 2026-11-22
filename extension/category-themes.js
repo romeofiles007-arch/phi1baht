@@ -24,8 +24,6 @@ export const CATEGORY_THEMES = {
     dark:palette('dark',{bg:'#0d1f17',panel:'#152c21',ink:'#e4f3e9',muted:'#a6c8b4',accent:'#8ed9b4',line:'#6a937c',pick:'#1e3d2e',wood:'#091710',gold:'#8ed9b4'}),
   },
 }
-// โหมดผู้เล่าเรื่อง — ใช้ฉากและสีโทนเดียวกับหมวดปรัชญาจีน
-CATEGORY_THEMES.self = { ...CATEGORY_THEMES.sage, title:'ผู้เล่าเรื่อง (ตัวเราเอง)' }
 
 export const themeKey = value => categoryOf(value)?.id ?? 'mix'
 export const categoryGenre = value => categoryOf(value)?.name ?? 'mix'

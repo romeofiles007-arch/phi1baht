@@ -22,7 +22,6 @@ test('ตัวอย่างคำถามตามภาษาพากย�
   assert.match(engageRule('th'), /ถ้าเป็นคุณ จะทำอย่างไร\?/)
   assert.match(engageRule('th'), /ใครเคยเจอเหตุการณ์แบบนี้บ้าง/)
   assert.match(engageRule('en'), /What would you do\?/)
-  assert.match(engageRule('zh'), /如果是你/)
   assert.match(engageRule('th'), /ห้ามขอไลก์/)
 })
 

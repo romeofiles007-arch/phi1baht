@@ -18,13 +18,12 @@ import { clipSettings } from '../pipeline/lib/clips.mjs'
 import { hasKey } from '../pipeline/lib/env.mjs'
 import { loadQueue, loadAccounts, allTargets, findTarget, pageSequence } from '../pipeline/lib/posting.mjs'
 import { playDoneSound } from './runner.js'
-import { selfNarratorReady, SELF_NOT_READY } from '../pipeline/lib/self_narrator.mjs'
 
 const FILE = join(ROOT, 'projects', '_production.json')
 const LAST_RUN = join(ROOT, 'projects', '_autopilot_last.json')
 const TICK_MS = 15_000
 const MAX_FAILS_IN_ROW = 3
-export const LANGUAGES = ['th', 'zh', 'en']
+export const LANGUAGES = ['th', 'en']
 
 export const DEFAULT_SETTINGS = {
   count: 1, // 0 = ไม่จำกัด จนกว่าจะกดหยุด · ผู้ใช้ (5 พ.ย. 2026): ค่าตั้งต้นเอาแค่ 1 คลิป
@@ -32,7 +31,7 @@ export const DEFAULT_SETTINGS = {
   time: '22:00',
   delayMin: 20,
   delayMax: 40,
-  random: { genre: true, art: true, narration: true, language: false },
+  random: { genre: true, art: true, language: false },
   languages: ['th'], // ภาษาที่สุ่มได้ (ใช้เมื่อ random.language)
   // off = เก็บในคลัง | now = เข้าคิวแล้วตั้งเวลาโพสต์ทันที · ไม่มีขั้น AI ตรวจแล้ว (ผู้ใช้ 16 พ.ย. 2026) — ค่าเก่า 'ai' นับเป็น 'now'
   autoPost: 'now',
@@ -43,8 +42,8 @@ export const DEFAULT_SETTINGS = {
   // ผู้ใช้ (19 พ.ย. 2026): ใช้หลายเพจ แต่ละเพจรับคนละหมวด → กำหนดได้ว่าหมวดไหนผลิตมากน้อยเท่าไร
   genreShare: {},
 }
-/** หมวดที่กำหนดสัดส่วนได้ (ไม่รวมโหมดเฉพาะ พระสอนธรรม) */
-export const SHARE_CATEGORIES = CATEGORIES.filter((c) => !c.exclusive).map((c) => c.id)
+/** หมวดที่กำหนดสัดส่วนได้ */
+export const SHARE_CATEGORIES = CATEGORIES.map((c) => c.id)
 const AUTO_POST = ['off', 'now']
 const POST_PAGES = ['all', 'split']
 const TARGET_KEY = /^(fb|yt|tk):[\w.-]{1,64}$/
@@ -149,16 +148,14 @@ export function shareGenre(share = {}, made = {}, rand = Math.random) {
 export function pickClip(s, config, rand = Math.random, made = {}) {
   const pick = (list) => list[Math.floor(rand() * list.length)]
   const language = s.random.language ? pick(s.languages) : config.script.language ?? 'th'
-  // โหมดเฉพาะ (ผู้เล่าเรื่อง) เลือกไว้ = ทุกคลิปเป็นโหมดนั้น ไม่สุ่มหมวดทับ แม้ติ๊ก "สุ่มหมวด" ไว้
-  const fixed = categoryOf(config.script.genre)
   return {
-    genre: fixed?.exclusive ? fixed.name : s.random.genre ? shareGenre(s.genreShare, made, rand) ?? 'mix' : GENRES.includes(config.script.genre) ? config.script.genre : 'mix',
+    genre: s.random.genre ? shareGenre(s.genreShare, made, rand) ?? 'mix' : GENRES.includes(config.script.genre) ? config.script.genre : 'mix',
     language,
-    // ชื่อเรื่องภาษาเดียวกับเสียงพากย์เมื่อสุ่มภาษา (คลิปจีนชื่อจีน)
+    // ชื่อเรื่องภาษาเดียวกับเสียงพากย์เมื่อสุ่มภาษา
     titleLanguage: s.random.language ? language : config.script.titleLanguage ?? language,
     minutes: config.script.targetMinutes,
     // clip_profile.mjs อ่านตัวแปรนี้แทน config — สุ่มต่อคลิปโดยไม่แตะตั้งค่าคลิปของผู้ใช้
-    env: { ...(s.random.art && { CLIP_ART_STYLE: 'random' }), ...(s.random.narration && { CLIP_NARRATION: 'random' }) },
+    env: { ...(s.random.art && { CLIP_ART_STYLE: 'random' }) },
   }
 }
 
@@ -403,7 +400,7 @@ export function createProduction({ runner, log, json, readBody, scheduler = true
       : runner.start('autopilot', null, { autoTopic: true, genre: clip.genre, language: clip.language, titleLanguage: clip.titleLanguage, minutes: clip.minutes, env: clip.env, quiet: true })
     state.run = { startedAt: run.startedAt, language: clip.language, genre: again ? again.genre ?? null : categoryOf(clip.genre)?.id ?? null }
     const n = state.made + 1
-    say(`${again ? `ทำต่อ "${again.title}" · ` : ''}เริ่มคลิป ${n}${settings.count ? `/${settings.count}` : ''} (${{ th: 'ไทย', zh: 'จีน', en: 'อังกฤษ' }[clip.language]}${!again && categoryOf(clip.genre) ? ` · ${categoryOf(clip.genre).name}` : ''})`)
+    say(`${again ? `ทำต่อ "${again.title}" · ` : ''}เริ่มคลิป ${n}${settings.count ? `/${settings.count}` : ''} (${{ th: 'ไทย', en: 'อังกฤษ' }[clip.language]}${!again && categoryOf(clip.genre) ? ` · ${categoryOf(clip.genre).name}` : ''})`)
     save()
   }
 
@@ -488,7 +485,6 @@ export function createProduction({ runner, log, json, readBody, scheduler = true
     if ((path === '/api/production/start' || path === '/api/production/resume') && halted()) return json(res, 423, { error: 'หยุดทุกอย่างไว้อยู่ — กด "ทำงานต่อ" ก่อน แล้วค่อยเริ่มผลิต' }), true
     if (path === '/api/production/start') {
       if (body.settings) settings = cleanSettings(body.settings, settings)
-      if (categoryOf(loadConfig().script.genre)?.id === 'self' && !selfNarratorReady()) return json(res, 400, { error: SELF_NOT_READY }), true
       startBatch()
       tick()
       return json(res, 200, view()), true
@@ -498,7 +494,6 @@ export function createProduction({ runner, log, json, readBody, scheduler = true
       if (!resumable()) return json(res, 400, { error: 'ไม่มีชุดที่หยุดค้าง — กดเริ่มผลิตแทน' }), true
       const at = body.at == null || body.at === '' ? null : String(body.at)
       if (at && !/^([01]?\d|2[0-3]):[0-5]\d$/.test(at)) return json(res, 400, { error: 'เลือกเวลาทำต่อให้ครบ' }), true
-      if (categoryOf(loadConfig().script.genre)?.id === 'self' && !selfNarratorReady()) return json(res, 400, { error: SELF_NOT_READY }), true
       resume(at ? at.padStart(5, '0') : null)
       tick()
       return json(res, 200, view()), true

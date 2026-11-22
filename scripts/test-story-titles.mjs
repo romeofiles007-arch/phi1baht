@@ -5,20 +5,19 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { ANGLES, STORY_ANGLES, STORY_TITLE_RULE, lessonTitle, scoredTopicsPrompt, CATEGORIES } from '../extension/prompts.js'
+import { ANGLES, STORY_TITLE_RULE, lessonTitle, scoredTopicsPrompt, CATEGORIES } from '../extension/prompts.js'
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 const LESSONISH = /สอน|ข้อคิด|บทเรียน|วิธี|เคล็ดลับ|ชีวิตคนยุคนี้|ใช้กับชีวิต|อธิบายใน/
 
 test('มุมเล่าทุกแบบเป็นมุมเล่าเรื่อง ไม่มีมุมสอน/ฮาวทู', () => {
-  for (const a of [...ANGLES, ...STORY_ANGLES]) assert.ok(!LESSONISH.test(a), a)
-  assert.ok(STORY_ANGLES.length >= 5)
+  for (const a of ANGLES) assert.ok(!LESSONISH.test(a), a)
+  assert.ok(ANGLES.length >= 5)
 })
 
 test('คำสั่งเสนอหัวข้อ: มีกฎชื่อเรื่องแบบเล่าเรื่อง และไม่มีคำสั่งแนวสอนเหลือ', () => {
-  for (const [genre, narration] of [['mix', 'novel'], ['sanguo', 'history'], ['sage', 'novel'], ['tale', 'novel']]) {
-    // sanguo + history เคยพังเพราะ STORY_ANGLES ไม่ได้ประกาศไว้
-    const p = scoredTopicsPrompt('BLUEPRINT', { genre, narration, minutes: 1 })
+  for (const genre of ['mix', 'sanguo', 'sage', 'tale']) {
+    const p = scoredTopicsPrompt('BLUEPRINT', { genre, minutes: 1 })
     assert.ok(p.includes(STORY_TITLE_RULE), genre)
     for (const bad of ['ชื่อเรื่องบอกตรงๆ ว่าสอนเรื่องอะไร', 'คลิปต้องอธิบายด้วยหลักคิดแกน', 'ตรงกับทุกข์ใจของคนดู', 'โยงมาใช้กับชีวิตคนยุคนี้']) {
       assert.ok(!p.includes(bad), `${genre}: ${bad}`)
@@ -26,7 +25,7 @@ test('คำสั่งเสนอหัวข้อ: มีกฎชื่อ
   }
 })
 
-test('หมวดปรัชญา/ผู้เล่าเรื่อง: หัวข้อเป็นเรื่องเล่า ไม่ใช่คำสอน', () => {
+test('ทุกหมวด: หัวข้อเป็นเรื่องเล่า ไม่ใช่คำสอน', () => {
   for (const c of CATEGORIES) assert.ok(!/โยงมาใช้|บอกตรงๆ ว่าสอน|และข้อคิด|นำไปใช้ได้จริง/.test(c.topics), c.id)
 })
 

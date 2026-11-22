@@ -16,8 +16,6 @@ import { preferredFlowTab, flowHomeUrl } from './flow-navigation.js'
 import { scheduleFromFields, scheduleFields, scheduleCopy } from './production-schedule.js'
 
 /** พระของฉัน (โหมดพระสอนธรรม) — ประกาศไว้บนสุด เพราะ render() ช่วงโหลดแรกอ่านค่านี้ */
-let selfHost = null
-let myBuddha = null
 
 initIcons()
 
@@ -205,8 +203,6 @@ $('askScript').addEventListener('click', async () => {
   $('scriptRawBox').hidden = true
   S.minutes = Math.min(60, Math.max(1, Number($('minutes').value) || 1))
   const opts = { language: S.language, targetMinutes: S.minutes, wordsPerMinute: WORDS_PER_MINUTE, engage: clip?.engage !== 'off', mood: S.mood ?? resolveMood(clip?.mood) }
-  // โหมดผู้เล่าเรื่อง: บทเป็นเจ้าของช่องพูดเอง ("อาตมา") ตามกฎของโหมด
-  if (selfMode()) opts.profile = { category: 'self', self: { name: selfHost?.name ?? '' } }
   try {
     const text = await withBusy('scriptStatus', 'ChatGPT กำลังเขียนบท (บทยาว ใช้เวลาหลายนาที)', async () =>
       askChatGPT(scriptPrompt(await blueprint(), S.selected.title, opts)),
@@ -1427,8 +1423,6 @@ function renderTopicMode() {
   $('topicSuggestBox').hidden = mode !== 'suggest'
   $('genreBox').hidden = false
   applyCategoryTheme(S.genre)
-  renderSelfMonk()
-  renderMyBuddha()
   $('topicGenre').disabled = busy || localBusy()
   $('topicGenre').value = categoryGenre(S.genre)
   $('topicAutoHint').hidden = mode !== 'auto'
@@ -1472,20 +1466,15 @@ function renderTopicMode() {
 
 // ── แนวคลิป: สุ่มหลากหลาย หรือเจาะแนวเดียว ──
 for (const g of ['mix', ...GENRES]) {
-  // โหมดเฉพาะ (พระสอนธรรม) แยกเป็นกลุ่มท้ายรายการ — ไม่อยู่ใน "คละ"
-  const label = g === 'mix' ? 'คละทั้ง 3 หมวด' : categoryOf(g)?.exclusive ? `🙏 ${g} · โหมดเฉพาะ` : g
+  const label = g === 'mix' ? 'คละทั้ง 3 หมวด' : g
   $('topicGenre').append(Object.assign(document.createElement('option'), { value: g, textContent: label }))
 }
-const selfMode = () => categoryOf(S.genre)?.id === 'self'
 /** บันทึกหมวดที่เลือกลงตั้งค่าในเครื่อง — ผลิตต่อเนื่องใช้หมวดนี้ */
 const syncGenre = async () => api(await localApp(), '/api/clip-settings', { genre: categoryGenre(S.genre) }).catch(() => null)
 $('topicGenre').addEventListener('change', async () => {
   S.genre = $('topicGenre').value
   applyCategoryTheme(S.genre)
   await save()
-  renderSelfMonk()
-  renderMyBuddha()
-  renderProdGenre()
   await syncGenre()
 })
 
@@ -1506,7 +1495,7 @@ $('suggestTopics').addEventListener('click', async () => {
     const avoid = recent.length ? recent.map((r) => r.title) : history.done ?? []
     const seen = history.seen ?? []
     const text = await withBusy('suggestStatus', 'ChatGPT กำลังคิดหัวข้อและให้คะแนน', async () =>
-      askChatGPT(scoredTopicsPrompt(await blueprint(), { titleLanguage: S.language, minutes: S.minutes, avoid, seen, genre: S.genre, narration: clip?.narration, mood: newClipMood() })),
+      askChatGPT(scoredTopicsPrompt(await blueprint(), { titleLanguage: S.language, minutes: S.minutes, avoid, seen, genre: S.genre, mood: newClipMood() })),
     )
     const offered = parseScoredTopics(text)
     // จำไว้ว่าเสนออะไรไปแล้ว — ครั้งหน้าให้ ChatGPT เลี่ยง (รวมข้อที่จะถูกตัดเพราะซ้ำ)
@@ -1572,8 +1561,8 @@ let clip = null
 function renderClipSettings() {
   if (!clip) return
   for (const b of $('clipOrientation').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.value === clip.orientation))
-  // ลายเส้น · วิธีเล่าหมวด 1 — โปรแกรมในเครื่องรุ่นเก่าไม่ส่งมา → ซ่อน
-  for (const [id, key] of [['clipArtStyle', 'artStyle'], ['clipNarration', 'narration']]) {
+  // ลายเส้น — โปรแกรมในเครื่องรุ่นเก่าไม่ส่งมา → ซ่อน
+  for (const [id, key] of [['clipArtStyle', 'artStyle']]) {
     const box = $(id)
     const opts = clip.options[key] ?? []
     box.parentElement.hidden = !opts.length
@@ -1831,10 +1820,6 @@ $('clipArtStyle').addEventListener('click', (e) => {
   const b = e.target.closest('button')
   if (b && !localBusy()) saveClipSettings({ artStyle: b.dataset.value })
 })
-$('clipNarration').addEventListener('click', (e) => {
-  const b = e.target.closest('button')
-  if (b && !localBusy()) saveClipSettings({ narration: b.dataset.value })
-})
 $('clipPause').addEventListener('click', (e) => {
   const b = e.target.closest('button')
   if (b && !localBusy()) saveClipSettings({ pause: b.dataset.value })
@@ -1954,7 +1939,7 @@ function renderCharacter() {
   $('charEnabled').disabled = !has
   $('charClear').disabled = !has
   $('charHint').textContent = !has
-    ? 'ยังไม่ได้ตั้ง — ระบบหาภาพให้เอง: หมวด 1 ใช้พระพุทธรูป · หมวด 2 ใช้ภาพจริงของพระเกจิ · หมวด 3 ใช้ตัวละครตาม Blueprint'
+    ? 'ยังไม่ได้ตั้ง — ระบบใช้ตัวละครตาม Blueprint'
     : character.active
       ? `ใช้ตัวละครนี้กับคลิปใหม่ (${character.images.length} รูป${character.description ? ' + คำอธิบาย' : ''}) — บันทึกไว้แล้ว`
       : 'ปิดไว้ — คลิปใหม่ใช้ตัวละครตาม Blueprint (ตัวละครยังบันทึกไว้)'
@@ -2043,167 +2028,6 @@ localApp()
   .then((data) => {
     character = data
     renderCharacter()
-  })
-  .catch(() => {})
-
-// ── พระของฉัน (โหมดพระสอนธรรม) — รูปหน้าพระ + ชื่อในคลิป · แสดงเฉพาะเมื่อเลือกโหมดนี้ ──
-function renderSelfMonk() {
-  const box = $('selfHostBox')
-  box.hidden = !selfMode()
-  if (box.hidden) return
-  const hint = $('selfHint')
-  if (!selfHost) {
-    hint.textContent = 'เปิดโปรแกรมในเครื่องก่อน แล้วรูปหน้าพระที่บันทึกไว้จะแสดงตรงนี้'
-    hint.className = 'hint'
-    return
-  }
-  const list = $('selfThumbs')
-  list.textContent = ''
-  for (const p of selfHost.previews) {
-    const li = document.createElement('li')
-    const del = Object.assign(document.createElement('button'), { type: 'button', textContent: '✕', title: 'ลบรูปนี้' })
-    del.setAttribute('aria-label', 'ลบรูปหน้าพระนี้')
-    del.addEventListener('click', () => selfCall('/api/self-host/image/delete', { name: p.name }))
-    li.append(Object.assign(document.createElement('img'), { src: p.dataUrl, alt: 'รูปหน้าพระ' }), del)
-    list.append(li)
-  }
-  if (document.activeElement !== $('selfName')) $('selfName').value = selfHost.name
-  if (document.activeElement !== $('selfDesc')) $('selfDesc').value = selfHost.description
-  hint.textContent = selfHost.ready
-    ? `พร้อมแล้ว — ${selfHost.images.length} รูป${selfHost.name ? ` · ชื่อในคลิป: ${selfHost.name}` : ''} · คลิปใหม่ทุกคลิปเป็นท่านสอนธรรม`
-    : 'ยังไม่มีรูปหน้าพระ — วางอย่างน้อย 1 รูปก่อนเริ่มทำคลิป (ระบบจะไม่ยอมเริ่มถ้ายังไม่มีรูป)'
-  hint.className = `hint${selfHost.ready ? ' ok' : ' status err'}`
-}
-
-async function selfCall(path, body) {
-  try {
-    selfHost = await api(await localApp(), path, body)
-  } catch (err) {
-    $('selfHint').textContent = err.message
-    $('selfHint').className = 'hint status err'
-    return
-  }
-  renderSelfMonk()
-}
-
-async function addSelfFiles(files) {
-  const images = [...files].filter((f) => /^image\/(png|jpeg|webp)$/.test(f.type))
-  if (!images.length) return
-  $('selfHint').textContent = 'กำลังบันทึกรูป…'
-  for (const f of images) await selfCall('/api/self-host/image', await imageToUpload(f))
-}
-
-$('selfPaste').addEventListener('paste', async (e) => {
-  const files = [...(e.clipboardData?.files ?? [])]
-  if (!files.length) return
-  e.preventDefault()
-  await addSelfFiles(files)
-})
-$('selfPaste').addEventListener('click', (e) => {
-  if (!e.target.closest('label')) $('selfPaste').focus()
-})
-$('selfPaste').addEventListener('dragover', (e) => {
-  e.preventDefault()
-  $('selfPaste').classList.add('drag')
-})
-$('selfPaste').addEventListener('dragleave', () => $('selfPaste').classList.remove('drag'))
-$('selfPaste').addEventListener('drop', async (e) => {
-  e.preventDefault()
-  $('selfPaste').classList.remove('drag')
-  await addSelfFiles(e.dataTransfer?.files ?? [])
-})
-$('selfFile').addEventListener('change', async (e) => {
-  await addSelfFiles(e.target.files)
-  e.target.value = ''
-})
-$('selfName').addEventListener('change', () => selfCall('/api/self-host', { name: $('selfName').value }))
-$('selfDesc').addEventListener('change', () => selfCall('/api/self-host', { description: $('selfDesc').value }))
-
-localApp()
-  .then((app) => api(app, '/api/self-host'))
-  .then((data) => {
-    selfHost = data
-    renderSelfMonk()
-  })
-  .catch(() => {})
-
-// ── 🪷 พระพุทธเจ้าของฉัน (หมวด 1) — ภาพอ้างอิงที่เลือกเอง ใช้แทนพระพุทธรูปที่ระบบโหลดจากวิกิพีเดีย ──
-function renderMyBuddha() {
-  const box = $('myBuddhaBox')
-  // โหมดพระสอนธรรมไม่มีตัวละคร @buddha — ซ่อนไว้
-  box.hidden = selfMode()
-  if (box.hidden) return
-  const hint = $('buddhaHint')
-  if (!myBuddha) {
-    hint.textContent = 'เปิดโปรแกรมในเครื่องก่อน แล้วภาพที่บันทึกไว้จะแสดงตรงนี้'
-    hint.className = 'hint'
-    return
-  }
-  const list = $('buddhaThumbs')
-  list.textContent = ''
-  for (const p of myBuddha.previews) {
-    const li = document.createElement('li')
-    const del = Object.assign(document.createElement('button'), { type: 'button', textContent: '✕', title: 'ลบรูปนี้' })
-    del.setAttribute('aria-label', 'ลบภาพอ้างอิงพระพุทธเจ้ารูปนี้')
-    del.addEventListener('click', () => buddhaCall('/api/my-buddha/image/delete', { name: p.name }))
-    li.append(Object.assign(document.createElement('img'), { src: p.dataUrl, alt: 'ภาพอ้างอิงพระพุทธเจ้า' }), del)
-    list.append(li)
-  }
-  if (document.activeElement !== $('buddhaDesc')) $('buddhaDesc').value = myBuddha.description
-  hint.textContent = myBuddha.ready
-    ? `ใช้ภาพที่เลือกไว้ ${myBuddha.images.length} รูป — คลิปใหม่หมวด 1 จะวาดพระพุทธเจ้าตามภาพนี้ (คลิปเดิมยังใช้ภาพที่แนบไว้แล้ว)`
-    : 'ยังไม่ได้เลือกเอง — ระบบจะโหลดพระพุทธรูปไทย (ชินราช · ศรีศากยมุนี · สิหิงค์) จากวิกิพีเดียให้เอง'
-  hint.className = `hint${myBuddha.ready ? ' ok' : ''}`
-}
-
-async function buddhaCall(path, body) {
-  try {
-    myBuddha = await api(await localApp(), path, body)
-  } catch (err) {
-    $('buddhaHint').textContent = err.message
-    $('buddhaHint').className = 'hint status err'
-    return
-  }
-  renderMyBuddha()
-}
-
-async function addBuddhaFiles(files) {
-  const images = [...files].filter((f) => /^image\/(png|jpeg|webp)$/.test(f.type))
-  if (!images.length) return
-  $('buddhaHint').textContent = 'กำลังบันทึกรูป…'
-  for (const f of images) await buddhaCall('/api/my-buddha/image', await imageToUpload(f))
-}
-
-$('buddhaPaste').addEventListener('paste', async (e) => {
-  const files = [...(e.clipboardData?.files ?? [])]
-  if (!files.length) return
-  e.preventDefault()
-  await addBuddhaFiles(files)
-})
-$('buddhaPaste').addEventListener('click', (e) => {
-  if (!e.target.closest('label')) $('buddhaPaste').focus()
-})
-$('buddhaPaste').addEventListener('dragover', (e) => {
-  e.preventDefault()
-  $('buddhaPaste').classList.add('drag')
-})
-$('buddhaPaste').addEventListener('dragleave', () => $('buddhaPaste').classList.remove('drag'))
-$('buddhaPaste').addEventListener('drop', async (e) => {
-  e.preventDefault()
-  $('buddhaPaste').classList.remove('drag')
-  await addBuddhaFiles(e.dataTransfer?.files ?? [])
-})
-$('buddhaFile').addEventListener('change', async (e) => {
-  await addBuddhaFiles(e.target.files)
-  e.target.value = ''
-})
-$('buddhaDesc').addEventListener('change', () => buddhaCall('/api/my-buddha', { description: $('buddhaDesc').value }))
-
-localApp()
-  .then((app) => api(app, '/api/my-buddha'))
-  .then((data) => {
-    myBuddha = data
-    renderMyBuddha()
   })
   .catch(() => {})
 
@@ -3049,15 +2873,13 @@ function renderVoices() {
   }
   if (V.edge) {
     // พากย์ไทย: ซ่อนเสียงอังกฤษล้วน — อ่านไทยไม่ออก (Microsoft ไม่ส่งเสียงกลับมา) · พากย์อังกฤษ: แสดงครบทุกเสียง
-    // พากย์จีน: แสดงเสียงจีน + หลายภาษา · พากย์ไทย: ไทย + หลายภาษา · อังกฤษ: ทุกกลุ่มยกเว้นจีน
+    // พากย์ไทย: ไทย + หลายภาษา · อังกฤษ: ทุกกลุ่มยกเว้นจีน
     const vlang = S.language ?? V.language
-    const EDGE_GROUPS = vlang === 'zh'
-      ? [['chinese', 'Edge — เสียงจีน'], ['multi', 'Edge — หลายภาษา']]
-      : [
-          ['thai', 'Edge — เสียงไทย'],
-          ['multi', 'Edge — หลายภาษา (พากย์ไทยและอังกฤษได้)'],
-          ...(vlang === 'en' ? [['english', 'Edge — อังกฤษ']] : []),
-        ]
+    const EDGE_GROUPS = [
+      ['thai', 'Edge — เสียงไทย'],
+      ['multi', 'Edge — หลายภาษา (พากย์ไทยและอังกฤษได้)'],
+      ...(vlang === 'en' ? [['english', 'Edge — อังกฤษ']] : []),
+    ]
     for (const [key, label] of EDGE_GROUPS) {
       const voices = V.edge.voices.filter((v) => (v.group ?? 'english') === key)
       if (!voices.length) continue
@@ -3785,19 +3607,19 @@ let prodFilled = false
  * ทับค่าที่เลือกไว้ในตั้งค่าคลิป — ไม่บอกไว้จะงงว่าเลือกสีน้ำแล้วทำไมได้ภาพยนตร์สมจริง
  */
 function showRandomOverride(random) {
-  for (const [id, key] of [['clipArtOverride', 'art'], ['clipNarrationOverride', 'narration']]) {
+  for (const [id, key] of [['clipArtOverride', 'art']]) {
     const el = $(id)
     if (el) el.hidden = !random?.[key]
   }
 }
 let prodResumeTimeSet = false // ช่องเวลาทำต่อ: ใส่เวลาเริ่มผลิตที่ตั้งไว้ให้ครั้งแรกครั้งเดียว ไม่ทับค่าที่ผู้ใช้เลือก
-const PROD_LANG = { th: 'ไทย', zh: 'จีน', en: 'อังกฤษ' }
+const PROD_LANG = { th: 'ไทย', en: 'อังกฤษ' }
 const prodTime = (t) => new Date(t).toLocaleString('th-TH', { hour: '2-digit', minute: '2-digit', day: new Date(t).toDateString() === new Date().toDateString() ? undefined : 'numeric', month: new Date(t).toDateString() === new Date().toDateString() ? undefined : 'short' })
 
 function prodOptions() {
   return {
     count: $('prodUnlimited').checked ? 0 : Number($('prodCount').value),
-    random: { genre: $('prodRandGenre').checked, art: $('prodRandArt').checked, narration: $('prodRandNarration').checked, language: $('prodRandLang').checked },
+    random: { genre: $('prodRandGenre').checked, art: $('prodRandArt').checked, language: $('prodRandLang').checked },
     languages: [...$('prodLangs').querySelectorAll('input:checked')].map((i) => i.value),
     autoPost: $('prodAutoPost').querySelector('[aria-pressed="true"]')?.dataset.value ?? 'now',
     postPages: $('prodPages').querySelector('[aria-pressed="true"]')?.dataset.value ?? 'all',
@@ -3835,7 +3657,7 @@ function renderProdShare(share) {
       box.append(label, input, Object.assign(document.createElement('span'), { textContent: '%' }))
     })
   }
-  $('prodShareBox').hidden = !$('prodRandGenre').checked || selfMode()
+  $('prodShareBox').hidden = !$('prodRandGenre').checked
   const form = prodOptions()
   const vals = form.genreShare ?? {}
   const total = Object.values(vals).reduce((a, b) => a + b, 0)
@@ -3894,13 +3716,6 @@ function renderProdQuota(pages, quota, count) {
   })
 }
 
-/** โหมดพระสอนธรรม: ผลิตต่อเนื่องไม่สุ่มหมวด (bridge บังคับเอง) — แผงล็อกช่องติ๊กให้เห็น ค่าที่ติ๊กไว้ยังเก็บไว้ใช้ตอนกลับไปหมวดอื่น */
-function renderProdGenre() {
-  const locked = selfMode()
-  $('prodRandGenre').disabled = locked
-  $('prodGenreLock').hidden = !locked
-}
-
 function renderProdPages(s) {
   const pages = prod.postPages ?? []
   const form = prodOptions()
@@ -3939,14 +3754,12 @@ function renderProd() {
     $('prodDelayMax').value = f.max
     $('prodRandGenre').checked = s.random.genre
     $('prodRandArt').checked = s.random.art
-    $('prodRandNarration').checked = s.random.narration
     $('prodRandLang').checked = s.random.language
     for (const i of $('prodLangs').querySelectorAll('input')) i.checked = s.languages.includes(i.value)
     for (const b of $('prodAutoPost').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.value === s.autoPost))
     for (const b of $('prodPages').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.value === (s.postPages ?? 'all')))
   }
   renderProdPages(s)
-  renderProdGenre()
   renderProdShare(s.genreShare)
   const postMode = prodOptions().autoPost
   $('prodPostHint').textContent = postMode === 'off'
@@ -4137,7 +3950,7 @@ $('prodPages').addEventListener('click', (e) => {
   for (const x of $('prodPages').querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b))
   prodSave()
 })
-for (const id of ['prodStart', 'prodUnlimited', 'prodPauseMode', 'prodRandGenre', 'prodRandArt', 'prodRandNarration', 'prodRandLang']) {
+for (const id of ['prodStart', 'prodUnlimited', 'prodPauseMode', 'prodRandGenre', 'prodRandArt', 'prodRandLang']) {
   $(id).addEventListener('change', prodSave)
 }
 for (const id of ['prodCount', 'prodTime', 'prodDelayMin', 'prodDelayMax']) $(id).addEventListener('input', prodSave)

@@ -35,8 +35,8 @@ for (const [field, value] of [
   ['language', config.script.language],
   ['titleLanguage', config.script.titleLanguage],
 ]) {
-  if (!['th', 'en', 'zh'].includes(value)) {
-    console.error(`script.${field} ต้องเป็น th, en หรือ zh (ได้ "${value}")`)
+  if (!['th', 'en'].includes(value)) {
+    console.error(`script.${field} ต้องเป็น th หรือ en (ได้ "${value}")`)
     process.exit(1)
   }
 }
@@ -59,7 +59,7 @@ async function ask(prompt, label) {
   return result.text
 }
 
-const LANG_NAME = { th: 'ไทย', en: 'อังกฤษ', zh: 'จีน' }
+const LANG_NAME = { th: 'ไทย', en: 'อังกฤษ' }
 
 if (command === 'topics') {
   console.log(`ชื่อหัวข้อ: ${LANG_NAME[config.script.titleLanguage]}`)

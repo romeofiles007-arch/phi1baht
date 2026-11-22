@@ -23,14 +23,14 @@ export function blueprint(config) {
 export const clipMood = (config) => shared.resolveMood(process.env.CLIP_MOOD || config.script?.mood)
 
 export function topicsPrompt(config) {
-  return shared.topicsPrompt(blueprint(config), { titleLanguage: config.script.titleLanguage, genre: config.script.genre, narration: config.script.narration, mood: clipMood(config) })
+  return shared.topicsPrompt(blueprint(config), { titleLanguage: config.script.titleLanguage, genre: config.script.genre, mood: clipMood(config) })
 }
 
 export const { parseScoredTopics } = shared
 
 /** หัวข้อพร้อมคะแนน — ชื่อหัวข้อใช้ภาษาเดียวกับเสียงพากย์ของคลิป */
 export function scoredTopicsPrompt(config, { avoid = [], seen = [], themes } = {}) {
-  return shared.scoredTopicsPrompt(blueprint(config), { titleLanguage: config.script.language, minutes: config.script.targetMinutes, avoid, seen, genre: config.script.genre, narration: config.script.narration, mood: clipMood(config), themes: themes ?? shared.pickThemes(5, recentThemes()) })
+  return shared.scoredTopicsPrompt(blueprint(config), { titleLanguage: config.script.language, minutes: config.script.targetMinutes, avoid, seen, genre: config.script.genre, mood: clipMood(config), themes: themes ?? shared.pickThemes(5, recentThemes()) })
 }
 
 /** profile = โปรไฟล์ของคลิป (หมวด + พระเกจิ) จาก clip_profile.mjs — ไม่มี = ให้ ChatGPT ดูหมวดจากชื่อเรื่อง */
@@ -101,10 +101,6 @@ export function clipLanguage(config, slug) {
 
 /** ภาษาของคำอธิบายช็อตและตัวอักษรในภาพ — ตามภาษาเสียงพากย์ของคลิป */
 export function imageLanguageRule(language) {
-  if (language === 'zh') {
-    return `- ภาษาในภาพ: จีน — เขียนคำอธิบายใน field (Env/Action/Frame) เป็นภาษาไทย แต่คงชื่อ field (SHOT, Chars, Env, Action, Frame) และ @TAG เป็นภาษาอังกฤษตามเดิม
-- ตัวอักษรในภาพ (on-screen text, label, thought bubble) เป็นภาษาจีนอักษรตัวย่อ 1–4 ตัว ตัวหนา เขียนถูกต้อง — ใส่ข้อความที่จะให้อยู่ในภาพในเครื่องหมายคำพูด เช่น ข้อความบนภาพ "放下" · ห้ามใช้ภาษาไทยหรืออังกฤษในภาพ`
-  }
   if (language === 'en') {
     return `- ภาษาในภาพ: English — เขียนคำอธิบายใน field (Env/Action/Frame) เป็นภาษาอังกฤษ · ตัวอักษรในภาพ (on-screen text, label, thought bubble) เป็นภาษาอังกฤษ ALL CAPS คำสั้น`
   }
