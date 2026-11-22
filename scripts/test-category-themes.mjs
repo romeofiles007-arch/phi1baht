@@ -35,3 +35,15 @@ for(const [id,t] of Object.entries(CATEGORY_THEMES)) for(const mode of ['light',
  if(p.action) assert.ok(contrast(p.action,p['action-ink'])>=4.5,`${id}/${mode}/gold action`)
 }
 console.log('PASS: 5 category IDs/names, mix falls back to ghost, existing art files, dark-only surfaces, light/dark contrast >=4.5:1.')
+
+// โหมดสว่าง = ภาพกลางวัน · โหมดมืด = ภาพกลางคืน
+{
+  const css = categoryThemeCss()
+  const [light, dark] = css.split('@media(prefers-color-scheme: dark)')
+  assert.ok(/--world-image:url\('agents\/phi-day\.png'\)/.test(light) && !/phi-night/.test(light), 'light rules ต้องใช้ภาพกลางวัน')
+  assert.ok(/--world-image:url\('agents\/phi-night\.png'\)/.test(dark) && !/phi-day/.test(dark), 'dark rules ต้องใช้ภาพกลางคืน')
+  const { readFileSync } = await import('node:fs')
+  const agentsCss = readFileSync(new URL('../extension/agents.css', import.meta.url), 'utf8')
+  const sceneLine = agentsCss.split('\n').find(l => l.startsWith('.agentScene {'))
+  assert.ok(sceneLine && sceneLine.includes('var(--world-image)') && !/phi-night/.test(sceneLine), '.agentScene ต้องตามตัวแปร --world-image')
+}
