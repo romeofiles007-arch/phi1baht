@@ -44,7 +44,7 @@ Ex sample audio to scritp.txt
 # ค่าที่ตั้งในเครื่องนี้ (เสียงที่โคลนไว้ ฯลฯ) — ลูกค้าได้ config/default.config.json แทน (scripts/make-default-config.mjs)
 config/project.config.json
 
-# ── เพิ่ม พ.ย. 2568 (ตอนตั้ง git ให้โปรเจกต์ตำนานจีน) ──
+# ── เพิ่ม พ.ย. 2568 (ตอนตั้ง git ให้โปรเจกต์ ผี 1 บาท) ──
 _dist-*/
 _เก่าธรรมะ-*/
 projects/_เก่าธรรมะ-*/

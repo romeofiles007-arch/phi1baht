@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs'
 import { shipsToCustomer } from '../bridge/package-rules.js'
 
 const ROOT = new URL('..', import.meta.url)
-const IDENTITY = /China ?Auto|china[_-]auto|ChinaAuto|romeofiles007-arch\/china\b|\b8786\b/i
+const IDENTITY = /Dhamma ?Auto|ตำนานจีน|China ?Auto|china[_-]auto|ChinaAuto|romeofiles007-arch\/china\b|\b8786\b/i
 const FULL = /จีน|ตำนานจีน|China ?Auto|china[_-]auto|ChinaAuto|romeofiles007-arch\/china\b|\b8786\b|ธรรมะ|dhamma/i
 const RULE = process.env.PHI_IDENTITY_ONLY === '1' ? IDENTITY : FULL
 const BINARY = /\.(png|jpe?g|gif|webp|ico|exe|dll|woff2?|ttf|otf|mp3|wav|ogg|m4a|mp4|webm|zip|pdf)$/i
@@ -23,6 +23,8 @@ test('ไฟล์ที่ส่งถึงลูกค้าไม่มี�
     if (RULE.test(f)) hits.push(`${f} (ชื่อไฟล์)`)
     let text
     try { text = read(f) } catch { continue }
+    // .bat: ข้อความใน base64 (MessageBox) ถอดรหัสก่อนตรวจ เพื่อให้เห็นข้อความจริง
+    if (f.endsWith('.bat')) for (const m of text.matchAll(/FromBase64String\('([^']+)'\)/g)) text += '\n' + Buffer.from(m[1], 'base64').toString('utf8')
     text.split(/\r?\n/).forEach((line, i) => { if (RULE.test(line)) hits.push(`${f}:${i + 1}: ${line.trim().slice(0, 100)}`) })
   }
   assert.deepEqual(hits, [], `พบคำต้องห้าม ${hits.length} จุด`)
@@ -31,4 +33,10 @@ test('ไฟล์ที่ส่งถึงลูกค้าไม่มี�
 test('manifest และ package.json เป็นของผี 1 บาท', () => {
   assert.equal(JSON.parse(read('extension/manifest.json')).name, 'ผี 1 บาท')
   assert.match(JSON.parse(read('package.json')).repository.url, /\/phi1baht$/)
+})
+
+test('ข้อความที่มองเห็นใน sidepanel.html มี "ผี 1 บาท" และไม่มี "ตำนานจีน"', () => {
+  const visible = read('extension/sidepanel.html').replace(/<(?:script|style)[\s\S]*?<\/(?:script|style)>/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ')
+  assert.ok(visible.includes('ผี 1 บาท'))
+  assert.ok(!visible.includes('ตำนานจีน'), 'ยังมี "ตำนานจีน" ในข้อความที่ผู้ใช้เห็น')
 })

@@ -1,5 +1,5 @@
 /**
- * โปรไฟล์ของคลิป — หมวด (สามก๊ก / ปราชญ์จีน / ตำนานจีน) + ข้อมูลบุคคล + ภาพอ้างอิง
+ * โปรไฟล์ของคลิป — หมวดเนื้อหา + ข้อมูลบุคคล + ภาพอ้างอิง
  *
  * เก็บที่ projects/<slug>/00_ref/
  *   profile.json   { category, figure?: { name, wiki, wikiTitle, url, summary, images: [{ file, source, page }] } }

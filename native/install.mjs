@@ -346,7 +346,7 @@ function ensureVersionFile() {
 // ════════════════════════ 3. ลงทะเบียน native host ════════════════════════
 /**
  * Chrome เรียก host ด้วย `cmd.exe /d /c "<path>" ...` — ถ้า path มี & ^ % ! cmd ตัดคำสั่งผิด (ภาษาไทย เว้นวรรค วงเล็บ ใช้ได้)
- * โฟลเดอร์แบบนั้นจึงลงทะเบียนผ่าน junction ที่ %LOCALAPPDATA%\DhammaAuto\app ซึ่งชี้กลับมาที่โฟลเดอร์นี้
+ * โฟลเดอร์แบบนั้นจึงลงทะเบียนผ่าน junction ที่ %LOCALAPPDATA%\Phi1Baht\app ซึ่งชี้กลับมาที่โฟลเดอร์นี้
  */
 const RISKY = /[&^%!]/
 const JUNCTION = join(process.env.LOCALAPPDATA ?? tmpdir(), 'Phi1Baht', 'app')

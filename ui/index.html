@@ -524,7 +524,7 @@
       el.textContent = r.lines.join('\n')
       el.scrollTop = el.scrollHeight
       const st = $$('[data-run-status="tts"]')[0]
-      if (r.status === 'running') setStatus(st, 'กำลังติดตั้งระบบเสียง… (ห้ามปิดหน้าต่าง ตำนานจีน Bridge)', 'busy')
+      if (r.status === 'running') setStatus(st, 'กำลังติดตั้งระบบเสียง… (ห้ามปิดหน้าต่าง ผี 1 บาท)', 'busy')
       else if (r.status === 'done') setStatus(st, 'ติดตั้งระบบเสียงเสร็จแล้ว', 'ok')
       else setStatus(st, 'ติดตั้งไม่สำเร็จ — ดูข้อความด้านล่าง', 'error')
     }

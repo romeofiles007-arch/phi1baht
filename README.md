@@ -17,12 +17,12 @@
 ## สร้างไฟล์ติดตั้งให้ลูกค้า (Setup.exe)
 
 ```powershell
-node scripts/build-installer.mjs    # → dist/DhammaAuto-Setup-<version>.exe (~150MB)
+node scripts/build-installer.mjs    # → dist/Phi1Baht-Setup-<version>.exe (~150MB)
 ```
 
 ไฟล์เดียวมีครบ: โปรแกรม + Node + ffmpeg + Python/เสียง Edge · ไม่มี Chrome ตัวติดตั้งโหลดให้ · ระบบเสียงในเครื่องเป็นตัวเลือก (โชว์เฉพาะเครื่องที่มีการ์ดจอ NVIDIA)
 ไม่ติด API key / เสียงที่โคลน / งานคลิปของเรา (ตรวจทุกครั้งก่อนสร้าง) · เลขรุ่นมาจาก `extension/manifest.json` — อัปเดตให้ลูกค้า: เพิ่มเลขรุ่นแล้วสร้างใหม่ ลูกค้ารันทับได้ งานไม่หาย
-ต้องมี Inno Setup 6 (`winget install --id JRSoftware.InnoSetup -e --scope user`) · สคริปต์ตัวติดตั้ง: `installer/DhammaAuto.iss`
+ต้องมี Inno Setup 6 (`winget install --id JRSoftware.InnoSetup -e --scope user`) · สคริปต์ตัวติดตั้ง: `installer/Phi1Baht.iss`
 
 ## ติดตั้ง (เครื่องใหม่)
 
