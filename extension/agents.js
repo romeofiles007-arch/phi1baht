@@ -3,11 +3,11 @@ import { SPRITE_REGISTRATION } from './sprite-registration.js'
 // สถานะแผนกใช้ภาพและสคริปต์ในส่วนขยายเท่านั้น
 export const DEPARTMENTS = [
   // duty = หน้าที่เต็มๆ ขึ้นในป้ายตอนเอาเมาส์ชี้ตัวละคร
-  { id: 'chatgpt', name: 'ChatGPT', role: 'เขียนบท · กำกับภาพ', animal: 'ปราชญ์เขียนบท', duty: 'คิดหัวข้อ เขียนบท แบ่งช็อต และเขียน prompt ภาพทุกช็อต — ทำงานในแท็บ ChatGPT' },
-  { id: 'flow', name: 'Google Flow', role: 'วาดภาพ', animal: 'จิตรกรหญิง', duty: 'วาดภาพทุกช็อตและภาพปกด้วย Google Flow แบบ 0 credits — ทำงานในแท็บ Flow' },
-  { id: 'meta', name: 'Kie API', role: 'ทำแอนิเมชัน', animal: 'นักรำกระบี่', duty: 'รับภาพฉากสำคัญจาก Google Flow ส่งให้ Kie API ทำแอนิเมชัน แล้วส่งคลิปให้แผนกตัดต่อ — ปิดได้เพื่อใช้ภาพนิ่ง' },
-  { id: 'voice', name: 'เสียงพากย์', role: 'ในเครื่อง', animal: 'นักร้องงิ้ว', duty: 'อ่านบทเป็นเสียงพากย์ แล้วจับเวลาแต่ละประโยค — ทำในเครื่องนี้ ไม่ต้องเปิดเว็บ' },
-  { id: 'edit', name: 'ตัดต่อ', role: 'ในเครื่อง', animal: 'ช่างเย็บเล่มตำรา', duty: 'รวมภาพ คลิป เสียงพากย์ เพลง และซับไตเติล เป็นไฟล์วิดีโอ — ทำในเครื่องนี้' },
+  { id: 'chatgpt', name: 'ChatGPT', role: 'เขียนบท · กำกับภาพ', animal: 'นักเขียนผีสูงวัย', duty: 'คิดหัวข้อ เขียนบท แบ่งช็อต และเขียน prompt ภาพทุกช็อต — ทำงานในแท็บ ChatGPT' },
+  { id: 'flow', name: 'Google Flow', role: 'วาดภาพ', animal: 'นักวาดปกเล่มละบาท', duty: 'วาดภาพทุกช็อตและภาพปกด้วย Google Flow แบบ 0 credits — ทำงานในแท็บ Flow' },
+  { id: 'meta', name: 'Kie API', role: 'ทำแอนิเมชัน', animal: 'คนฉายหนังกลางแปลง', duty: 'รับภาพฉากสำคัญจาก Google Flow ส่งให้ Kie API ทำแอนิเมชัน แล้วส่งคลิปให้แผนกตัดต่อ — ปิดได้เพื่อใช้ภาพนิ่ง' },
+  { id: 'voice', name: 'เสียงพากย์', role: 'ในเครื่อง', animal: 'นักพากย์หนังกลางแปลง', duty: 'อ่านบทเป็นเสียงพากย์ แล้วจับเวลาแต่ละประโยค — ทำในเครื่องนี้ ไม่ต้องเปิดเว็บ' },
+  { id: 'edit', name: 'ตัดต่อ', role: 'ในเครื่อง', animal: 'ช่างโรงพิมพ์เย็บเล่ม', duty: 'รวมภาพ คลิป เสียงพากย์ เพลง และซับไตเติล เป็นไฟล์วิดีโอ — ทำในเครื่องนี้' },
 ]
 export const AGENT_WORD = { working: 'กำลังทำงาน', waiting: 'รอคิว', idle: 'ว่าง', offline: 'ไม่ได้ต่อ' }
 export const HANDOFF = [
@@ -19,7 +19,7 @@ export const HANDOFF = [
   { key: 'edit', id: 'edit', label: 'ตัดต่อ' },
 ]
 
-// ตัวละครวัดไทย 3D: ภาพ 12 เฟรมในตาราง 4×3 เล่นด้วย CSS เท่านั้น
+// ตัวละครผู้ใหญ่ลายเส้นเล่มละบาท: ภาพ 12 เฟรมในตาราง 4×3 เล่นด้วย CSS เท่านั้น
 export const SPRITE_COLUMNS = 4
 export const SPRITE_ROWS = 3
 export const SPRITE_FRAMES = SPRITE_COLUMNS * SPRITE_ROWS

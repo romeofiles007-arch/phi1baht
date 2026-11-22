@@ -1,4 +1,4 @@
-/* ธรรมะ Auto: consistent 24px, 1.8px rounded-stroke icons. */
+/* ผี 1 บาท: consistent 24px, 1.8px rounded-stroke icons. */
 [data-icon]::before, .ui-icon {
   content: ""; display: inline-block; width: 18px; height: 18px; flex: none;
   background: currentColor; mask: var(--icon) center / contain no-repeat;

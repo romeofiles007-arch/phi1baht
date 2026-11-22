@@ -5,7 +5,7 @@ import { SEA_ASSETS, DEPARTMENTS, HANDOFF, elapsed } from '../extension/agents.j
 
 const read = name => readFileSync(new URL('../' + name, import.meta.url), 'utf8')
 assert.deepEqual(DEPARTMENTS.map(d => [d.id, d.animal]), [
-  ['chatgpt', 'ปราชญ์เขียนบท'], ['flow', 'จิตรกรหญิง'], ['meta', 'นักรำกระบี่'], ['voice', 'นักร้องงิ้ว'], ['edit', 'ช่างเย็บเล่มตำรา'],
+  ['chatgpt', 'นักเขียนผีสูงวัย'], ['flow', 'นักวาดปกเล่มละบาท'], ['meta', 'คนฉายหนังกลางแปลง'], ['voice', 'นักพากย์หนังกลางแปลง'], ['edit', 'ช่างโรงพิมพ์เย็บเล่ม'],
 ])
 assert.deepEqual(HANDOFF.map(s => [s.key, s.id]), [
   ['script', 'chatgpt'], ['voice', 'voice'], ['art', 'chatgpt'], ['images', 'flow'], ['clips', 'meta'], ['edit', 'edit'],

@@ -1774,7 +1774,7 @@ function renderWriterSwitch(note) {
       : 'คลิปถัดไป ChatGPT คิดหัวข้อและเขียนบทผ่านแท็บเบราว์เซอร์')
   // หัวกล่องบอกผู้เขียนที่ใช้อยู่ด้วย
   const head = $('autoTopicBlock').querySelector('.blockHead')
-  head.dataset.agentLabel = `ปราชญ์เขียนบท · ${web ? 'Gemini เว็บ' : useApi && hasKey ? 'Gemini API' : 'ChatGPT'}`
+  head.dataset.agentLabel = `นักเขียนผีสูงวัย · ${web ? 'Gemini เว็บ' : useApi && hasKey ? 'Gemini API' : 'ChatGPT'}`
 }
 
 async function saveWriterKey() {
@@ -2189,8 +2189,8 @@ const studioHero = (() => {
   let last = null // ข้อมูลรอบล่าสุด — กดดูแล้วแสดงทันทีโดยไม่ต้องถามโปรแกรมในเครื่องใหม่
 
   const tips = new Map() // ป้ายหน้าที่ของแต่ละตัว ขึ้นทันทีตอนชี้/โฟกัส (title ของเบราว์เซอร์ขึ้นช้าและไม่บอกหน้าที่)
-  // กดสัตว์ในแถบด้านบน → ไปเฉพาะขั้นใน "หรือทำทีละขั้นเอง" (ไม่ไปการ์ดอัตโนมัติ) แม้ขั้นนั้นยังล็อกอยู่
-  // เต่ามี 3 ขั้น (1 หัวข้อ · 2 บท · 4 prompt ภาพ) → กดซ้ำเลื่อนไปขั้นถัดไปของเต่า
+  // กดตัวละครในแถบด้านบน → ไปเฉพาะขั้นใน "หรือทำทีละขั้นเอง" (ไม่ไปการ์ดอัตโนมัติ) แม้ขั้นนั้นยังล็อกอยู่
+  // นักเขียนบทมี 3 ขั้น (1 หัวข้อ · 2 บท · 4 prompt ภาพ) → กดซ้ำเลื่อนไปขั้นถัดไปของนักเขียนบท
   const settingTargets = { chatgpt: ['topicSection', 'scriptSection', 'imageSection'], voice: ['voiceSettingsBox', 'voiceSection'], flow: ['flowSection'], meta: ['clipsSection'], edit: ['renderSection'] }
   const stepCursor = {}
   let focusTimer = null
@@ -2239,7 +2239,7 @@ const studioHero = (() => {
     $('stickyLogo').onclick = () => scrollTo({ top: 0, behavior: 'smooth' })
     stickyCrew.set(d.id, sticky)
   }
-  // ── สัตว์ลอย: กล่องของแผนกไหนพาดเส้นกลางจอ → เปลี่ยนเป็นตัวนั้น
+  // ── ตัวละครลอย: กล่องของแผนกไหนพาดเส้นกลางจอ → เปลี่ยนเป็นตัวนั้น
   // ใช้ IntersectionObserver เส้นบางที่ 45% ของจอ (ไม่ฟัง scroll และไม่มี rAF ตามกติกาของตกแต่ง)
   const mascot = $('floatMascot')
   let mascotId = null
@@ -2275,10 +2275,10 @@ const studioHero = (() => {
     for (const e of entries) e.isIntersecting ? onLine.add(e.target) : onLine.delete(e.target)
     syncMascot()
   }, { rootMargin: '-45% 0px -54% 0px' })
-  // เฉพาะขั้นใน "หรือทำทีละขั้นเอง" — การ์ดอัตโนมัติไม่เรียกสัตว์ลอย และไม่เปลี่ยนธีม
+  // เฉพาะขั้นใน "หรือทำทีละขั้นเอง" — การ์ดอัตโนมัติไม่เรียกตัวละครลอย และไม่เปลี่ยนธีม
   for (const el of document.querySelectorAll('main > section.step[data-agent]')) lineObserver.observe(el)
 
-  // ── ลากสัตว์ลอยไปวางตรงไหนก็ได้ · จำตำแหน่งไว้ในเบราว์เซอร์นี้ · ดับเบิลคลิก = กลับมุมขวาล่าง ──
+  // ── ลากตัวละครลอยไปวางตรงไหนก็ได้ · จำตำแหน่งไว้ในเบราว์เซอร์นี้ · ดับเบิลคลิก = กลับมุมขวาล่าง ──
   const MASCOT_KEY = 'floatMascotPos'
   const placeMascot = (pos) => {
     if (!pos) {
@@ -2368,7 +2368,7 @@ const studioHero = (() => {
     const working = agents.filter((a) => a.state === 'working')
     const waiting = agents.filter((a) => a.state === 'waiting')
     const autoRunning = auto?.status === 'running' && !failed
-    // ตัวเอกต้องเป็นตัวเดียวกับที่ขยับในแถวทีมงาน: แผนกของขั้นปัจจุบัน (ถ้ากำลังทำ) > แผนกที่กำลังทำจริง > แผนกของขั้นปัจจุบัน > รอคิว > เต่า
+    // ตัวเอกต้องเป็นตัวเดียวกับที่ขยับในแถวทีมงาน: แผนกของขั้นปัจจุบัน (ถ้ากำลังทำ) > แผนกที่กำลังทำจริง > แผนกของขั้นปัจจุบัน > รอคิว > นักเขียนบท
     // เช่นขั้นวาดภาพที่ ChatGPT ทำปกอยู่ — ถ้ายึดแผนกของขั้น ตัวบนจะนิ่งทั้งที่ตัวล่างขยับ
     const stageLead = byId.get(stage?.id)
     const lead = byId.get(pinned?.id) ?? (stageLead?.state === 'working' ? stageLead : null) ?? byId.get(working[0]?.id) ?? stageLead ?? byId.get(waiting[0]?.id) ?? byId.get('chatgpt')
@@ -2867,7 +2867,7 @@ function renderVoices() {
   }
   if (V.edge) {
     // พากย์ไทย: ซ่อนเสียงอังกฤษล้วน — อ่านไทยไม่ออก (Microsoft ไม่ส่งเสียงกลับมา) · พากย์อังกฤษ: แสดงครบทุกเสียง
-    // พากย์ไทย: ไทย + หลายภาษา · อังกฤษ: ทุกกลุ่มยกเว้นจีน
+    // พากย์ไทย: ไทย + หลายภาษา · อังกฤษ: เพิ่มกลุ่มเสียงอังกฤษ
     const vlang = S.language ?? V.language
     const EDGE_GROUPS = [
       ['thai', 'Edge — เสียงไทย'],
@@ -3213,7 +3213,7 @@ for (const [id, key] of [['titleLang', 'titleLanguage'], ['voLang', 'language'],
 // ── วาดหน้า ──
 
 /**
- * ขั้นที่ยังทำไม่ได้: ไม่ซ่อนทั้งขั้น — แสดงหัวขั้น (รูปสัตว์ · ป้ายแผนก) แบบพับไว้ พร้อมบอกว่าต้องทำอะไรก่อน
+ * ขั้นที่ยังทำไม่ได้: ไม่ซ่อนทั้งขั้น — แสดงหัวขั้น (รูปตัวละคร · ป้ายแผนก) แบบพับไว้ พร้อมบอกว่าต้องทำอะไรก่อน
  * ผู้ใช้เห็นทีมครบทุกตัวตั้งแต่แรก (ช่างศิลป์/ปูไม่หายไปจนกว่าจะถึงคิว)
  */
 function lockStep(id, locked, reason) {

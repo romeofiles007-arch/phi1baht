@@ -8,21 +8,21 @@
 <link rel="stylesheet" href="agents.css" />
 <link rel="stylesheet" href="posting.css" />
 <style>
-  /* Shared control layout. Temple colors and illustrations are defined in temple.css. */
+  /* Shared control layout. Print-shop colours and illustrations are defined in temple.css. */
   :root {
-    color-scheme: light;
-    --bg: #f5eddd; --panel: #fffcf5; --ink: #123b42; --muted: #526c6d; --line: #82765f;
-    --accent: #006d77; --accent-ink: #fff; --ok: #24724f; --warn: #875000; --pick: #d9eeea;
-    --danger: #ae402f; --sea-top: #b8e0dd; --sand-deep: #dcc391; --panel-shadow: 0 3px 12px rgba(18, 59, 66, .08);
-    --studio-tint: #214d42; --studio-sand: #e9c991; --world-wash: rgba(239, 242, 219, .12); --world-image: url('agents/china-night.png');
+    color-scheme: dark;
+    --bg: #2b2318; --panel: #3a2f21; --ink: #f6ead0; --muted: #d6c49c; --line: #8f7b55;
+    --accent: #ff8a73; --accent-ink: #1c0d0a; --ok: #8fd3ad; --warn: #ecc763; --pick: #4a3b28;
+    --danger: #ff9f93; --sea-top: #3a2f21; --sand-deep: #8f7b55; --panel-shadow: 0 3px 12px rgba(12, 7, 2, .3);
+    --studio-tint: #5a4326; --studio-sand: #e0b04a; --world-wash: rgba(20, 14, 8, .26); --world-image: url('agents/china-night.png');
   }
   @media (prefers-color-scheme: dark) {
     :root {
       color-scheme: dark;
-      --bg: #07242b; --panel: #10363e; --ink: #edf6f1; --muted: #a5c2c2; --line: #6d9495;
-      --accent: #78d9cd; --accent-ink: #07363b; --ok: #87d9ac; --warn: #ebc17a; --pick: #194850;
-      --danger: #ffa18b; --sea-top: #164b53; --sand-deep: #d9ba84; --panel-shadow: 0 3px 16px rgba(0, 15, 20, .28);
-      --studio-sand: #e9c991; --world-wash: rgba(3, 24, 31, .48);
+      --bg: #14100c; --panel: #1f1812; --ink: #f1e4c4; --muted: #c4b18a; --line: #7d6a48;
+      --accent: #ff8a73; --accent-ink: #140a08; --ok: #8fd3ad; --warn: #ecc763; --pick: #2c2318;
+      --danger: #ff9f93; --sea-top: #1f1812; --sand-deep: #7d6a48; --panel-shadow: 0 3px 16px rgba(2, 1, 0, .34);
+      --studio-sand: #e0b04a; --world-wash: rgba(8, 5, 2, .4);
     }
   }
   * { box-sizing: border-box; }
@@ -445,7 +445,7 @@
     </details>
     </div>
     <div class="agentBlock agentSetting" id="autoTopicBlock" data-agent="chatgpt" data-agent-label="ChatGPT">
-    <div class="blockHead" data-agent-label="ปราชญ์เขียนบท · ChatGPT"><span class="blockTitle">หัวข้อและบท</span></div>
+    <div class="blockHead" data-agent-label="นักเขียนผีสูงวัย · ChatGPT"><span class="blockTitle">หัวข้อและบท</span></div>
     <!-- ผู้เขียนบท: สวิตช์ใหญ่บนสุดของกล่อง ให้เห็นทันทีว่าตอนนี้ใครเขียน (ผู้ใช้ 21 พ.ย. 2026: "ทำปุ่มสลับให้เห็นชัดเจน") -->
     <div class="writerSwitch" id="writerSwitch" hidden>
       <div class="writerSwitchLabel">ใครเขียนหัวข้อและบท</div>
@@ -492,7 +492,7 @@
     </div>
     <!-- กล่องนักพากย์กล่องเดียว: ภาษา ความยาว เสียง อารมณ์ ความเร็ว (เดิมแยก "ภาษาและความยาว" ไว้อีกกล่อง ผู้ใช้เห็นว่าซ้ำ) -->
     <details class="clipSettings agentSetting agentBlock voiceSettings" id="voiceSettingsBox" data-agent="voice" data-agent-label="เสียงพากย์" open>
-      <summary data-agent-label="นักร้องงิ้ว · เสียงพากย์"><span class="blockTitle" id="autoVoice">เสียงพากย์</span><svg class="blockCaret" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+      <summary data-agent-label="นักพากย์หนังกลางแปลง · เสียงพากย์"><span class="blockTitle" id="autoVoice">เสียงพากย์</span><svg class="blockCaret" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
       <div class="pick" style="margin-top:10px">ภาษาและความยาว
         <div class="controls" style="margin:0">
           <div class="seg" id="autoLang" role="group" aria-label="ภาษาพากย์">
@@ -546,7 +546,7 @@
       <div class="status" id="voicePickStatus" role="status" aria-live="polite" style="margin-top:8px"></div>
     </details>
     <details class="clipSettings agentSetting agentBlock" id="clipSettingsBox" data-agent="flow" data-agent-label="Google Flow" open>
-      <summary data-agent-label="จิตรกรหญิง · Google Flow"><span class="blockTitle" id="clipSettingsSummary">ตั้งค่าคลิป</span><svg class="blockCaret" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+      <summary data-agent-label="นักวาดปกเล่มละบาท · Google Flow"><span class="blockTitle" id="clipSettingsSummary">ตั้งค่าคลิป</span><svg class="blockCaret" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
       <div class="pick" style="margin-top:10px">รูปแบบภาพและวิดีโอ
         <div class="seg" id="clipOrientation" role="group" aria-label="แนวภาพ">
           <button type="button" data-value="landscape">▭ แนวนอน 16:9</button>
@@ -584,8 +584,8 @@
       </div>
       <p class="hint" style="margin:0">แนวภาพและตัวละครใช้กับ prompt/ภาพที่สร้างใหม่ · ซับไตเติลใช้ตอนตัดต่อ · ช่วงเงียบใช้ตอนทำเสียง (คลิปเดิมปรับได้ในขั้นที่ 6)</p>
     </details>
-    <details class="clipSettings agentSetting seahorseSettings agentBlock" id="metaSettings" data-agent="meta" data-agent-label="นักรำกระบี่ · Kie API" open>
-      <summary data-agent-label="นักรำกระบี่ · Kie API"><span class="blockTitle">แอนิเมชัน</span> <span id="kieModeBadge" class="kieBadge">ปิด</span><svg class="blockCaret" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+    <details class="clipSettings agentSetting seahorseSettings agentBlock" id="metaSettings" data-agent="meta" data-agent-label="คนฉายหนังกลางแปลง · Kie API" open>
+      <summary data-agent-label="คนฉายหนังกลางแปลง · Kie API"><span class="blockTitle">แอนิเมชัน</span> <span id="kieModeBadge" class="kieBadge">ปิด</span><svg class="blockCaret" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
       <p class="hint">หลัง Google Flow วาดภาพ ผู้ช่วยจัดฉากเลือกฉากสำคัญ ส่งภาพไป Kie แล้วส่งคลิปให้แผนกตัดต่อ</p>
       <div class="pick">สร้างแอนิเมชัน
         <div class="seg" id="clipAi" role="group" aria-label="เปิดหรือปิด Kie API และเลือกสัดส่วนฉาก หรือทำเฉพาะภาพแรก" aria-describedby="clipAiHint"></div>
@@ -609,7 +609,7 @@
   <p class="groupDivider"><span>หรือทำทีละขั้นเอง</span></p>
 
   <section class="step agentSetting" id="topicSection" data-agent="chatgpt" data-agent-label="ChatGPT" aria-label="ขั้นที่ 1 หัวข้อ">
-    <h2 data-agent-label="ปราชญ์เขียนบท · ChatGPT"><span class="stepNo" aria-hidden="true">1</span>หัวข้อ</h2>
+    <h2 data-agent-label="นักเขียนผีสูงวัย · ChatGPT"><span class="stepNo" aria-hidden="true">1</span>หัวข้อ</h2>
     <p class="lede">สั่ง ChatGPT คิดหัวข้อ viral 5 ข้อตาม Blueprint แล้วคลิกเลือก</p>
     <div class="controls">
       <div class="seg" id="titleLang" role="group" aria-label="ภาษาชื่อหัวข้อ">
@@ -626,7 +626,7 @@
   </section>
 
   <section class="step agentSetting" id="scriptSection" data-agent="chatgpt" data-agent-label="ChatGPT" aria-label="ขั้นที่ 2 บทพากย์" hidden>
-    <h2 data-agent-label="ปราชญ์เขียนบท · ChatGPT"><span class="stepNo" aria-hidden="true">2</span>บทพากย์</h2>
+    <h2 data-agent-label="นักเขียนผีสูงวัย · ChatGPT"><span class="stepNo" aria-hidden="true">2</span>บทพากย์</h2>
     <p class="lede" id="pickedTitle"></p>
     <div class="controls">
       <div class="seg" id="voLang" role="group" aria-label="ภาษาพากย์">
@@ -653,7 +653,7 @@
   </section>
 
   <section class="step agentSetting" id="voiceSection" data-agent="voice" data-agent-label="เสียงพากย์" aria-label="ขั้นที่ 3 เสียงพากย์">
-    <h2 data-agent-label="นักร้องงิ้ว · เสียงพากย์"><span class="stepNo" aria-hidden="true">3</span>เสียงพากย์ (เสียงของเรา)</h2>
+    <h2 data-agent-label="นักพากย์หนังกลางแปลง · เสียงพากย์"><span class="stepNo" aria-hidden="true">3</span>เสียงพากย์ (เสียงของเรา)</h2>
     <p class="lede">สร้างเสียงด้วยโมเดลที่เทรนจากเสียงเราเอง — ทำในเครื่องด้วยการ์ดจอ ไม่ใช้ API</p>
     <!-- เลือกเสียง/อารมณ์/ความเร็ว ย้ายไปกล่อง "ปรับแต่งเสียงพากย์" ในส่วนทำคลิปอัตโนมัติ (ผู้ใช้ขอให้อยู่ใกล้ตั้งค่าคลิป) -->
     <p class="hint voiceMovedHint"><span id="voiceCurrent"></span> · <button type="button" class="linkBtn" id="gotoVoiceSettings">ปรับเสียง อารมณ์ ความเร็ว ↑</button></p>
@@ -719,7 +719,7 @@
   </section>
 
   <section class="step agentSetting" id="imageSection" data-agent="chatgpt" data-agent-label="ChatGPT" aria-label="ขั้นที่ 4 Prompt ภาพ" hidden>
-    <h2 data-agent-label="ปราชญ์เขียนบท · ChatGPT"><span class="stepNo" aria-hidden="true">4</span>Prompt ภาพสำหรับ Google Flow</h2>
+    <h2 data-agent-label="นักเขียนผีสูงวัย · ChatGPT"><span class="stepNo" aria-hidden="true">4</span>Prompt ภาพสำหรับ Google Flow</h2>
     <p class="lede">ตาม Blueprint OUTPUT 5 — Style Bible + Character Bible (@TAG) + Shot List ช็อตละ 2–3 วิ ชื่อไฟล์ = timecode ของเสียงพากย์</p>
     <div class="run">
       <button class="primary" id="startShots">▶ เริ่มสร้าง prompt ภาพ</button>
@@ -740,7 +740,7 @@
   </section>
 
   <section class="step agentSetting" id="flowSection" data-agent="flow" data-agent-label="Google Flow" aria-label="ขั้นที่ 5 สร้างภาพ" hidden>
-    <h2 data-agent-label="จิตรกรหญิง · Google Flow"><span class="stepNo" aria-hidden="true">5</span>สร้างภาพใน Google Flow</h2>
+    <h2 data-agent-label="นักวาดปกเล่มละบาท · Google Flow"><span class="stepNo" aria-hidden="true">5</span>สร้างภาพใน Google Flow</h2>
     <p class="lede">เปิด project ใหม่ → เปิด Agent → ตั้งค่า Image · 16:9 · Nano Banana 2 Lite · x1 (ตรวจว่า 0 credits ก่อน) → ส่ง prompt จากขั้นที่ 4</p>
     <div class="run">
       <button class="primary" id="startFlow">▶ ส่งไป Google Flow</button>
@@ -755,8 +755,8 @@
     <p class="warn" id="flowMissing" hidden></p>
   </section>
 
-  <section class="step agentSetting" id="clipsSection" data-agent="meta" data-agent-label="นักรำกระบี่ · Kie API" aria-label="ขั้นที่ 6 แอนิเมชัน" hidden>
-    <h2 data-agent-label="นักรำกระบี่ · Kie API"><span class="stepNo" aria-hidden="true">6</span>ทำแอนิเมชันด้วย Kie</h2>
+  <section class="step agentSetting" id="clipsSection" data-agent="meta" data-agent-label="คนฉายหนังกลางแปลง · Kie API" aria-label="ขั้นที่ 6 แอนิเมชัน" hidden>
+    <h2 data-agent-label="คนฉายหนังกลางแปลง · Kie API"><span class="stepNo" aria-hidden="true">6</span>ทำแอนิเมชันด้วย Kie</h2>
     <p class="lede">ผู้ช่วยจัดฉากเลือกฉากสำคัญจากภาพของขั้นที่ 5 ส่งให้ Kie ทำเป็นคลิปขยับ แล้วขั้นตัดต่อใช้คลิปแทนภาพนิ่งของฉากนั้น</p>
     <div class="clipsSummary"><span id="clipsSummary"></span><button type="button" class="linkish" id="editClipSettings">แก้การตั้งค่า</button></div>
     <div class="run">
@@ -769,7 +769,7 @@
   </section>
 
   <section class="step agentSetting" id="renderSection" data-agent="edit" data-agent-label="ตัดต่อ" aria-label="ขั้นที่ 7 สร้างวิดีโอ" hidden>
-    <h2 data-agent-label="ช่างเย็บเล่มตำรา · ตัดต่อ"><span class="stepNo" aria-hidden="true">7</span>สร้างวิดีโอ</h2>
+    <h2 data-agent-label="ช่างโรงพิมพ์เย็บเล่ม · ตัดต่อ"><span class="stepNo" aria-hidden="true">7</span>สร้างวิดีโอ</h2>
     <p class="lede">ประกอบภาพ (ชื่อไฟล์ = เวลาที่ภาพขึ้น) + เสียงพากย์ เป็น MP4 1080p ไม่ใส่เพลง</p>
     <p class="hint" id="renderSettingsHint"></p>
     <div class="run">
@@ -790,7 +790,7 @@
 </main>
 
 <!-- เลื่อนลงจนมองไม่เห็นแบนเนอร์ → แถว agent ลอยติดขอบบน เพื่อไปตั้งค่าได้ทุกเวลา -->
-<!-- สัตว์ตัวใหญ่ลอยมุมขวาล่าง ล้นขอบกล่องเล็กน้อย — เลื่อนถึงกล่องของแผนกไหนก็เปลี่ยนเป็นตัวนั้น (ตกแต่ง ไม่ดักการกด) -->
+<!-- ตัวละครตัวใหญ่ลอยมุมขวาล่าง ล้นขอบกล่องเล็กน้อย — เลื่อนถึงกล่องของแผนกไหนก็เปลี่ยนเป็นตัวนั้น (ตกแต่ง ไม่ดักการกด) -->
 <div class="floatMascot" id="floatMascot" aria-hidden="true" hidden><span class="floatSprite"><span class="sprite-pose"></span></span></div>
 
 <nav class="agentSticky" id="agentSticky" hidden aria-label="เลือก agent เพื่อไปตั้งค่า">

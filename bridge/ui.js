@@ -211,7 +211,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
       agents: [
         { id: 'chatgpt', name: 'ChatGPT', role: 'เขียนบท · กำกับภาพ', ...webAgent('chatgpt') },
         { id: 'flow', name: 'Google Flow', role: 'วาดภาพ', ...webAgent('flow') },
-        { id: 'meta', name: 'นักรำกระบี่ · Kie API', role: 'ทำแอนิเมชัน', ...localAgent('meta', 'clips') },
+        { id: 'meta', name: 'คนฉายหนังกลางแปลง · Kie API', role: 'ทำแอนิเมชัน', ...localAgent('meta', 'clips') },
         { id: 'voice', name: 'เสียงพากย์', role: 'ในเครื่อง', ...localAgent('voice', 'voice') },
         { id: 'edit', name: 'ตัดต่อ', role: 'ในเครื่อง', ...localAgent('edit', 'edit') },
       ],
