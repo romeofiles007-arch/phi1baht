@@ -271,11 +271,15 @@ test('ผิดพลาดเฉยๆ ไม่บอกสาเหตุ = f
 
 test('ตัวสั่ง Flow ใช้ตัวแยกนี้: busy → FLOW_BUSY รอแล้วสั่งต่อ · มีภาพแล้วไม่ทิ้งทั้งคลิป', () => {
   const agent = src('content-flow-agent.js')
-  assert.match(agent, /agentFailureKind\(failure\)/)
+  // 23 พ.ย. 2026: การจัดประเภทย้ายไปรวมที่ flowFailureError() เพื่อให้ทางที่เจอ error ของ Flow ทุกทางใช้ร่วมกัน
+  assert.match(agent, /const flowFailureError = \(why\) =>/)
+  assert.match(agent, /agentFailureKind\(why\)/)
   assert.match(agent, /FLOW_BUSY:/)
   // ผิดพลาดไม่บอกสาเหตุก็รอเว้นช่วงเหมือนคิวเต็ม — ไม่ส่งซ้ำถี่ทุก 5–10 วิ และไม่หยุดทั้งชุดตั้งแต่ครั้งแรก
   assert.ok(!agent.includes('await sleep(5000 * round)'), 'ห้ามส่งซ้ำถี่')
   assert.match(agent, /if \(kind === 'busy' \|\| kind === 'failed'\)/)
+  // ตรวจ error ของ Flow ก่อนแนบรูปและตอนวาง prompt ไม่ได้ด้วย ไม่ใช่หลังส่งอย่างเดียว
+  assert.match(agent, /const stuck = flowProblem\(\)/)
   assert.match(agent, /if \(await busyPause\(error\.kind\)\) continue/)
   // รอครบแล้วยังผิดพลาด → FLOW_BLOCKED (หยุดทั้งชุดเหมือนเดิม)
   assert.match(agent, /FLOW_BLOCKED: Google Flow ไม่รับคำสั่งของ Agent มา/)

@@ -508,9 +508,38 @@ async function attachImages(editor, attachments) {
   await sleep(1000)
 }
 
+/**
+ * Flow บอกว่าเกิดข้อผิดพลาด — ดูทั้งการ์ดคำตอบของ Agent และ toast/แถบเตือนบนหน้า · '' = ไม่มีปัญหา
+ * 23 พ.ย. 2026: Flow ขึ้น toast "Something went wrong. Please try again." แล้วค้าง prompt กับรูปแนบไว้ในช่องพิมพ์
+ * ช่องจึงล้างไม่ออก เราเลยรายงานว่า "วาง prompt ไม่ได้" ทั้งที่ต้นเหตุคือ Flow เอง — และข้ามจังหวะรอแล้วส่งใหม่ไปเลย
+ * นับเฉพาะข้อความที่บอกว่าเกิดข้อผิดพลาดจริง ไม่งั้นแถบเตือนอื่นที่ค้างอยู่จะทำให้สั่งงานไม่ได้เลย
+ */
+const flowProblem = () => {
+  const card = agentFailed()
+  const alerts = pageAlerts()
+  if (!card && !L.agentFailed.test(alerts)) return ''
+  return [card && labelText(card), alerts].filter(Boolean).join(' · ').replace(/\s+/g, ' ').trim().slice(0, 220)
+}
+/** แปลงข้อความผิดพลาดของ Flow เป็น error ที่คนเรียกรู้ว่าควรรอแล้วส่งใหม่ (busy) หรือหยุดทั้งชุด (blocked) */
+const flowFailureError = (why) => {
+  const kind = agentFailureKind(why)
+  if (kind === 'busy' || kind === 'failed') {
+    return Object.assign(new Error(`FLOW_BUSY: Flow ${kind === 'busy' ? 'คิวเต็ม (คนใช้เยอะ)' : 'ตอบว่าเกิดข้อผิดพลาด'} — "${why}"`), { kind })
+  }
+  return Object.assign(new Error(
+    `FLOW_BLOCKED: Google Flow ไม่รับคำสั่งของ Agent — "${why}"` +
+    (kind === 'blocked'
+      ? ' · Flow มองว่าการใช้งานผิดปกติ (มันเตือนเรื่องส่วนขยายที่แก้หน้าเว็บด้วย) หยุดสั่งงานอัตโนมัติสักพัก แล้วเปิดหน้า Flow สั่งสร้างภาพเองด้วยมือสักครั้งให้ผ่านก่อน ค่อยเริ่มผลิตใหม่'
+      : ' · ลองส่งใหม่ครบ 3 ครั้งแล้วยังไม่ผ่าน เปิดหน้า Flow ดูว่ามีอะไรค้างอยู่')
+  ), { kind: kind || 'failed' })
+}
+
 async function sendPrompt(prompt, attachments) {
   if (expectedAccount && !Q.sameAccount(await verifiedAccountEmail(), expectedAccount)) throw new Error('FLOW_ACCOUNTS_EXHAUSTED: บัญชี Flow เปลี่ยนระหว่างทำงาน')
   checkAccountQuota()
+  // ตรวจก่อนแนบรูป: Flow ค้าง error จากรอบก่อนอยู่หรือเปล่า — แนบรูปทับไปตอนนี้ก็ส่งไม่ออกอยู่ดี
+  const stuck = flowProblem()
+  if (stuck) throw flowFailureError(stuck)
   await waitBeforeNextPrompt()
   if (expectedAccount && !Q.sameAccount(await verifiedAccountEmail(), expectedAccount)) throw new Error('FLOW_ACCOUNTS_EXHAUSTED: บัญชี Flow เปลี่ยนระหว่างทำงาน')
   checkAccountQuota()
@@ -536,14 +565,19 @@ async function sendPrompt(prompt, attachments) {
   }
   // ส่งแล้วต้องเห็นว่า Flow รับงานจริง ไม่ใช่แค่ช่องพิมพ์ว่าง — ว่างเพราะถูกปฏิเสธก็ว่างเหมือนกัน
   let failure = ''
-  let kind = ''
   {
     let pasted = false
     for (let attempt = 0; attempt < 3 && !pasted; attempt++) {
       pasted = await pasteText()
       if (!pasted) await sleep(1500)
     }
-    if (!pasted) throw new Error('วาง prompt ลงช่องพิมพ์ของ Flow ไม่ได้')
+    if (!pasted) {
+      // ล้างช่องพิมพ์ไม่ออกเกือบทุกครั้งแปลว่า Flow ค้าง error อยู่ (prompt กับรูปแนบรอบก่อนยังอยู่ในช่อง)
+      // รายงานสาเหตุจริง ไม่ใช่ "วาง prompt ไม่ได้" และให้คนเรียกรอแล้วส่งใหม่แทนที่จะเลิกทั้งรอบ
+      const why = flowProblem()
+      if (why) throw flowFailureError(why)
+      throw new Error('วาง prompt ลงช่องพิมพ์ของ Flow ไม่ได้ — ช่องพิมพ์ล้างไม่ออกหรือพิมพ์ไม่ลง · เปิดแท็บ Flow ดูว่ามีอะไรค้างในช่องพิมพ์ แล้วสั่งใหม่')
+    }
     await waitFor(() => (SEL.send() && !SEL.send().disabled ? SEL.send() : null), { label: 'ปุ่มส่งพร้อมใช้งาน' })
     await chrome.storage.local.set({ [FLOW_LAST_PROMPT_KEY]: Date.now() })
     await trustedEnter(await waitFor(SEL.editor, { label: 'ช่องพิมพ์' }), prompt)
@@ -552,20 +586,11 @@ async function sendPrompt(prompt, attachments) {
     const failed = await waitFor(agentFailed, { timeout: 12_000, interval: 500, label: 'คำตอบของ Agent' }).catch(() => null)
     if (!failed) return
     failure = [labelText(failed), pageAlerts()].filter(Boolean).join(' · ').replace(/\s+/g, ' ').trim().slice(0, 220)
-    kind = agentFailureKind(failure)
     // Flow กันบอต — ลองใหม่กี่ครั้งก็เหมือนเดิม และคลิปถัดไปก็เจอเหมือนกัน หยุดทั้งชุดดีกว่าไล่ทำต่อให้พังหมด
     // Flow คิวเต็ม / ผิดพลาดไม่บอกสาเหตุ — ส่งซ้ำทันทีก็โดนอีก และส่งถี่ยิ่งดูเป็นบอต
     // ให้คนเรียกรอเป็นนาที (BUSY_WAITS_MS) แล้วค่อยส่งใหม่ (เจอจริง 20 พ.ย. 2026: Flow คนใช้เยอะทั้งช่วงเช้า)
   }
-  if (kind === 'busy' || kind === 'failed') {
-    throw Object.assign(new Error(`FLOW_BUSY: Flow ${kind === 'busy' ? 'คิวเต็ม (คนใช้เยอะ)' : 'ตอบว่าเกิดข้อผิดพลาด'} — "${failure}"`), { kind })
-  }
-  throw Object.assign(new Error(
-    `FLOW_BLOCKED: Google Flow ไม่รับคำสั่งของ Agent — "${failure}"` +
-    (kind === 'blocked'
-      ? ' · Flow มองว่าการใช้งานผิดปกติ (มันเตือนเรื่องส่วนขยายที่แก้หน้าเว็บด้วย) หยุดสั่งงานอัตโนมัติสักพัก แล้วเปิดหน้า Flow สั่งสร้างภาพเองด้วยมือสักครั้งให้ผ่านก่อน ค่อยเริ่มผลิตใหม่'
-      : ' · ลองส่งใหม่ครบ 3 ครั้งแล้วยังไม่ผ่าน เปิดหน้า Flow ดูว่ามีอะไรค้างอยู่')
-  ), { kind: kind || 'failed' })
+  throw flowFailureError(failure)
 }
 
 const agentBusy = () => !!byAria(L.stop).find(visible)
