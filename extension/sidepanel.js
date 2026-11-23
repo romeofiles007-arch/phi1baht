@@ -1590,7 +1590,8 @@ function renderClipSettings() {
   }
   bgm.value = clip.bgm
   $('clipBgmHint').textContent = !clip.bgmCount
-    ? 'ยังไม่มีเพลง — วางไฟล์เพลง (mp3 · wav · m4a) ไว้ในโฟลเดอร์ music ของโปรแกรม'
+    // ชนิดไฟล์ต้องตรงกับ BGM_AUDIO_EXT ใน pipeline/lib/bgm.mjs — เดิมบอกแค่ 3 ชนิด คนวาง .ogg/.flac แล้วไม่ขึ้น
+    ? 'ยังไม่มีเพลง — วางไฟล์เพลง (mp3 · wav · m4a · aac · ogg · flac) ไว้ในโฟลเดอร์ music ของโปรแกรม แล้วปิด-เปิดแผงข้างใหม่ (รายชื่อเพลงอ่านตอนเปิดแผง)'
     : clip.bgm === 'off'
       ? 'ไม่ใส่เพลง — คลิปมีแต่เสียงพากย์'
       : clip.bgm === 'random'
