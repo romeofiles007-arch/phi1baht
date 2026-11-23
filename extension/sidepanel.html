@@ -572,6 +572,15 @@
         </div>
         <p class="hint" id="charHint" style="margin:4px 0 0">ยังไม่ได้ตั้ง — ระบบใช้ตัวละครตาม Blueprint</p>
       </div>
+      <div class="pick">สินค้าในเรื่อง <small>(ตัวทดลอง)</small>
+        <input id="clipProductUrl" type="url" inputmode="url" placeholder="วางลิ้งสินค้าจาก Shopee" />
+        <input id="clipProductName" type="text" maxlength="60" placeholder="ชื่อสินค้าที่จะให้เรียกในเรื่อง เช่น ไฟส่องกบ" />
+        <div class="controls" style="margin:6px 0 0">
+          <label class="field"><input type="checkbox" id="clipProductEnabled" /> ให้สินค้าโผล่ในคลิปใหม่</label>
+          <button type="button" class="ghost" id="clipProductClear">ล้างสินค้า</button>
+        </div>
+        <p class="hint" id="clipProductHint" style="margin:4px 0 0">ยังไม่ได้ตั้ง — บทจะไม่มีสินค้าเลย</p>
+      </div>
       <p class="hint" style="margin:0">แนวภาพและตัวละครใช้กับ prompt/ภาพที่สร้างใหม่ · ซับไตเติลใช้ตอนตัดต่อ · ช่วงเงียบใช้ตอนทำเสียง (คลิปเดิมปรับได้ในขั้นที่ 6)</p>
     </details>
     <details class="clipSettings agentSetting seahorseSettings agentBlock" id="metaSettings" data-agent="meta" data-agent-label="คนฉายหนังกลางแปลง · Kie API" open>

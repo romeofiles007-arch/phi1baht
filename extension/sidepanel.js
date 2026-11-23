@@ -204,7 +204,8 @@ async function selectTopic(t) {
 $('askScript').addEventListener('click', async () => {
   $('scriptRawBox').hidden = true
   S.minutes = Math.min(60, Math.max(1, Number($('minutes').value) || 1))
-  const opts = { language: S.language, targetMinutes: S.minutes, wordsPerMinute: WORDS_PER_MINUTE, engage: clip?.engage !== 'off', scare: S.scare ?? resolveScare(clip?.scare) }
+  // สินค้าในเรื่อง (ตัวทดลอง) — ส่งไปเฉพาะตอนเปิดใช้และมีชื่อสินค้าแล้ว ไม่งั้นบทไม่ต้องรู้เรื่องสินค้าเลย
+  const opts = { language: S.language, targetMinutes: S.minutes, wordsPerMinute: WORDS_PER_MINUTE, engage: clip?.engage !== 'off', scare: S.scare ?? resolveScare(clip?.scare), product: clip?.product?.enabled && clip.product.name ? clip.product : null }
   try {
     const text = await withBusy('scriptStatus', 'ChatGPT กำลังเขียนบท (บทยาว ใช้เวลาหลายนาที)', async () =>
       askChatGPT(scriptPrompt(await blueprint(), S.selected.title, opts)),
@@ -1734,6 +1735,7 @@ function renderClipSettings() {
   }
   $('kieModeBadge').textContent = !aiOn ? 'ปิด' : firstMode ? `เปิด ${firstCount} ภาพแรก` : `เปิด ${aiCoverage}%`
   $('kieKeyStatus').textContent = clip.kie?.hasKey ? 'บันทึก API key แล้ว · เก็บไว้ในเครื่อง' : 'ยังไม่มี API key — กรอกก่อนเริ่มสร้างแอนิเมชัน'
+  renderProduct()
   const motionLabel = motionOptions.find((o) => o.id === clip.motion)?.label
   const subLabel = clip.options.subtitles.find((o) => o.id === clip.subtitles)?.label
   const pauseLabel = clip.options.pause.find((o) => o.id === clip.pause)?.label
@@ -1743,6 +1745,32 @@ function renderClipSettings() {
   $('clipSettingsSummary').textContent = `ตั้งค่าคลิป: ${summary}${character?.active ? ' · ตัวละครของฉัน' : ''}`
   $('renderSettingsHint').textContent = `ซับไตเติล: ${subLabel}${motionLabel ? ` · ${motionLabel}` : ''} · แนวภาพตามภาพที่สร้างไว้ (เปลี่ยนได้ที่ ⚡ ตั้งค่าคลิป)`
   for (const el of [...$('clipOrientation').querySelectorAll('button'), sel, bgm, ...pause.querySelectorAll('button'), ...motion.querySelectorAll('button'), ...ai.querySelectorAll('button')]) el.disabled = localBusy()
+}
+
+/**
+ * สินค้าในเรื่อง (ตัวทดลอง) — วางลิ้ง Shopee แล้วระบบอ่านชื่อสินค้าจากตัวลิ้ง (ไม่ยิงเน็ตไปหา Shopee)
+ * ลิ้งย่อ (th.shp.ee) หรือลิ้งแบบ /product/<id>/<id> ไม่มีชื่ออยู่ใน URL → ให้ผู้ใช้พิมพ์ชื่อเอง
+ * โปรแกรมในเครื่องรุ่นเก่าไม่ส่ง product มา → ซ่อนกล่องนี้ไป
+ */
+function renderProduct() {
+  const box = $('clipProductUrl')?.parentElement
+  if (!box) return
+  const p = clip?.product
+  box.hidden = !p
+  if (!p) return
+  if (document.activeElement !== $('clipProductUrl')) $('clipProductUrl').value = p.url ?? ''
+  if (document.activeElement !== $('clipProductName')) $('clipProductName').value = p.name ?? ''
+  $('clipProductEnabled').checked = p.enabled === true
+  $('clipProductEnabled').disabled = !p.name || localBusy()
+  $('clipProductHint').textContent = !p.url && !p.name
+    ? 'ยังไม่ได้ตั้ง — บทจะไม่มีสินค้าเลย'
+    : !p.name
+      ? 'ลิ้งนี้ไม่มีชื่อสินค้าอยู่ใน URL (ลิ้งย่อ) — พิมพ์ชื่อสินค้าในช่องที่สองเอง'
+      : p.enabled
+        ? `สินค้าจะโผล่เป็นของในมือ 2–3 ครั้งในคลิปใหม่ ("${p.name}") — ไม่พูดราคา ไม่ชวนซื้อ และไม่เป็นปมของเรื่อง`
+        : 'มีสินค้าแล้ว แต่ยังไม่ได้เปิดใช้ — ติ๊กช่องด้านบนเพื่อให้โผล่ในคลิปใหม่'
+  $('clipProductHint').className = `hint${p.enabled ? ' ok' : ''}`
+  for (const el of [$('clipProductUrl'), $('clipProductName'), $('clipProductClear')]) el.disabled = localBusy()
 }
 
 /** คำอธิบายใต้ชื่อผู้เขียนแต่ละคนบนสวิตช์ */
@@ -1836,6 +1864,19 @@ $('clipScare').addEventListener('click', (e) => {
 $('clipWriter').addEventListener('click', (e) => {
   const b = e.target.closest('button')
   if (b && !localBusy()) saveClipSettings({ writer: b.dataset.value })
+})
+// สินค้าในเรื่อง — วางลิ้งแล้วชื่อขึ้นเอง · แก้ชื่อทับได้ · วางลิ้งใหม่ = ตั้งใจใช้ จึงเปิดให้เลย
+$('clipProductUrl').addEventListener('change', (e) => {
+  if (!localBusy()) saveClipSettings({ productUrl: e.target.value, ...(e.target.value.trim() && { productEnabled: true }) })
+})
+$('clipProductName').addEventListener('change', (e) => {
+  if (!localBusy()) saveClipSettings({ productName: e.target.value, ...(e.target.value.trim() && { productEnabled: true }) })
+})
+$('clipProductEnabled').addEventListener('change', (e) => {
+  if (!localBusy()) saveClipSettings({ productEnabled: e.target.checked })
+})
+$('clipProductClear').addEventListener('click', () => {
+  if (!localBusy()) saveClipSettings({ productUrl: '', productName: '', productEnabled: false })
 })
 // กดบันทึก หรือ Enter — วาง key แล้วลืมกดบันทึกเคยทำให้ key ไม่ถูกเก็บ (21 พ.ย. 2026)
 $('saveWriterGeminiKey').addEventListener('click', saveWriterKey)

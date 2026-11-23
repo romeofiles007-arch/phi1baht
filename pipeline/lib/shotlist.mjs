@@ -9,7 +9,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { projectDir } from './config.mjs'
-import { blueprint, parseShotList, flowPrompt, orientationRule, aspectOf, stripSafeArea, clipLanguage, imageLanguageRule } from './prompts.mjs'
+import { blueprint, parseShotList, flowPrompt, orientationRule, aspectOf, stripSafeArea, clipLanguage, imageLanguageRule, clipProduct, productShotRule } from './prompts.mjs'
 import { activeCharacter, characterRule, bodyStyleRule } from './character.mjs'
 import { readProfile } from './clip_profile.mjs'
 import { categoryRule } from '../../extension/prompts.js'
@@ -145,7 +145,7 @@ ${batch.map(slotLine).join('\n')}
 - ส่วน 5.3 ต้องขึ้นต้นด้วยบรรทัด "=== SHOT LIST ===" แล้วตามด้วย shot
 ${OUTPUT_RULES}${orientationRule(config) ? `\n${orientationRule(config)}` : ''}
 ${bodyStyleRule(character, profile)}${charRule ? `\n${charRule}` : ''}${catRule ? `\n${catRule}` : ''}
-${coverRequest(orientationOf(config) === 'portrait', language, profile?.category, profile?.issue)}${riddleRequest(language, themeOf(slug)) ? `\n${riddleRequest(language, themeOf(slug))}` : ''}`,
+${coverRequest(orientationOf(config) === 'portrait', language, profile?.category, profile?.issue)}${riddleRequest(language, themeOf(slug)) ? `\n${riddleRequest(language, themeOf(slug))}` : ''}${productShotRule(clipProduct(config)) ? `\n${productShotRule(clipProduct(config))}` : ''}`,
     }
   }
 
@@ -170,7 +170,7 @@ ${batch.map(slotLine).join('\n')}
 
 ข้อกำหนดของ output:
 - ไม่ต้องเขียน 5.1 และ 5.2 ซ้ำ — ขึ้นต้นคำตอบด้วยบรรทัด "=== SHOT LIST ===" แล้วตามด้วย shot ทันที
-${OUTPUT_RULES}${orientationRule(config) ? `\n${orientationRule(config)}` : ''}${categoryRule(readProfile(slug), 'image') ? `\n${categoryRule(readProfile(slug), 'image')}` : ''}`,
+${OUTPUT_RULES}${orientationRule(config) ? `\n${orientationRule(config)}` : ''}${categoryRule(readProfile(slug), 'image') ? `\n${categoryRule(readProfile(slug), 'image')}` : ''}${productShotRule(clipProduct(config)) ? `\n${productShotRule(clipProduct(config))}` : ''}`,
   }
 }
 

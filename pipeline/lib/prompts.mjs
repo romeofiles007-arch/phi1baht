@@ -9,7 +9,18 @@ import { styleKitFiles, styleKitAttachments } from './style-kit.mjs'
 
 import * as shared from '../../extension/prompts.js'
 
-export const { cleanScript, parseTopics, GENRES, opensWithHaveYouEver, endsWithLecture, endsCliffhanger, endsGeneric, tellsAsYou } = shared
+export const { cleanScript, parseTopics, GENRES, opensWithHaveYouEver, endsWithLecture, endsCliffhanger, endsGeneric, tellsAsYou, lacksReveal, productFromUrl, productRule } = shared
+
+/**
+ * สินค้าที่ขอให้โผล่ในเรื่อง (ตัวทดลอง) — config.script.product = { url, name, enabled }
+ * ชื่อจากลิ้ง Shopee ใช้เป็นค่าตั้งต้น ผู้ใช้แก้ชื่อทับได้ในแผงข้าง · ปิดอยู่ = ไม่ส่งไปใน prompt เลย
+ */
+export function clipProduct(config) {
+  const p = config.script?.product
+  if (!p?.enabled) return null
+  const name = p.name?.trim() || shared.productFromUrl(p.url)?.name || null
+  return name ? { name, url: p.url ?? '', enabled: true } : null
+}
 
 /** Blueprint คือแหล่งความจริงเดียวของกติกาทั้งหมด — ส่งไปทั้งฉบับทุกครั้ง ไม่สรุปย่อ */
 export const BLUEPRINT_MARK = 'V1 ผี 1 บาท'
@@ -36,7 +47,7 @@ export function scoredTopicsPrompt(config, { avoid = [], seen = [], themes } = {
 
 /** profile = โปรไฟล์ของคลิป (หมวด + ลายเส้น + ระดับความสยอง) จาก clip_profile.mjs — ไม่มี = ให้ ChatGPT ดูหมวดจากชื่อเรื่อง */
 export function scriptPrompt(config, title, profile = null) {
-  return shared.scriptPrompt(blueprint(config), title, { ...config.script, profile, scare: profile?.scare ?? clipScare(config), theme: themeOf(slugify(title)) })
+  return shared.scriptPrompt(blueprint(config), title, { ...config.script, profile, scare: profile?.scare ?? clipScare(config), theme: themeOf(slugify(title)), product: clipProduct(config) })
 }
 
 
@@ -72,7 +83,20 @@ ${SHOT_VARIETY_RULE}
 ${bodyStyleRule(activeCharacter(slug), readProfile(slug))}${shared.categoryRule(readProfile(slug), 'image') ? `\n${shared.categoryRule(readProfile(slug), 'image')}` : ''}
 - Env ต้องเป็นฉากที่มีรายละเอียดตาม BACKGROUNDS ใน Style Bible (สถานที่ + ของประกอบฉาก 3–6 ชิ้น + แสง/บรรยากาศ + โทนสี) ห้ามเขียนแค่ "พื้นหลังสีเรียบ"
 - แสงและโทนสีของ Env เลือกตาม COLOR MOOD ใน Style Bible ให้ตรงอารมณ์ของบรรทัดนั้น โดยใช้ชุดสีของหมวดคลิป (COLOR PALETTE) — ทุกภาพลงสีเต็ม
-${imageLanguageRule(clipLanguage(config, slug))}`
+${imageLanguageRule(clipLanguage(config, slug))}${block(productShotRule(clipProduct(config)))}`
+}
+
+const block = (text) => (text ? `\n${text}` : '')
+
+/**
+ * สินค้าในภาพ (ตัวทดลอง) — ให้ Flow วาดสินค้าเป็นของในมือใน 2–3 ช็อต ไม่ใช่ภาพโฆษณา
+ * ห้ามมีตัวหนังสือ/โลโก้บนตัวสินค้า: Blueprint กฎ 7 ห้ามตัวหนังสือในภาพ และโลโก้ยี่ห้อวาดออกมาเพี้ยนทุกครั้ง
+ */
+export function productShotRule(product) {
+  const name = product?.name?.trim()
+  if (!name) return ''
+  return `- สินค้าในเรื่องคลิปนี้: "${name}" — ให้โผล่ใน 2–3 ช็อตเป็นของในมือ ของสะพาย หรือของวางข้างตัวละคร เขียนลงใน field Action หรือ Chars ให้เห็นรูปร่างชัดพอจำได้ (ขนาด สี ทรง) แต่ห้ามเป็นช็อตโคลสอัปตัวสินค้าแบบโฆษณา ห้ามเป็นจุดสนใจของช็อต
+- ตัวสินค้าห้ามมีตัวหนังสือ โลโก้ ยี่ห้อ หรือ label ใดๆ (กฎ 7 ของ Blueprint) · ให้วาดเป็นของใช้ธรรมดาในลายเส้นเล่มละบาทเหมือนของประกอบฉากชิ้นอื่น`
 }
 
 /**

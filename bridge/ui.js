@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, createRea
 import { pipeline as pipeStreams } from 'node:stream/promises'
 import { join, resolve, sep, extname } from 'node:path'
 import { ROOT, loadConfig, updateConfig, slugify } from '../pipeline/lib/config.mjs'
-import { topicsPrompt, scriptPrompt, parseTopics, cleanScript, GENRES, flowAttachments } from '../pipeline/lib/prompts.mjs'
+import { topicsPrompt, scriptPrompt, parseTopics, cleanScript, GENRES, flowAttachments, productFromUrl } from '../pipeline/lib/prompts.mjs'
 import { SCARE_LEVELS } from '../extension/prompts.js'
 import { createProduction } from './production.js'
 import { saveScript, loadScript } from '../pipeline/lib/stage2.mjs'
@@ -965,6 +965,19 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
             }
             // ผู้เขียนบทและหัวข้อ: chatgpt (ค่าเริ่มต้น) | gemini — ใช้กับคลิปที่เริ่มหลังจากนี้
             if (WRITERS[body.writer]) c.script.writer = body.writer
+            // สินค้าในเรื่อง (ตัวทดลอง): วางลิ้ง Shopee → อ่านชื่อจากตัวลิ้ง · แก้ชื่อทับได้ · ลิ้งว่าง = ล้างทิ้ง
+            if (body.productUrl !== undefined || body.productName !== undefined || body.productEnabled !== undefined) {
+              const p = { ...(c.script.product ?? {}) }
+              if (body.productUrl !== undefined) {
+                p.url = String(body.productUrl ?? '').trim()
+                p.name = p.url ? (productFromUrl(p.url)?.name ?? '') : ''
+              }
+              if (body.productName !== undefined) p.name = String(body.productName ?? '').trim().slice(0, 60)
+              if (body.productEnabled !== undefined) p.enabled = body.productEnabled === true || body.productEnabled === 'on'
+              // ไม่มีลิ้งและไม่มีชื่อ = ยังไม่ได้ตั้ง → ปิดไว้ ไม่ให้ค้างเป็นเปิดแต่ไม่มีสินค้า
+              if (!p.url && !p.name) c.script.product = { url: '', name: '', enabled: false }
+              else c.script.product = { url: p.url ?? '', name: p.name ?? '', enabled: p.enabled === true && Boolean(p.name) }
+            }
             // แอนิเมชัน Kie (คนฉายหนังกลางแปลง): 'off' · เปอร์เซ็นต์ของฉากทั้งเรื่อง · 'first' = N ภาพแรก (จำนวนจาก firstCount)
             const aiCoverage = body.aiCoverage ?? body.aiClips // aiClips รองรับ extension รุ่นเก่า
             if (aiCoverage === 'off') c.clips = { ...(c.clips ?? {}), provider: 'off' }
@@ -1006,6 +1019,12 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
           inkify: c.render.inkify === false ? 'off' : 'on',
           scare: SCARE_LEVELS[c.script.scare] ? c.script.scare : 'medium',
           writer: writerOf(c),
+          // สินค้าในเรื่อง (ตัวทดลอง) — name ว่าง = ลิ้งไม่มีชื่อสินค้าอยู่ใน URL ให้ผู้ใช้พิมพ์เอง
+          product: {
+            url: c.script.product?.url ?? '',
+            name: c.script.product?.name ?? '',
+            enabled: c.script.product?.enabled === true && Boolean(c.script.product?.name),
+          },
           gemini: { hasKey: hasKey('GEMINI_API_KEY') },
           bgm: bgmMode(c),
           bgmCount: tracks.length,

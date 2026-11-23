@@ -14,6 +14,8 @@ if (config.tts?.elevenlabs) Object.assign(config.tts.elevenlabs, { voiceId: '', 
 if (config.tts) config.tts.engine = 'edge'
 // Kie มีค่าใช้จ่าย — ให้ลูกค้าเปิดเองเมื่อมี API key
 if (config.clips) config.clips.provider = 'off'
+// สินค้าในเรื่อง (ตัวทดลอง) เป็นลิ้งร้านของเราเอง → ลูกค้าเริ่มที่ยังไม่ได้ตั้งสินค้า
+if (config.script) config.script.product = { url: '', name: '', enabled: false }
 // โฟลเดอร์ส่งโพสต์ (Google Drive ของเรา) ไม่ใช่ของลูกค้า
 if (config.autoPost) config.autoPost.dir = ''
 // เพลงพื้นหลัง: ลูกค้าเริ่มที่โฟลเดอร์ music ของโปรแกรม + สุ่มเพลง (เพลงที่เราเลือกไว้อาจไม่มีในเครื่องลูกค้า)
