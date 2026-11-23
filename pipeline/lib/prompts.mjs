@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { ROOT, loadConfig, slugify } from './config.mjs'
 import { recentThemes, themeOf } from './topics.mjs'
 import { characterFlowNote, bodyStyleRule, bodyStyleFlowNote, activeCharacter, characterAttachments } from './character.mjs'
-import { SHOT_VARIETY_RULE } from './continuity.mjs'
+import { SHOT_VARIETY_RULE, WORLD_RICHNESS_RULE } from './continuity.mjs'
 import { readProfile } from './clip_profile.mjs'
 import { styleKitFiles, styleKitAttachments } from './style-kit.mjs'
 
@@ -80,6 +80,7 @@ ${table}
 - ใส่ pattern interrupt ทุก 15-30 วิ ตามกฎ 6
 - ตัวละครทุกตัวต้องมี @TAG และห้ามเปลี่ยนรูปร่าง/สี/อุปกรณ์ข้ามช็อต
 ${SHOT_VARIETY_RULE}
+${WORLD_RICHNESS_RULE}
 ${bodyStyleRule(activeCharacter(slug), readProfile(slug))}${shared.categoryRule(readProfile(slug), 'image') ? `\n${shared.categoryRule(readProfile(slug), 'image')}` : ''}
 - Env ต้องเป็นฉากที่มีรายละเอียดตาม BACKGROUNDS ใน Style Bible (สถานที่ + ของประกอบฉาก 3–6 ชิ้น + แสง/บรรยากาศ + โทนสี) ห้ามเขียนแค่ "พื้นหลังสีเรียบ"
 - แสงและโทนสีของ Env เลือกตาม COLOR MOOD ใน Style Bible ให้ตรงอารมณ์ของบรรทัดนั้น โดยใช้ชุดสีของหมวดคลิป (COLOR PALETTE) — ทุกภาพลงสีเต็ม
@@ -87,6 +88,19 @@ ${imageLanguageRule(clipLanguage(config, slug))}${block(productShotRule(clipProd
 }
 
 const block = (text) => (text ? `\n${text}` : '')
+
+/**
+ * ขอบขาว/กรอบกระดาษรอบภาพ — ผู้ใช้ (23 พ.ย. 2026) ส่งภาพจาก Flow มาถาม "แบบนี้ ห้ามทำกรอบได้ไหม"
+ * กฎ full-bleed อยู่หัว prompt อยู่แล้ว แต่ Flow วาดภาพทีละช็อตและสนใจข้อความของช็อตนั้นมากที่สุด
+ * (คลิปแรก 10 จาก 29 ช็อตออกมาเป็นภาพบนแผ่นกระดาษ → ต้องมีตัวตัดขอบตามเก็บ)
+ * จึงต่อท้ายคำสั่งของ "ทุกช็อต" ด้วย ไม่ใช่บอกครั้งเดียวที่หัว
+ */
+export const FULL_BLEED_TAG = 'full-bleed edge to edge, no white border, no paper margin, no picture frame'
+export const withFullBleed = (prompt) => {
+  const text = String(prompt ?? '').trim()
+  if (!text || text.includes(FULL_BLEED_TAG)) return text
+  return `${text.replace(/[.,;·\s]+$/, '')} | ${FULL_BLEED_TAG}`
+}
 
 /**
  * สินค้าในภาพ (ตัวทดลอง) — ให้ Flow วาดสินค้าเป็นของในมือใน 2–3 ช็อต ไม่ใช่ภาพโฆษณา

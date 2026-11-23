@@ -9,7 +9,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { projectDir } from './config.mjs'
-import { blueprint, parseShotList, flowPrompt, orientationRule, aspectOf, stripSafeArea, clipLanguage, imageLanguageRule, clipProduct, productShotRule } from './prompts.mjs'
+import { blueprint, parseShotList, flowPrompt, orientationRule, aspectOf, stripSafeArea, clipLanguage, imageLanguageRule, clipProduct, productShotRule, withFullBleed } from './prompts.mjs'
 import { activeCharacter, characterRule, bodyStyleRule } from './character.mjs'
 import { readProfile } from './clip_profile.mjs'
 import { categoryRule } from '../../extension/prompts.js'
@@ -17,7 +17,7 @@ import { coverRequest, parseCover, saveCoverPrompt, readCoverPrompt, coverShot, 
 import { riddleRequest, parseRiddle, parseRiddleDraft, riddleProblem, saveRiddle } from './riddle.mjs'
 import { themeOf } from './topics.mjs'
 import { orientationOf } from './prompts.mjs'
-import { continuityProblems, continuityReport, SHOT_VARIETY_RULE } from './continuity.mjs'
+import { continuityProblems, continuityReport, SHOT_VARIETY_RULE, WORLD_RICHNESS_RULE } from './continuity.mjs'
 import { sanitizeShotPrompt } from './shot-safety.mjs'
 
 export const SHOTS_PER_ROUND = 40
@@ -93,6 +93,7 @@ const outputRules = (language) => `- ตอบเป็นข้อความ�
 - ใส่ pattern interrupt ทุก 15-30 วิ ตามกฎ 6
 - ตัวละครทุกตัวต้องมี @TAG และห้ามเปลี่ยนรูปร่าง/สี/อุปกรณ์ข้ามช็อต
 ${SHOT_VARIETY_RULE}
+${WORLD_RICHNESS_RULE}
 ${imageLanguageRule(language)}`
 
 /**
@@ -249,7 +250,7 @@ export function mergeRounds(slug) {
   // ต่อ shot ด้วยชื่อไฟล์ที่เราคำนวณไว้เอง กันกรณี AI พิมพ์ชื่อไฟล์ตกหล่น
   const agentBrief = `${head}\n\n=== SHOT LIST ===\n\n${shots
     .filter((s) => s.prompt)
-    .map((s) => `${s.filename} ${s.prompt}`)
+    .map((s) => `${s.filename} ${withFullBleed(s.prompt)}`)
     .join('\n\n')}`
 
   // prompt ปกคลิปจากรอบแรก (ไม่มี = Flow ออกแบบเองตอนสร้างภาพ)

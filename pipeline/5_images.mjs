@@ -12,7 +12,7 @@ import { readFileSync, existsSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { loadConfig, projectDir } from './lib/config.mjs'
 import { requireBridge, runJob } from './lib/bridge.mjs'
-import { flowPrompt, flowAttachments, aspectOf, stripSafeArea, tagNames, untagShotPrompt, recolorBrief, recolorShotPrompt } from './lib/prompts.mjs'
+import { flowPrompt, flowAttachments, aspectOf, stripSafeArea, tagNames, untagShotPrompt, recolorBrief, recolorShotPrompt, withFullBleed } from './lib/prompts.mjs'
 import { ensureProfile } from './lib/clip_profile.mjs'
 import { coverShot, coverBriefLines, hasCover, COVER_NAME } from './lib/cover.mjs'
 import { riddleShot, riddleBriefLines, hasRiddleImage, RIDDLE_NAME } from './lib/riddle.mjs'
@@ -115,14 +115,14 @@ const result = await generateWithFailover({
     briefHead,
     `คำสั่งรอบนี้สร้างเฉพาะ ${remaining.length} ภาพตามรายชื่อไฟล์ใน SHOT LIST/COVER ด้านล่าง ไม่สร้างช็อตอื่นจากข้อความก่อนหน้า และใช้เครื่องมือสร้างภาพจริงก่อนตอบว่าสร้างแล้ว`,
     '=== SHOT LIST ===',
-    ...remaining.filter(s => s.filename !== COVER_NAME && s.filename !== RIDDLE_NAME).map(s => `${s.filename} ${s.prompt}`),
+    ...remaining.filter(s => s.filename !== COVER_NAME && s.filename !== RIDDLE_NAME).map(s => `${s.filename} ${withFullBleed(s.prompt)}`),
     ...remaining.filter(s => s.filename === COVER_NAME).flatMap(s => coverBriefLines(untag(shots.find(original => original.filename === s.filename)), aspect === '9:16')),
     ...remaining.filter(s => s.filename === RIDDLE_NAME).flatMap(() => riddleBriefLines(riddle)),
   ].join('\n\n'), undefined, slug),
   onSwitch: (quota, missing) => console.log(`\n  บัญชี Flow ${quota.email} ติดลิมิต — สลับบัญชีอัตโนมัติและทำต่อเฉพาะ ${missing} ภาพที่ขาด`),
   payload: {
     prompt: flowPrompt(brief, undefined, slug),
-    shots: shots.map(untag).map((s) => ({ filename: s.filename, shot: s.shot, prompt: s.prompt })), // คำสั่งซ้ำ/ขอช็อตที่ขาดก็ไม่มี @TAG ในคำบรรยาย
+    shots: shots.map(untag).map((s) => ({ filename: s.filename, shot: s.shot, prompt: withFullBleed(s.prompt) })), // คำสั่งซ้ำ/ขอช็อตที่ขาดก็ไม่มี @TAG ในคำบรรยาย
     model: 'Nano Banana 2 Lite', // ใช้ 0 credits — extension ตรวจตัวเลข credit ก่อนสั่ง agent ทุกครั้ง
     aspect, // 16:9 แนวนอน | 9:16 แนวตั้ง
     projectTitle: title, // ตั้งชื่อ project ใน Flow เป็นชื่อเรื่อง แทนชื่อวันที่ของ Flow
