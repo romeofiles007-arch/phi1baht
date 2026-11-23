@@ -8,7 +8,7 @@ import vm from 'node:vm'
 import { fileURLToPath } from 'node:url'
 import * as flowNavigation from '../extension/flow-navigation.js'
 import { insertTikTokCaption } from '../extension/tiktok-caption.js'
-import { preferredChatTab } from '../extension/chat-tabs.js'
+import { preferredChatTab, preferredGeminiTab } from '../extension/chat-tabs.js'
 
 const EXT = join(fileURLToPath(new URL('..', import.meta.url)), 'extension')
 const bgSource = readFileSync(join(EXT, 'background.js'), 'utf8')
@@ -63,7 +63,7 @@ function makeChrome({ tabs, windows, focused, session = {}, translated = false }
 
 function loadBackground(env) {
   const { chrome, calls } = makeChrome(env)
-  const ctx = vm.createContext({ ...flowNavigation, insertTikTokCaption, preferredChatTab, chrome, console: { log() {}, warn() {} }, setTimeout, clearTimeout, setInterval, clearInterval, queueMicrotask, URL, fetch: async () => ({ ok: false, status: 500 }) })
+  const ctx = vm.createContext({ ...flowNavigation, insertTikTokCaption, preferredChatTab, preferredGeminiTab, chrome, console: { log() {}, warn() {} }, setTimeout, clearTimeout, setInterval, clearInterval, queueMicrotask, URL, fetch: async () => ({ ok: false, status: 500 }) })
   vm.runInContext(bgSource.replace(/^import \{[^\n]+\} from '\.\/(?:flow-(?:navigation|account-switch)|tiktok-caption|chat-tabs)\.js'\r?\n/gm, ''), ctx)
   return { ctx, calls }
 }
@@ -226,15 +226,42 @@ await test('ตัวขับ Flow: ไม่เจอปุ่ม Agent ตอ
   assert.match(bgSource, /msg\.type === 'FLOW_WIDEN'[\s\S]{0,200}flow\\\.google\\\.com/, 'รับคำขอจากแท็บ Flow เท่านั้น')
 })
 
-// แท็บของตัวเองเท่านั้น: preferredFlowTab คืนเฉพาะแท็บที่จำเลขไว้
-await test('preferredFlowTab คืน null เมื่อไม่มีแท็บตรง savedId แม้มีแท็บ Flow อื่นเปิดอยู่', () => {
+// ผู้ใช้สั่ง 23 พ.ย. 2026: "google ไม่ต้องเรียกหน้าต่างใหม่ ถ้ามีเปิดไว้อยู่แล้ว"
+// เดิมคืน null เมื่อไม่ตรง savedId (เปิดแท็บ Flow ใหม่ทุกครั้งที่ส่วนขยายรีโหลด เพราะเลขที่จำไว้หาย)
+await test('preferredFlowTab ใช้แท็บ Flow ที่เปิดอยู่แล้วเมื่อไม่มีเลขที่จำไว้ ไม่เปิดใหม่', () => {
   const tabs = [{ id: 2, url: 'https://flow.google.com/?hl=en', active: true, lastAccessed: 20 }]
-  assert.equal(flowNavigation.preferredFlowTab(tabs, 1), null)
-  assert.equal(flowNavigation.preferredFlowTab(tabs, undefined), null)
+  assert.equal(flowNavigation.preferredFlowTab(tabs, 1).id, 2, 'เลขที่จำไว้ถูกปิดไปแล้ว')
+  assert.equal(flowNavigation.preferredFlowTab(tabs, undefined).id, 2, 'ส่วนขยายเพิ่งรีโหลด')
 })
-await test('preferredFlowTab คืนแท็บที่ id ตรง savedId', () => {
+await test('preferredFlowTab คืนแท็บที่ id ตรง savedId ก่อนแท็บที่ใช้ล่าสุด', () => {
   const tabs = [{ id: 1, url: 'https://flow.google.com/project/a', lastAccessed: 10 }, { id: 2, url: 'https://flow.google.com/?hl=en', active: true, lastAccessed: 20 }]
   assert.equal(flowNavigation.preferredFlowTab(tabs, 1).id, 1)
+})
+await test('preferredFlowTab ไม่ยืมแท็บเว็บอื่น · ไม่มีแท็บ Flow เลย → null (เปิดใหม่)', () => {
+  assert.equal(flowNavigation.preferredFlowTab([{ id: 3, url: 'https://gemini.google.com/app', lastAccessed: 9 }], undefined), null)
+  assert.equal(flowNavigation.preferredFlowTab([{ id: 4, url: 'https://labs.google/fx/tools/flow', lastAccessed: 9 }], undefined), null, 'ที่อยู่เก่าของ Flow ไม่ใช่แท็บที่ขับได้')
+  assert.equal(flowNavigation.preferredFlowTab([], undefined), null)
+})
+
+// Gemini (ผู้เขียนบทแบบเว็บ) ใช้กติกาเดียวกับ ChatGPT และ Flow
+await test('preferredGeminiTab: แท็บที่จำไว้ → แท็บ Gemini ที่ใช้ล่าสุด → null', () => {
+  const tabs = [
+    { id: 1, url: 'https://gemini.google.com/app', discarded: false, lastAccessed: 10 },
+    { id: 2, url: 'https://gemini.google.com/app/abc', discarded: false, lastAccessed: 99 },
+  ]
+  assert.equal(preferredGeminiTab(tabs, 1).id, 1)
+  assert.equal(preferredGeminiTab(tabs, undefined).id, 2, 'เลือกแท็บที่ใช้ล่าสุด')
+  assert.equal(preferredGeminiTab(tabs, 999).id, 2, 'เลขที่จำไว้ถูกปิดไปแล้ว')
+  assert.equal(preferredGeminiTab([{ id: 5, url: 'https://flow.google.com/', lastAccessed: 1 }], undefined), null, 'ไม่ยืมแท็บ Google เว็บอื่น')
+  assert.equal(preferredGeminiTab([], undefined), null)
+})
+
+await test('ensureTab: Gemini และ Flow ใช้แท็บที่เปิดอยู่ · TikTok ยังใช้เฉพาะแท็บที่จำไว้', () => {
+  const picker = bgSource.split('const existing =')[1]?.split('\n  if (existing)')[0] ?? ''
+  assert.match(picker, /preferredGeminiTab\(tabs, savedId\)/)
+  assert.match(picker, /preferredFlowTab\(tabs, savedId\)/)
+  assert.match(picker, /preferredChatTab\(tabs, savedId\)/)
+  assert.match(picker, /tabs\.find\(\(t\) => t\.id === savedId\)/, 'TikTok ยังใช้เฉพาะแท็บที่แอปเปิดเอง (กันร่างโพสต์หาย)')
 })
 
 

@@ -3,10 +3,13 @@ import { test } from 'node:test'
 let F
 try { F = await import('../extension/flow-navigation.js') } catch (error) { if (error.code !== 'ERR_MODULE_NOT_FOUND') throw error }
 const api = () => { assert.ok(F, 'Flow account routing is missing'); return F }
-test('only the remembered Flow tab is used; a Flow tab the user opened is never borrowed', () => {
+// 23 พ.ย. 2026 ผู้ใช้: "google ไม่ต้องเรียกหน้าต่างใหม่ ถ้ามีเปิดไว้อยู่แล้ว"
+// เดิมยืมแท็บ Flow ของผู้ใช้ไม่ได้เลย ทำให้เปิดแท็บใหม่ทุกครั้งที่ส่วนขยายรีโหลด (เลขที่จำไว้หาย)
+test('the remembered Flow tab wins; otherwise the most recently used open Flow tab is reused', () => {
   const tabs = [{ id: 1, url: 'https://flow.google.com/project/old', lastAccessed: 10 }, { id: 2, url: 'https://flow.google.com/?authuser=1', active: true, lastAccessed: 20 }]
   assert.equal(api().preferredFlowTab(tabs, 1).id, 1)
-  assert.equal(api().preferredFlowTab(tabs, 3), null)
+  assert.equal(api().preferredFlowTab(tabs, 3).id, 2, 'remembered id is gone — reuse the open tab instead of opening a new one')
+  assert.equal(api().preferredFlowTab([], 3), null, 'no Flow tab at all — open one')
 })
 test('Flow home keeps account routing query parameters and path prefixes', () => {
   const F = api()

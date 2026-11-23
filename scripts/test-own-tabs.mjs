@@ -7,7 +7,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { preferredChatTab } from '../extension/chat-tabs.js'
+import { preferredChatTab, preferredGeminiTab } from '../extension/chat-tabs.js'
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 const tab = (id, url, extra = {}) => ({ id, url, discarded: false, lastAccessed: id, ...extra })
@@ -33,12 +33,24 @@ test('ChatGPT: แท็บที่ถูกพักหน่วยควา�
   assert.equal(preferredChatTab([tab(2, 'https://example.com/')], undefined), null)
 })
 
-test('ensureTab ของ ChatGPT ใช้ preferredChatTab · TikTok ยังใช้เฉพาะแท็บที่จำไว้', () => {
-  const line = read('extension/background.js').split(/\r?\n/).find((l) => /^\s*const existing =/.test(l))
-  assert.ok(line, 'ไม่พบบรรทัด existing =')
-  assert.match(line, /preferredChatTab\(tabs, savedId\)/)
-  assert.ok(!line.includes('tabs.find((t) => !t.discarded) ?? tabs[0]'), 'ห้ามยืมแท็บแรกที่เจอแบบไม่เลือก')
-  assert.ok(line.includes('t.id === savedId'), 'เว็บอื่นยังใช้เฉพาะแท็บที่จำเลขไว้')
+test('ensureTab: ChatGPT/Gemini/Flow ใช้แท็บที่เปิดอยู่ · TikTok ยังใช้เฉพาะแท็บที่จำไว้', () => {
+  const src = read('extension/background.js')
+  const picker = src.split('const existing =')[1]?.split('\n  if (existing)')[0]
+  assert.ok(picker, 'ไม่พบตัวเลือกแท็บ (const existing =)')
+  assert.match(picker, /preferredChatTab\(tabs, savedId\)/)
+  // 23 พ.ย. 2026 ผู้ใช้: "google ไม่ต้องเรียกหน้าต่างใหม่ ถ้ามีเปิดไว้อยู่แล้ว"
+  assert.match(picker, /preferredGeminiTab\(tabs, savedId\)/)
+  assert.match(picker, /preferredFlowTab\(tabs, savedId\)/)
+  assert.ok(!picker.includes('tabs.find((t) => !t.discarded) ?? tabs[0]'), 'ห้ามยืมแท็บแรกที่เจอแบบไม่เลือก')
+  assert.ok(picker.includes('t.id === savedId'), 'TikTok ยังใช้เฉพาะแท็บที่จำเลขไว้ (กันร่างโพสต์หาย)')
+})
+
+test('Gemini: แท็บที่จำไว้ → แท็บ Gemini ที่เปิดอยู่ → null (เปิดใหม่)', () => {
+  const tabs = [tab(1, 'https://gemini.google.com/app', { lastAccessed: 10 }), tab(2, 'https://gemini.google.com/app/x', { lastAccessed: 99 })]
+  assert.equal(preferredGeminiTab(tabs, 1)?.id, 1)
+  assert.equal(preferredGeminiTab(tabs, undefined)?.id, 2)
+  assert.equal(preferredGeminiTab([tab(3, 'https://flow.google.com/')], undefined), null, 'ไม่ยืมแท็บ Google เว็บอื่น')
+  assert.equal(preferredGeminiTab([], undefined), null)
 })
 
 test('แผงข้างใช้แท็บ ChatGPT ที่เปิดอยู่แล้วเหมือนกัน', () => {

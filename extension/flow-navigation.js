@@ -1,12 +1,16 @@
 // Flow account selection belongs to the user's chosen tab. Do not restore an
 // old project URL over that tab: its owner can pull Google back to account 0.
+import { preferredSiteTab, FLOW_HOSTS } from './chat-tabs.js'
+
 const HOME = 'https://flow.google.com/?hl=en'
 const flowUrl = value => {
   try { const url = new URL(value); return url.origin === 'https://flow.google.com' ? url : null } catch { return null }
 }
-// Only the tab this app opened (remembered id) is ever used — never a Flow tab the user opened themselves.
+// ผู้ใช้สั่ง 23 พ.ย. 2026: "google ไม่ต้องเรียกหน้าต่างใหม่ ถ้ามีเปิดไว้อยู่แล้ว"
+// เดิมใช้เฉพาะแท็บที่แอปเปิดเองและจำเลขไว้ แต่เลขหายทุกครั้งที่ส่วนขยายรีโหลด จึงเปิดแท็บ Flow ใหม่เพิ่มเรื่อยๆ
+// ตอนนี้ยืมแท็บ Flow ที่ผู้ใช้เปิดเองได้ด้วย (ลำดับเดียวกับ ChatGPT) — แท็บนั้นจะถูกพาไปหน้าโปรเจกต์ของคลิป
 export function preferredFlowTab(tabs, savedId) {
-  return tabs.find(tab => tab.id === savedId && flowUrl(tab.url) && !tab.discarded) ?? null
+  return preferredSiteTab(tabs.filter(tab => flowUrl(tab.url ?? tab.pendingUrl)), savedId, FLOW_HOSTS)
 }
 export function flowHomeUrl(value) {
   const url = flowUrl(value)

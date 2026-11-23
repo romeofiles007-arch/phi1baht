@@ -10,7 +10,7 @@ const NATIVE_HOST = 'com.phi1baht.bridge'
 import { preferredFlowTab, flowHomeUrl, flowJobNavigation } from './flow-navigation.js'
 import { switchFlowAccount, inspectFlowAccounts, flowIdentity } from './flow-account-switch.js'
 import { insertTikTokCaption } from './tiktok-caption.js'
-import { preferredChatTab } from './chat-tabs.js'
+import { preferredChatTab, preferredGeminiTab } from './chat-tabs.js'
 
 const AGENTS = {
   chatgpt: { match: 'https://chatgpt.com/', pattern: ['https://chatgpt.com/*', 'https://chat.openai.com/*'], key: 'chatTabId' },
@@ -73,8 +73,12 @@ async function ensureTab(agent) {
   const tabs = await chrome.tabs.query({ url: pattern })
   const { [key]: savedId } = await chrome.storage.session.get(key)
   // TikTok uses its own tab so navigating for a job never discards a user's upload draft.
-  // ChatGPT: ใช้แท็บที่เปิดอยู่แล้วก่อน ไม่เปิดใหม่ทุกครั้งที่ส่วนขยายรีโหลด (ผู้ใช้สั่ง 23 พ.ย. 2026)
-  const existing = agent === 'flow' ? preferredFlowTab(tabs, savedId) : agent === 'chatgpt' ? preferredChatTab(tabs, savedId) : tabs.find((t) => t.id === savedId)
+  // ChatGPT / Gemini / Flow: ใช้แท็บที่เปิดอยู่แล้วก่อน ไม่เปิดใหม่ทุกครั้งที่ส่วนขยายรีโหลด
+  // (ผู้ใช้สั่ง 23 พ.ย. 2026 — ChatGPT ก่อน แล้วขยายมาที่ Google: "ไม่ต้องเรียกหน้าต่างใหม่ ถ้ามีเปิดไว้อยู่แล้ว")
+  const existing = agent === 'flow' ? preferredFlowTab(tabs, savedId)
+    : agent === 'chatgpt' ? preferredChatTab(tabs, savedId)
+      : agent === 'gemini' ? preferredGeminiTab(tabs, savedId)
+        : tabs.find((t) => t.id === savedId)
   if (existing) {
     if (existing.id !== savedId) await chrome.storage.session.set({ [key]: existing.id })
     if (agent === 'flow') await chrome.storage.local.set({ flowAccountHome: flowHomeUrl(existing.url) })
