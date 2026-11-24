@@ -107,9 +107,19 @@ function splitForInput(prompt, max = MAX_INPUT) {
   return { text: 'ไฟล์แนบคือคำสั่งงานฉบับเต็ม อ่านทั้งไฟล์แล้วทำตามคำสั่งท้ายไฟล์ ตอบเป็นข้อความในแชตตามข้อกำหนดในไฟล์ ห้ามสรุปไฟล์', file: prompt }
 }
 
-async function fillPrompt(prompt) {
+async function fillPrompt(prompt, images = []) {
   const ed = await waitFor(editor, { label: 'ช่องพิมพ์ของ Gemini', timeout: 30_000 })
   await clearComposer(ed)
+  // รูปแนบ (เช่น รูปสินค้าให้เลือก/บรรยาย) — วางทีละรูปแล้วรอให้ขึ้นเป็นไฟล์แนบจริงก่อนพิมพ์
+  // ผู้ใช้ 23 พ.ย. 2026: "ถ้าเราเลือก Gemini ก็ส่งไป Gemini" (เดิมแท็บนี้รับได้แต่ข้อความ)
+  for (const img of images) {
+    if (typeof img?.base64 !== 'string' || !img.base64) continue
+    const before = attachments()
+    const bytes = Uint8Array.from(atob(img.base64), (c) => c.charCodeAt(0))
+    paste(ed, new File([bytes], img.name || 'image.png', { type: img.type || 'image/png' }))
+    await waitFor(() => attachments() > before, { timeout: 60_000, label: 'Gemini รับรูปแนบ' })
+    await sleep(400)
+  }
   const { text, file } = splitForInput(prompt)
   if (file) {
     const before = attachments()
@@ -155,13 +165,13 @@ function pageState() {
   return `${why} [${location.host}${location.pathname} · คำตอบเดิม ${responses().length} · ช่องพิมพ์ rich-textarea ${document.querySelectorAll('rich-textarea').length} · contenteditable ${editable} · "${document.title.slice(0, 40)}"]`
 }
 
-async function runPrompt(prompt, { newChat = true } = {}) {
+async function runPrompt(prompt, { newChat = true, images = [] } = {}) {
   // หน้าโหลดเสร็จแล้วยังไม่ล็อกอิน → บอกเลย ไม่ต้องรอหาช่องพิมพ์ 40 วิ
   if (await waitFor(() => editor() || (document.readyState === 'complete' && signedOut() && document.querySelector('a, button')), { timeout: 20_000, label: 'หน้า Gemini' }).then(() => !editor() && signedOut(), () => signedOut())) {
     throw new Error(NOT_SIGNED_IN)
   }
   if (newChat) await startNewChat()
-  await fillPrompt(prompt)
+  await fillPrompt(prompt, images)
   await waitFor(() => sendButton() && !sendButton().disabled && sendButton().getAttribute('aria-disabled') !== 'true', { timeout: 60_000, label: 'ปุ่มส่งของ Gemini พร้อม' }).catch(() => null)
   guard()
   await sleep(500)
@@ -213,6 +223,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     stopButton()?.click()
     sendResponse({ ok: true })
     return
+  }
+  // แผงข้างถามตรง (ไม่ผ่านคิวของโปรแกรมในเครื่อง) — ใช้กับงานสั้นที่มีรูปแนบ เช่น ให้เลือก/บรรยายรูปสินค้า
+  if (msg.type === 'ASK') {
+    stopped = false
+    runPrompt(msg.prompt, { newChat: msg.newChat ?? true, images: msg.attachments ?? [] })
+      .then((text) => sendResponse({ ok: true, text }))
+      .catch((err) => sendResponse({ ok: false, error: String(err.message) }))
+    return true
   }
   if (msg.type !== 'RUN_JOB') return
   const { job } = msg

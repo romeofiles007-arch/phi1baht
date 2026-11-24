@@ -94,11 +94,13 @@ export function geminiChat({ model: preferred = '', log = console.log } = {}) {
   let usedModel = null
   return {
     get model() { return usedModel },
-    async ask(prompt, { newChat = true, timeoutMs = 10 * 60_000 } = {}) {
+    // images = [{ type, base64 }] แนบรูปไปกับคำถามได้ (เช่น ให้เลือก/บรรยายรูปสินค้า)
+    async ask(prompt, { newChat = true, timeoutMs = 10 * 60_000, images = [] } = {}) {
       const key = geminiKey()
       if (!key) throw new Error('ยังไม่ได้ใส่ Gemini API key — ใส่ในแผงข้าง (ผู้เขียนบท → Gemini) หรือในไฟล์ .env (GEMINI_API_KEY)')
       if (newChat) history = []
-      const contents = [...history, { role: 'user', parts: [{ text: prompt }] }]
+      const pictures = images.map((i) => ({ inline_data: { mime_type: i.type, data: i.base64 } }))
+      const contents = [...history, { role: 'user', parts: [...pictures, { text: prompt }] }]
       // แชตเดิมต้องใช้รุ่นเดิม · แชตใหม่ไล่ตามลำดับรุ่น
       const models = !newChat && usedModel ? [usedModel] : await modelsToTry(key, preferred)
       let lastError

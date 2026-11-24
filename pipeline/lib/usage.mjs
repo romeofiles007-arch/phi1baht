@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, readdirSync, renameSync, rmSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { ROOT } from './config.mjs'
 import { clipsDir } from './clips.mjs'
@@ -37,6 +37,29 @@ export function recordChatUsage({ prompt, text, attachments = 0 }, file = proces
   c.inTokens += estimateTokens(prompt) + attachments * IMAGE_TOKENS
   c.outTokens += estimateTokens(text)
   u.chatgpt = c
+  try { writeFileSync(file, JSON.stringify(u, null, 2)) } catch {}
+}
+
+/**
+ * เสียงพากย์ที่เสียเงินตามจำนวนตัวอักษร — ElevenLabs คิด 1 เครดิต/ตัวอักษร (รุ่น turbo/flash คิดครึ่ง)
+ * ผู้ใช้ (23 พ.ย. 2026) ส่งภาพโควตา ElevenLabs มาแล้วขอให้บอกว่า "ทุกคลิปใช้ token ไปเท่าไร"
+ * เดิมนับแต่ token ของ ChatGPT กับเครดิต Kie — เสียงไม่เคยถูกนับเลย ทั้งที่กินเครดิตมากที่สุด
+ * engine ที่ไม่เสียเงิน (edge · เสียงในเครื่อง) จดไว้ด้วยเพื่อให้รู้ว่าคลิปนี้ใช้เสียงอะไร
+ */
+export const ELEVEN_CREDITS_PER_CHAR = { eleven_turbo_v2_5: 0.5, eleven_flash_v2_5: 0.5 }
+export function recordTtsUsage({ engine, model = '', chars = 0, segments = 0, voice = '' }, file = process.env.CARTOON_USAGE_FILE) {
+  if (!file || !chars) return
+  const u = readJson(file, {})
+  const t = u.tts ?? { engine, model, voice, chars: 0, segments: 0, runs: 0 }
+  t.engine = engine
+  t.model = model || t.model
+  t.voice = voice || t.voice
+  t.chars += chars
+  t.segments += segments
+  t.runs += 1
+  // ElevenLabs เป็น engine เดียวที่หักเครดิตตามตัวอักษร — engine อื่นฟรีหรือทำในเครื่อง
+  t.credits = engine === 'elevenlabs' ? Math.round(t.chars * (ELEVEN_CREDITS_PER_CHAR[t.model] ?? 1)) : 0
+  u.tts = t
   try { writeFileSync(file, JSON.stringify(u, null, 2)) } catch {}
 }
 
@@ -108,12 +131,40 @@ export async function clipCost(slug, opts) {
   }
   const usd = +(credits * KIE_USD_PER_CREDIT).toFixed(4)
   const fx = await usdToThb(opts)
-  const chat = readJson(join(ROOT, 'projects', slug, 'usage.json'), {}).chatgpt ?? null
+  const usage = readJson(join(ROOT, 'projects', slug, 'usage.json'), {})
+  const chat = usage.chatgpt ?? null
+  const tts = usage.tts ?? null
   return {
     kie: { credits: +credits.toFixed(2), clips, unknown },
     usd,
     thb: +(usd * fx.rate).toFixed(2),
     fx,
     chatgpt: chat && { calls: chat.calls, tokens: chat.inTokens + chat.outTokens, inTokens: chat.inTokens, outTokens: chat.outTokens },
+    tts: tts && { engine: tts.engine, model: tts.model, chars: tts.chars, segments: tts.segments, credits: tts.credits ?? 0, paid: (tts.credits ?? 0) > 0 },
   }
+}
+
+/** ค่าใช้จ่ายของทุกคลิปที่ทำไว้ — เรียงจากคลิปใหม่สุด (ผู้ใช้ขอให้บอก "ทุกคลิป" ไม่ใช่เฉพาะคลิปที่กำลังทำ) */
+export function allClipUsage() {
+  const dir = join(ROOT, 'projects')
+  if (!existsSync(dir)) return []
+  const rows = []
+  for (const name of readdirSync(dir)) {
+    if (name.startsWith('_') || name.startsWith('.')) continue
+    const file = join(dir, name, 'usage.json')
+    if (!existsSync(file)) continue
+    const u = readJson(file, {})
+    const chat = u.chatgpt ?? null
+    const tts = u.tts ?? null
+    rows.push({
+      slug: name,
+      at: (() => { try { return statSync(file).mtimeMs } catch { return 0 } })(),
+      tokens: chat ? chat.inTokens + chat.outTokens : 0,
+      calls: chat?.calls ?? 0,
+      ttsChars: tts?.chars ?? 0,
+      ttsCredits: tts?.credits ?? 0,
+      ttsEngine: tts?.engine ?? '',
+    })
+  }
+  return rows.sort((a, b) => b.at - a.at)
 }

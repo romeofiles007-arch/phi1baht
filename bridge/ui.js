@@ -40,8 +40,10 @@ import { PAUSE_PRESETS, MOTION_PRESETS } from '../pipeline/lib/ffmpeg.mjs'
 import { SUBTITLE_STYLES } from '../pipeline/lib/subtitles.mjs'
 import { bgmMode, bgmTracks, bgmLevel, BGM_LEVELS } from '../pipeline/lib/bgm.mjs'
 import { clipSettings, CLIP_COVERAGES, firstCountOf, FIRST_COUNT_MAX } from '../pipeline/lib/clips.mjs'
+import { readProduct, addProductImage, removeProductImage, setProductPick, clearProduct, productAttachment, productKey, productMatches, PRODUCT_DIR, MAX_IMAGES as PRODUCT_MAX_IMAGES, PROMINENCE, prominenceOf } from '../pipeline/lib/product.mjs'
+import { castStatus, missingCast, addCastSheet, removeCastSheet, clearCast, castSheetJob, CAST_DIR } from '../pipeline/lib/cast.mjs'
 import { KIE_TIERS, kieTier } from '../pipeline/lib/kie.mjs'
-import { clipCost } from '../pipeline/lib/usage.mjs'
+import { clipCost, allClipUsage } from '../pipeline/lib/usage.mjs'
 import { readAsrTimeline, writeAsrTimeline, parseSegmentText } from '../pipeline/lib/asr.mjs'
 
 const MIME = {
@@ -772,6 +774,12 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
 
       // ค่าใช้จ่ายของคลิปที่เลือก (ขั้นทำเอง — คลิปที่ไม่ได้ผ่าน autopilot ก็ดูได้)
       if (req.method === 'GET' && path === '/api/cost') {
+        // ?all=1 — ยอดของทุกคลิปที่ทำไว้ (ผู้ใช้ 23 พ.ย. 2026: "อยากให้บอกด้วยว่าทุกคลิปใช้ token ไปเท่าไร")
+        if (url.searchParams.get('all')) {
+          const clips = allClipUsage()
+          const sum = (k) => clips.reduce((n, c) => n + (c[k] ?? 0), 0)
+          return json(res, 200, { clips, total: { clips: clips.length, tokens: sum('tokens'), calls: sum('calls'), ttsChars: sum('ttsChars'), ttsCredits: sum('ttsCredits') } }), true
+        }
         const slug = url.searchParams.get('slug') || selectedSlug()
         return json(res, 200, slug ? await clipCost(slug).catch(() => null) : null), true
       }
@@ -836,6 +844,19 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
         const title = String(body.title ?? '').trim()
         const autoTopic = !title && body.autoTopic === true
         if (!title && !autoTopic) return json(res, 400, { error: 'พิมพ์หัวข้อก่อน' }), true
+        // เริ่มใหม่ตั้งแต่แผนกที่เลือก (ไม่ใส่ = ทำต่อจากที่ค้าง) — ต้องมีหัวข้อ ใช้กับคลิปที่มีอยู่แล้ว
+        const restartFrom = title && ['script', 'voice', 'art', 'images', 'clips', 'edit'].includes(body.restartFrom) ? body.restartFrom : null
+        const slug = autoTopic ? null : slugify(title)
+        // คลิปที่ทำเสร็จไปแล้ว + ไม่ได้สั่งเริ่มใหม่ตั้งแต่แผนกไหน = ไม่มีงานให้ทำ → ปฏิเสธ แทนที่จะ "ทำต่อ" แล้วจบใน 0.2 วิ
+        // 23 พ.ย. 2026 ผู้ใช้: "กดสร้างแล้ววิ่งไปที่คลิปที่เสร็จแล้ว" — ช่องหัวข้อในแผงข้างยังค้างชื่อเรื่องเก่า กด ▶ จึงได้คลิปเดิม
+        // done: true ให้แผงข้างรู้ว่าต้องล้างช่องหัวข้อ ไม่ใช่แค่โชว์ error
+        if (slug && !restartFrom && readJson(join(ROOT, 'projects', slug, 'autopilot.json'), null)?.status === 'done') {
+          return json(res, 409, {
+            error: `"${title}" ทำเสร็จไปแล้ว — เลือกหรือพิมพ์หัวข้อใหม่ (ถ้าจะทำเรื่องนี้ใหม่ ใช้ "เริ่มใหม่ตั้งแต่แผนก…")`,
+            done: true,
+            slug,
+          }), true
+        }
         const config = loadConfig()
         if (clipSettings(config).enabled && !hasKey('KIE_API_KEY')) {
           return json(res, 400, { error: 'เปิดแอนิเมชัน Kie อยู่ แต่ยังไม่มี API key — กรอกในตั้งค่าแอนิเมชัน (คนฉายหนังกลางแปลง) หรือเลือกปิดเพื่อใช้ภาพนิ่ง' }), true
@@ -844,9 +865,6 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
         const titleLanguage = ['th', 'en'].includes(body.titleLanguage) ? body.titleLanguage : (config.script.titleLanguage ?? language)
         const minutes = Number(body.minutes) > 0 ? Number(body.minutes) : config.script.targetMinutes
         const genre = GENRES.includes(body.genre) ? body.genre : 'mix'
-        // เริ่มใหม่ตั้งแต่แผนกที่เลือก (ไม่ใส่ = ทำต่อจากที่ค้าง) — ต้องมีหัวข้อ ใช้กับคลิปที่มีอยู่แล้ว
-        const restartFrom = title && ['script', 'voice', 'art', 'images', 'clips', 'edit'].includes(body.restartFrom) ? body.restartFrom : null
-        const slug = autoTopic ? null : slugify(title)
         // ระดับความสยองที่แผงข้างใช้ตอนเสนอหัวข้อ (สุ่มไว้แล้ว) → บทเป็นระดับเดียวกับหัวข้อ · ไม่ส่ง = autopilot เลือกตามตั้งค่าคลิป
         const env = ['light', 'medium', 'strong'].includes(body.scare) ? { CLIP_SCARE: body.scare } : undefined
         const started = runner.start('autopilot', slug, { title, autoTopic, genre, language, titleLanguage, minutes, restartFrom, env })
@@ -943,6 +961,92 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
         if (req.method === 'POST' && path === '/api/character/clear') return json(res, 200, view(clearCharacter())), true
       }
 
+      // ── รูปสินค้า (วางเอง หรือดึงจากแท็บ Shopee) — ChatGPT เลือกรูปที่ควรแนบแล้วบรรยายหน้าตา ──
+      // แยกจากตั้งค่าสินค้าใน /api/clip-settings: ตรงนั้นเก็บ ลิ้ง/ชื่อ/เปิดปิด/ความเด่น ตรงนี้เก็บรูปกับคำบรรยาย
+      if (path === '/api/product' || path.startsWith('/api/product/')) {
+        const view = (p) => ({
+          ...p,
+          max: PRODUCT_MAX_IMAGES,
+          attached: productAttachment()?.name ?? null,
+          // มีรูปในคลังแต่เป็นของสินค้าตัวอื่น → แผงข้างต้องเตือน ไม่ใช่โชว์ "แนบรูปที่ ChatGPT เลือกไว้" เหมือนปกติ
+          stale: p.images.length > 0 && !productMatches(),
+          previews: p.images.map((name) => ({
+            name,
+            picked: name === p.chosen,
+            dataUrl: `data:image/${name.endsWith('.png') ? 'png' : name.endsWith('.webp') ? 'webp' : 'jpeg'};base64,${readFileSync(join(PRODUCT_DIR, name)).toString('base64')}`,
+          })),
+        })
+        if (req.method === 'GET' && path === '/api/product') return json(res, 200, view(readProduct())), true
+        if (req.method === 'POST' && path === '/api/product/image') return json(res, 200, view(addProductImage(await readBody(req)))), true
+        if (req.method === 'POST' && path === '/api/product/image/delete') {
+          const { name } = await readBody(req)
+          return json(res, 200, view(removeProductImage(String(name)))), true
+        }
+        // ผลที่ ChatGPT เลือก — แผงข้างส่งมาหลังถาม ChatGPT เสร็จ
+        if (req.method === 'POST' && path === '/api/product/pick') {
+          const { chosen, description, by } = await readBody(req)
+          return json(res, 200, view(setProductPick({ chosen: chosen ? String(chosen) : null, description, by }))), true
+        }
+        // ผู้เขียนเป็น Gemini API → ถามจากที่นี่ (key อยู่ในเครื่อง ไม่ส่งไปแผงข้าง) · รูปอ่านจากคลังตามชื่อ ไม่ต้องส่ง base64 ข้ามมา
+        // ผู้ใช้ 23 พ.ย. 2026: "ถ้าเราเลือก Gemini ก็ส่งไป Gemini"
+        if (req.method === 'POST' && path === '/api/product/ask-gemini') {
+          const { prompt, names } = await readBody(req)
+          const { images } = readProduct()
+          const wanted = (Array.isArray(names) ? names : []).filter((n) => images.includes(n))
+          if (!wanted.length) return json(res, 400, { error: 'ไม่มีรูปที่จะส่งให้ Gemini ดู' }), true
+          const pics = wanted.map((n) => ({
+            type: n.endsWith('.png') ? 'image/png' : n.endsWith('.webp') ? 'image/webp' : 'image/jpeg',
+            base64: readFileSync(join(PRODUCT_DIR, n)).toString('base64'),
+          }))
+          const { geminiChat } = await import('../pipeline/lib/gemini_text.mjs')
+          const text = await geminiChat({ log }).ask(String(prompt ?? ''), { images: pics, timeoutMs: 3 * 60_000 })
+          return json(res, 200, { text }), true
+        }
+        if (req.method === 'POST' && path === '/api/product/clear') return json(res, 200, view(clearProduct())), true
+      }
+
+      // ── คลังตัวละคร 48 ตัว — แผ่นแบบที่ ChatGPT วาดไว้ล่วงหน้า แล้วแนบให้ Flow เป็นแบบของคนคนนั้น ──
+      // ผู้ใช้ 23 พ.ย. 2026: "ตัวละครมันมั่วสลับไปสลับมา ก็เลยทำให้ Google Flow งง"
+      // บัญชีใครเป็นใครอยู่ที่ extension/prompts.js → CAST · ที่นี่เก็บแค่รูปที่วาดเสร็จ
+      if (path === '/api/cast' || path.startsWith('/api/cast/')) {
+        const view = () => {
+          const s = castStatus()
+          return {
+            ...s,
+            groups: s.groups.map((g) => ({
+              ...g,
+              members: g.members.map((m) => ({
+                ...m,
+                // แผงข้างแสดงรูปย่อจาก dataUrl ตรงๆ เหมือนรูปตัวละครและรูปสินค้า (ไม่ต้องเปิดพอร์ตไฟล์เพิ่ม)
+                dataUrl: m.file
+                  ? `data:image/${m.file.endsWith('.png') ? 'png' : m.file.endsWith('.webp') ? 'webp' : 'jpeg'};base64,${readFileSync(join(CAST_DIR, m.file)).toString('base64')}`
+                  : null,
+              })),
+            })),
+          }
+        }
+        if (req.method === 'GET' && path === '/api/cast') return json(res, 200, view()), true
+        // คำสั่งวาดของตัวที่ยังไม่มีรูป — แผงข้างเอาไปส่งให้ ChatGPT ทีละตัว
+        if (req.method === 'GET' && path === '/api/cast/todo') {
+          const limit = Math.max(1, Math.min(48, Number(url.searchParams.get('limit')) || 48))
+          // ส่งภาพอ้างอิงลายเส้นไปกับคำสั่งด้วย (ผู้ใช้ 23 พ.ย. 2026: "แนบสไตล์ที่เราต้องการไปด้วย")
+          return json(res, 200, { todo: missingCast().slice(0, limit).map(castSheetJob).filter(Boolean) }), true
+        }
+        if (req.method === 'POST' && path === '/api/cast/image') {
+          addCastSheet(await readBody(req))
+          return json(res, 200, view()), true
+        }
+        if (req.method === 'POST' && path === '/api/cast/image/delete') {
+          const { id } = await readBody(req)
+          removeCastSheet(String(id))
+          return json(res, 200, view()), true
+        }
+        if (req.method === 'POST' && path === '/api/cast/clear') {
+          clearCast()
+          return json(res, 200, view()), true
+        }
+      }
+
       // ── ตั้งค่าคลิป: แนวภาพ · ซับไตเติล · ช่วงเงียบระหว่างประโยค ──
       if (path === '/api/clip-settings') {
         if (req.method === 'POST') {
@@ -966,17 +1070,25 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
             // ผู้เขียนบทและหัวข้อ: chatgpt (ค่าเริ่มต้น) | gemini — ใช้กับคลิปที่เริ่มหลังจากนี้
             if (WRITERS[body.writer]) c.script.writer = body.writer
             // สินค้าในเรื่อง (ตัวทดลอง): วางลิ้ง Shopee → อ่านชื่อจากตัวลิ้ง · แก้ชื่อทับได้ · ลิ้งว่าง = ล้างทิ้ง
-            if (body.productUrl !== undefined || body.productName !== undefined || body.productEnabled !== undefined) {
+            // ทุกช่องของสินค้าต้องอยู่ในเงื่อนไขนี้ ไม่งั้นค่าที่ส่งมาเดี่ยวๆ จะถูกข้ามเงียบๆ แล้วเด้งกลับค่าเดิม
+            // (23 พ.ย. 2026: ลืมใส่ productProminence ปุ่มเลือกระดับความเด่นจึงกด "ไม่ติด")
+            if (body.productUrl !== undefined || body.productName !== undefined || body.productEnabled !== undefined || body.productProminence !== undefined) {
               const p = { ...(c.script.product ?? {}) }
               if (body.productUrl !== undefined) {
+                const before = p.url
                 p.url = String(body.productUrl ?? '').trim()
                 p.name = p.url ? (productFromUrl(p.url)?.name ?? '') : ''
+                // เปลี่ยนเป็นสินค้าตัวอื่น (หรือล้างลิ้ง) = รูป รูปที่ ChatGPT เลือก และคำบรรยายของตัวเก่าใช้ไม่ได้แล้ว → ล้าง
+                // 23 พ.ย. 2026: เปลี่ยนจากรองเท้าเป็นนาฬิกาแล้วรูปรองเท้าค้าง คลังเต็มจนดึงรูปนาฬิกาไม่เข้า
+                // สินค้าเดิมแต่ลิ้งต่างแค่พารามิเตอร์ติดตาม = ไม่ล้าง (เทียบด้วย productKey)
+                if (productKey(before) !== productKey(p.url)) clearProduct()
               }
               if (body.productName !== undefined) p.name = String(body.productName ?? '').trim().slice(0, 60)
               if (body.productEnabled !== undefined) p.enabled = body.productEnabled === true || body.productEnabled === 'on'
+              if (body.productProminence !== undefined) p.prominence = prominenceOf(body.productProminence)
               // ไม่มีลิ้งและไม่มีชื่อ = ยังไม่ได้ตั้ง → ปิดไว้ ไม่ให้ค้างเป็นเปิดแต่ไม่มีสินค้า
-              if (!p.url && !p.name) c.script.product = { url: '', name: '', enabled: false }
-              else c.script.product = { url: p.url ?? '', name: p.name ?? '', enabled: p.enabled === true && Boolean(p.name) }
+              if (!p.url && !p.name) c.script.product = { url: '', name: '', enabled: false, prominence: p.prominence ?? 'prop' }
+              else c.script.product = { url: p.url ?? '', name: p.name ?? '', enabled: p.enabled === true && Boolean(p.name), prominence: prominenceOf(p.prominence) }
             }
             // แอนิเมชัน Kie (คนฉายหนังกลางแปลง): 'off' · เปอร์เซ็นต์ของฉากทั้งเรื่อง · 'first' = N ภาพแรก (จำนวนจาก firstCount)
             const aiCoverage = body.aiCoverage ?? body.aiClips // aiClips รองรับ extension รุ่นเก่า
@@ -1024,6 +1136,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
             url: c.script.product?.url ?? '',
             name: c.script.product?.name ?? '',
             enabled: c.script.product?.enabled === true && Boolean(c.script.product?.name),
+            prominence: prominenceOf(c.script.product?.prominence),
           },
           gemini: { hasKey: hasKey('GEMINI_API_KEY') },
           bgm: bgmMode(c),
@@ -1043,6 +1156,7 @@ export function createUi({ jobs, enqueue, lastPoll, token, port, json, readBody,
             engage: [{ id: 'on', label: 'ชวนคุย' }, { id: 'off', label: 'ไม่ชวน' }],
             inkify: [{ id: 'on', label: 'เปิด' }, { id: 'off', label: 'ปิด' }],
             scare: Object.entries(SCARE_LEVELS).map(([id, s]) => ({ id, label: s.label })),
+            productProminence: Object.entries(PROMINENCE).map(([id, p]) => ({ id, label: p.label, shots: p.shots })),
             writer: Object.entries(WRITERS).map(([id, w]) => ({ id, label: w.label })),
             bgmLevel: Object.entries(BGM_LEVELS).map(([id, l]) => ({ id, label: l.label })),
             bgm: [

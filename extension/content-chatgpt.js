@@ -294,7 +294,110 @@ async function runPrompt(prompt, { newChat = true, attachments = [] } = {}) {
   return text
 }
 
+/**
+ * รูปที่ ChatGPT วาด → base64 — ใช้กับคลังตัวละคร 48 ตัว (ผู้ใช้ 23 พ.ย. 2026: ให้สร้างตัวละครไว้ใน ChatGPT Web)
+ * เดิมหน้านี้ดึงกลับได้แต่ข้อความ · วาดรูปใช้เวลานานกว่าตอบข้อความมาก จึงรอแยกจาก runPrompt
+ */
+async function imageAsPngBase64(src) {
+  const blob = await fetch(src).then((r) => {
+    if (!r.ok) throw new Error(`โหลดภาพไม่ได้ (${r.status})`)
+    return r.blob()
+  })
+  const bitmap = await createImageBitmap(blob)
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
+  canvas.getContext('2d').drawImage(bitmap, 0, 0)
+  const png = new Uint8Array(await (await canvas.convertToBlob({ type: 'image/png' })).arrayBuffer())
+  let binary = ''
+  for (let i = 0; i < png.length; i += 0x8000) binary += String.fromCharCode(...png.subarray(i, i + 0x8000))
+  return { base64: btoa(binary), width: bitmap.width, height: bitmap.height }
+}
+
+/**
+ * หาตำแหน่งคำสั่งที่เพิ่งส่งในหน้า — ใช้บรรทัด "ตัวละคร: ..." ถ้ามี ไม่งั้น 40 ตัวแรกของคำสั่ง
+ * 23 พ.ย. 2026 (วาดคลัง 48 ตัวจริง): หน้า ChatGPT รุ่นนี้ไม่มี data-message-author-role แล้ว
+ * assistantTurns() จึงหาคำตอบไม่เจอ · ยึด "ข้อความคำสั่ง" แทน เพราะเป็นของที่เราพิมพ์เองและหาเจอแน่นอน
+ */
+const promptMarker = (prompt) => (String(prompt).split(/\r?\n/).find((l) => l.startsWith('ตัวละคร: ')) ?? String(prompt).slice(0, 40)).trim()
+function promptAnchor(marker) {
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+  let last = null
+  for (let n = w.nextNode(); n; n = w.nextNode()) if (n.nodeValue.includes(marker)) last = n
+  return last
+}
+
+/**
+ * รูปที่ ChatGPT วาดตอบคำสั่งนี้ = รูปภาพเต็ม (ด้านยาว ≥1000px) ที่อยู่ "หลัง" คำสั่งล่าสุดในหน้า
+ * - ไม่ดูแค่ "รูปใหม่ที่ไม่เคยเห็น": ChatGPT ซ่อนรูปที่เลื่อนพ้นจอแล้วใส่กลับมาด้วย blob: ใหม่
+ *   วาดคลังจริงเคยได้ใบของร่างทรงมาแทนพยาบาลเพราะเหตุนี้ · รูปเก่าอยู่ก่อนคำสั่ง จึงไม่โดนนับ
+ * - ไม่นับภาพร่าง: ChatGPT ขึ้นภาพ 768px แบบ data: ก่อน แล้วค่อยสลับเป็นภาพเต็ม 1024–1536px แบบ blob:
+ */
+const answerImages = (marker) => {
+  const anchor = promptAnchor(marker)
+  if (!anchor) return []
+  return [...document.querySelectorAll('img')].filter((img) => {
+    const src = img.currentSrc || img.src
+    if (!src || src.startsWith('data:')) return false
+    if (Math.max(img.naturalWidth || 0, img.naturalHeight || 0) < 1000) return false
+    return Boolean(anchor.compareDocumentPosition(img) & Node.DOCUMENT_POSITION_FOLLOWING)
+  })
+}
+
+/**
+ * สั่ง ChatGPT วาดรูปแล้วเอารูปกลับมา — รอให้หยุดวาด มีภาพเต็มหลังคำสั่ง และภาพเดิมนิ่ง 3 วินาที
+ * (ช่วงสลับจากภาพร่างเป็นภาพเต็ม ปุ่มหยุดหายไปชั่วครู่ ถ้าคว้าทันทีจะได้ภาพผิดใบ)
+ */
+async function runImagePrompt(prompt, { newChat = true, timeout = 8 * 60_000, attachments = [] } = {}) {
+  if (newChat) await startNewChat()
+  const marker = promptMarker(prompt)
+  const input = await waitFor(() => pickVisible(S.input), { label: 'ช่องพิมพ์ของ ChatGPT' })
+  await clearComposer(input)
+  // ภาพอ้างอิงลายเส้น (Style Kit) — วางรูปก่อนพิมพ์ แล้วรอให้ขึ้นเป็นไฟล์แนบจริง
+  // ผู้ใช้ 23 พ.ย. 2026: "แนบสไตล์ที่เราต้องการไปด้วย" · ไม่รออัปโหลด ปุ่มส่งจะไม่ยอมส่ง
+  if (attachments.length) {
+    const before = document.querySelectorAll('form img[src^="blob:"], form img[src^="https:"]').length
+    pasteFiles(input, attachments)
+    await waitFor(() => document.querySelectorAll('form img[src^="blob:"], form img[src^="https:"]').length >= before + attachments.length, {
+      timeout: 120_000,
+      interval: 500,
+      label: 'ChatGPT อัปโหลดภาพอ้างอิงลายเส้น',
+    })
+    await sleep(800)
+  }
+  await typeInto(input, prompt)
+  await sleep(400)
+  pressEnter(input)
+  await sleep(1500)
+  // Enter ไม่ติด = คำสั่งยังค้างในช่องพิมพ์ → กดปุ่มส่ง
+  if ((pickVisible(S.input)?.innerText || '').includes(marker)) {
+    pickVisible(S.send)?.click()
+    await sleep(1500)
+  }
+  const ready = () => !pickVisible(S.stop) && answerImages(marker).length > 0
+  await waitFor(ready, { timeout, interval: 2500, label: 'ChatGPT วาดรูป' })
+  let src = null
+  for (let i = 0; i < 20; i++) {
+    const now = answerImages(marker).at(-1)
+    const nowSrc = now ? now.currentSrc || now.src : null
+    if (nowSrc && nowSrc === src && !pickVisible(S.stop)) break
+    src = nowSrc
+    await sleep(3000)
+  }
+  const img = answerImages(marker).at(-1)
+  if (!img) throw new Error('ChatGPT ไม่ได้วาดรูปกลับมา')
+  const { base64, width, height } = await imageAsPngBase64(img.currentSrc || img.src)
+  if (!base64) throw new Error('อ่านรูปที่ ChatGPT วาดไม่ได้')
+  return { base64, type: 'image/png', width, height }
+}
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  // สั่งวาดรูป (คลังตัวละคร) — ตอบกลับเป็น base64 ให้แผงข้างส่งเข้าโปรแกรมในเครื่องเอง
+  if (msg.type === 'ASK_IMAGE') {
+    stopped = false
+    runImagePrompt(msg.prompt, { newChat: msg.newChat ?? true, timeout: msg.timeout, attachments: msg.attachments ?? [] })
+      .then((image) => sendResponse({ ok: true, ...image }))
+      .catch((err) => sendResponse({ ok: false, error: String(err.message) }))
+    return true
+  }
   // หน้าตรวจความพร้อม: ChatGPT ใช้แบบไม่ล็อกอินได้ แต่โควตาน้อยและตอบยาวไม่ได้ → ถือว่ายังไม่พร้อม
   if (msg.type === 'PING') {
     const loginButton = document.querySelector('[data-testid="login-button"], a[href*="/auth/login"]')

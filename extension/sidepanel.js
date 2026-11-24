@@ -6,14 +6,14 @@
  *
  * prompt ใช้ชุดเดียวกับ pipeline/ (extension/prompts.js) ผลจึงเหมือนรันจาก terminal
  */
-import { BLUEPRINT_FILE, topicsPrompt, scriptPrompt, parseTopics, cleanScript, estimateMinutes, slugify, scoredTopicsPrompt, parseScoredTopics, GENRES, CATEGORIES, categoryOf, resolveScare, scareApplies, storyTitlesFirst } from './prompts.js'
+import { BLUEPRINT_FILE, topicsPrompt, scriptPrompt, parseTopics, cleanScript, estimateMinutes, slugify, scoredTopicsPrompt, parseScoredTopics, GENRES, CATEGORIES, categoryOf, resolveScare, scareApplies, storyTitlesFirst, productPickPrompt, productDescribePrompt, parseProductPick } from './prompts.js'
 import { screenTopics, localDuplicate } from './dedupe.js'
 import { initIcons, setIconLabel } from './icons.js'
 import { portrait, DEPARTMENTS, HANDOFF, AGENT_WORD, elapsed, SEA_ASSETS } from './agents.js'
 import { initPosting } from './posting.js'
 import { applyCategoryTheme, categoryGenre } from './category-themes.js'
 import { preferredFlowTab, flowHomeUrl } from './flow-navigation.js'
-import { preferredChatTab } from './chat-tabs.js'
+import { preferredChatTab, preferredGeminiTab } from './chat-tabs.js'
 import { scheduleFromFields, scheduleFields, scheduleCopy } from './production-schedule.js'
 
 initIcons()
@@ -245,7 +245,10 @@ async function api(app, path, body) {
     body: body && JSON.stringify(body),
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error ?? `โปรแกรมในเครื่องตอบ ${res.status}`)
+  if (!res.ok) {
+    // แนบรหัสและข้อมูลที่โปรแกรมตอบมาไว้ด้วย — ผู้เรียกบางจุดต้องรู้มากกว่าข้อความ (เช่น done: true = คลิปนี้เสร็จแล้ว)
+    throw Object.assign(new Error(data.error ?? `โปรแกรมในเครื่องตอบ ${res.status}`), { status: res.status, data })
+  }
   return data
 }
 
@@ -1129,8 +1132,10 @@ function showAuto(status, run, progress, log, cost) {
 
 // ── ค่าใช้จ่ายของคลิป: เงินจริง (Kie) เป็น $ และบาท + token ChatGPT โดยประมาณ (อยู่ในแพ็กเกจ ไม่เสียเพิ่ม) ──
 const fmtNum = (n, digits = 0) => Number(n).toLocaleString('th-TH', { minimumFractionDigits: digits, maximumFractionDigits: digits })
+let lastCost = null
 function renderCost(cost) {
   const box = $('autoCost')
+  lastCost = cost
   box.hidden = !cost
   if (!cost) return
   box.textContent = ''
@@ -1141,14 +1146,49 @@ function renderCost(cost) {
     Object.assign(document.createElement('span'), { className: 'costThb', textContent: `≈ ${fmtNum(cost.thb, 2)} บาท` }),
   )
   const rate = cost.fx?.rate ? `อัตรา ${fmtNum(cost.fx.rate, 2)} บาท/$${cost.fx.date ? ` (${cost.fx.date})` : ' (ค่าตั้งต้น)'}` : ''
+  // เสียงพากย์: ElevenLabs หักเครดิตตามจำนวนตัวอักษร — engine อื่นฟรีหรือทำในเครื่อง
+  const tts = cost.tts
+  const ttsLine = !tts
+    ? 'เสียงพากย์: ยังไม่ได้ทำเสียงของคลิปนี้'
+    : tts.paid
+      ? `เสียง ${tts.engine} ≈ ${fmtNum(tts.credits)} เครดิต · ${fmtNum(tts.chars)} ตัวอักษร · ${tts.segments} ท่อน`
+      : `เสียง ${tts.engine} ${fmtNum(tts.chars)} ตัวอักษร · ${tts.segments} ท่อน (ไม่เสียเครดิต)`
   const lines = [
     `Kie ${fmtNum(cost.kie.credits, 2)} เครดิต · ${cost.kie.clips} คลิป${cost.kie.unknown ? ` · ยังไม่รู้ค่า ${cost.kie.unknown} งาน` : ''}`,
     cost.chatgpt ? `ChatGPT ≈ ${fmtNum(cost.chatgpt.tokens)} token · ${cost.chatgpt.calls} ครั้ง (อยู่ในแพ็กเกจ ไม่เสียเพิ่ม)` : 'ChatGPT: ยังไม่มีข้อมูล token ของคลิปนี้',
-    `Google Flow 0 credits · เสียงทำในเครื่อง${rate ? ` · ${rate}` : ''}`,
+    ttsLine,
+    `Google Flow 0 credits${rate ? ` · ${rate}` : ''}`,
   ]
   const detail = Object.assign(document.createElement('ul'), { className: 'costDetail' })
   for (const t of lines) detail.append(Object.assign(document.createElement('li'), { textContent: t }))
   box.append(money, detail)
+  box.append(allClipsLine())
+}
+
+/** บรรทัดสรุปของทุกคลิป — กดแล้วกางรายคลิป (อ่านครั้งเดียวแล้วจำไว้) */
+let allUsage = null
+function allClipsLine() {
+  const wrap = Object.assign(document.createElement('details'), { className: 'costAll' })
+  const sum = allUsage?.total
+  wrap.append(Object.assign(document.createElement('summary'), {
+    textContent: sum ? `ทุกคลิปรวม ${sum.clips} คลิป · ≈ ${fmtNum(sum.tokens)} token${sum.ttsCredits ? ` · เสียง ${fmtNum(sum.ttsCredits)} เครดิต` : ''}` : 'ดูยอดของทุกคลิป',
+  }))
+  const list = Object.assign(document.createElement('ul'), { className: 'costDetail' })
+  for (const c of allUsage?.clips ?? []) {
+    list.append(Object.assign(document.createElement('li'), {
+      textContent: `${c.slug} — ≈ ${fmtNum(c.tokens)} token · ${c.calls} ครั้ง${c.ttsCredits ? ` · เสียง ${fmtNum(c.ttsCredits)} เครดิต` : c.ttsChars ? ` · เสียง ${fmtNum(c.ttsChars)} ตัวอักษร` : ''}`,
+    }))
+  }
+  wrap.append(list)
+  wrap.addEventListener('toggle', async () => {
+    if (!wrap.open || allUsage) return
+    try {
+      allUsage = await api(await localApp(), '/api/cost?all=1')
+      renderCost(lastCost)
+      $('autoCost').querySelector('.costAll').open = true
+    } catch { /* อ่านไม่ได้ก็ปล่อยว่าง ไม่ให้กล่องค่าใช้จ่ายพังทั้งกล่อง */ }
+  })
+  return wrap
 }
 
 // ── หน้าต่าง log แบบ terminal (แบบเดียวกับ Ebook Plus): เวลา · ที่มา · ระดับ · ข้อความ ──
@@ -1252,6 +1292,8 @@ async function runAuto(app, slug) {
   try {
     const st = await watchAuto(app, slug)
     slug = st.slug ?? slug
+    // เสร็จแล้ว = ใช้หัวข้อนี้ไปแล้ว ล้างทิ้ง ไม่งั้นกด ▶ รอบหน้าจะวิ่งกลับมาที่คลิปนี้
+    await forgetFinishedTitle(st.title)
     setStatus('autoStatus', 'ทำคลิปเสร็จแล้ว', 'ok')
     await openProject(app, slug).catch(() => {})
     if (!(await showFinishedVideo(app, slug).catch(() => false))) setStatus('autoStatus', `ทำคลิปเสร็จแล้ว: ${st.video ?? ''}`, 'ok')
@@ -1275,14 +1317,25 @@ async function doneDuplicate(title) {
   return localDuplicate(title, history?.recent ?? [])
 }
 
+/**
+ * วิธีได้หัวข้อคลิป: 'auto' เลือกให้เลย (ค่าเริ่มต้น) · 'suggest' ให้ AI เสนอ · 'manual' พิมพ์เอง
+ * ผู้ใช้ 23 พ.ย. 2026: "อยากให้ค่าเริ่มต้นเป็นค่านี้" (เลือกให้เลย) — เดิมค่าเริ่มต้นเป็นพิมพ์เอง
+ * และกด "ทำต่อ" / "เริ่มใหม่ตั้งแต่แผนก" เคยเปลี่ยนโหมดของผู้ใช้เป็นพิมพ์เองแล้วบันทึกทิ้งไว้ — เลิกทำแล้ว
+ * ทุกจุดต้องอ่านผ่านตัวนี้ ไม่งั้นค่าว่างจะโชว์ว่า "เลือกให้เลย" แต่กด ▶ แล้วถูกนับเป็นพิมพ์เอง
+ */
+// function (ไม่ใช่ const) — ถูกเรียกตอน render ครั้งแรกซึ่งอาจมาก่อนบรรทัดนี้ ต้อง hoist ได้
+function topicMode() {
+  return S.autoTopicMode ?? 'auto'
+}
+
 let dupConfirmed = null // หัวข้อที่ผู้ใช้กดยืนยันแล้วว่าจะทำทั้งที่ซ้ำ
 
 $('startAuto').addEventListener('click', async () => {
-  const autoTopic = S.autoTopicMode === 'auto'
+  const autoTopic = topicMode() === 'auto'
   const title = autoTopic ? '' : $('autoTitle').value.trim()
   if (!title && !autoTopic) {
-    setStatus('autoStatus', S.autoTopicMode === 'suggest' ? 'เลือกหัวข้อจากรายการที่ AI เสนอก่อน' : 'พิมพ์หัวข้อคลิปก่อน', 'error')
-    return S.autoTopicMode === 'suggest' ? $('suggestTopics').focus() : $('autoTitle').focus()
+    setStatus('autoStatus', topicMode() === 'suggest' ? 'เลือกหัวข้อจากรายการที่ AI เสนอก่อน' : 'พิมพ์หัวข้อคลิปก่อน', 'error')
+    return topicMode() === 'suggest' ? $('suggestTopics').focus() : $('autoTitle').focus()
   }
   // หัวข้อที่พิมพ์เอง (หรือแก้ข้อความที่ AI เสนอ) ยังไม่ผ่านตัวกันเรื่องซ้ำ → เตือนก่อนหนึ่งครั้ง กดอีกครั้ง = ทำจริง
   const screened = !!S.scoredTopics?.some((t) => t.title === title)
@@ -1307,8 +1360,34 @@ $('newAuto').addEventListener('click', async () => {
   renderTopicMode()
   setStatus('autoStatus', 'เริ่มวิดีโอใหม่ — เลือกหัวข้อและตั้งค่าด้านล่าง เสร็จแล้วกด ▶ ทำคลิปอัตโนมัติ', 'ok')
   $('autoTopicBlock').scrollIntoView({ behavior: 'smooth', block: 'start' })
-  if ((S.autoTopicMode ?? 'manual') === 'manual') $('autoTitle').focus({ preventScroll: true })
+  if (topicMode() === 'manual') $('autoTitle').focus({ preventScroll: true })
 })
+
+/**
+ * ลืมเรื่องที่ทำเสร็จแล้ว: ล้างช่องหัวข้อ และเอาออกจากรายการหัวข้อที่ AI เสนอ
+ * 23 พ.ย. 2026 ผู้ใช้: "กดสร้างแล้ววิ่งไปที่คลิปที่เสร็จแล้ว" — ช่องหัวข้อจำชื่อเรื่องที่เลือกจากรายการไว้ข้ามรอบ
+ * เรื่องนั้นทำเสร็จไปแล้วแต่ชื่อยังค้างทั้งในช่องและในรายการ กด ▶ ทีไรก็ "ทำต่อ" เรื่องเดิมที่ไม่มีงานเหลือ
+ * (ตัวเตือนเรื่องซ้ำยกเว้นหัวข้อที่มาจากรายการที่เสนอ จึงไม่เตือนด้วย)
+ */
+async function forgetFinishedTitle(title) {
+  if (!title) return
+  let changed = false
+  if ($('autoTitle').value.trim() === title) {
+    $('autoTitle').value = ''
+    changed = true
+  }
+  if (S.autoTitle === title) {
+    S.autoTitle = ''
+    changed = true
+  }
+  if (S.scoredTopics?.some((t) => t.title === title)) {
+    S.scoredTopics = S.scoredTopics.filter((t) => t.title !== title)
+    changed = true
+  }
+  if (!changed) return
+  await save()
+  renderTopicMode()
+}
 
 async function startAutopilot({ title, autoTopic }) {
   S.autoTitle = title
@@ -1334,7 +1413,13 @@ async function startAutopilot({ title, autoTopic }) {
     await runAuto(app, slug)
   } catch (err) {
     autoRunning = false
-    setStatus('autoStatus', err.message, 'error')
+    // โปรแกรมในเครื่องบอกว่าเรื่องนี้ทำเสร็จไปแล้ว → ล้างชื่อทิ้ง ให้กด ▶ ครั้งถัดไปได้เรื่องใหม่จริง
+    if (err.data?.done) {
+      await forgetFinishedTitle(title)
+      setStatus('autoStatus', `${err.message} · ล้างช่องหัวข้อให้แล้ว`, 'error')
+      if (topicMode() === 'suggest') $('suggestTopics').focus()
+      else if (topicMode() !== 'auto') $('autoTitle').focus()
+    } else setStatus('autoStatus', err.message, 'error')
     render()
   }
 }
@@ -1367,7 +1452,6 @@ $('stopAuto').addEventListener('click', async () => {
   const r = autoResume
   $('autoTitle').value = r.title
   S.autoTitle = r.title
-  if (S.autoTopicMode === 'auto') S.autoTopicMode = 'manual' // เลือกหัวข้อไปแล้ว ไม่ต้องคิดใหม่
   await save()
   autoResume = null
   autoRunning = true
@@ -1394,7 +1478,6 @@ $('restartAuto').addEventListener('click', async () => {
   if (!app) return setStatus('autoStatus', 'เปิดโปรแกรมในเครื่องไม่ได้', 'error')
   $('autoTitle').value = target.title
   S.autoTitle = target.title
-  if (S.autoTopicMode === 'auto') S.autoTopicMode = 'manual'
   await save()
   autoResume = null
   autoRunning = true
@@ -1429,7 +1512,7 @@ $('autoLang').addEventListener('click', async (e) => {
 
 // ── เลือกหัวข้อ: พิมพ์เอง / ให้ AI เสนอพร้อมคะแนน / ให้ระบบเลือกคะแนนสูงสุดเอง ──
 function renderTopicMode() {
-  const mode = S.autoTopicMode ?? 'manual'
+  const mode = topicMode()
   for (const b of $('autoTopicMode').querySelectorAll('button')) {
     b.setAttribute('aria-pressed', String(b.dataset.value === mode))
     b.disabled = busy || localBusy()
@@ -1544,7 +1627,7 @@ $('suggestTopics').addEventListener('click', async () => {
   }
   render()
 })
-$('autoTitle').addEventListener('input', () => S.autoTopicMode === 'suggest' && renderTopicMode())
+$('autoTitle').addEventListener('input', () => topicMode() === 'suggest' && renderTopicMode())
 
 /** เปิดแผงใหม่ระหว่างที่ autopilot ทำงานอยู่ → แสดงต่อ; จบไปแล้ว → แสดงผลล่าสุด */
 async function resumeAuto() {
@@ -1558,6 +1641,8 @@ async function resumeAuto() {
     return runAuto(app, a.slug)
   }
   setResume(a.status, a.last)
+  // เปิดแผงมาแล้วเรื่องล่าสุดเสร็จไปแล้ว แต่ชื่อยังค้างในช่องหัวข้อ (จากรุ่นก่อนที่ไม่ล้าง) → ล้างทิ้งเลย
+  if (a.status.status === 'done') await forgetFinishedTitle(a.status.title)
   // เสร็จตอนแผงปิดอยู่ (หรือตอนแผงไม่ได้ติดตาม) → เปิดแผงมาเห็นวิดีโอเลย ครั้งเดียวต่อคลิป
   if (a.status.status === 'done' && Date.now() - (a.status.updatedAt ?? 0) < 6 * 3600_000) {
     showFinishedVideo(app, a.slug, { once: true }).catch(() => {})
@@ -1737,6 +1822,10 @@ function renderClipSettings() {
   $('kieModeBadge').textContent = !aiOn ? 'ปิด' : firstMode ? `เปิด ${firstCount} ภาพแรก` : `เปิด ${aiCoverage}%`
   $('kieKeyStatus').textContent = clip.kie?.hasKey ? 'บันทึก API key แล้ว · เก็บไว้ในเครื่อง' : 'ยังไม่มี API key — กรอกก่อนเริ่มสร้างแอนิเมชัน'
   renderProduct()
+  renderProminence()
+  // คลังตัวละคร: อ่านครั้งแรกที่เปิดกล่องตั้งค่า แล้ววาดใหม่ทุกครั้งเพื่อให้ปุ่มสะท้อนว่างานผลิตใช้แท็บ ChatGPT อยู่ไหม
+  if (castState === null && castSupported !== false) castCall('/api/cast')
+  else renderCast()
   const motionLabel = motionOptions.find((o) => o.id === clip.motion)?.label
   const subLabel = clip.options.subtitles.find((o) => o.id === clip.subtitles)?.label
   const pauseLabel = clip.options.pause.find((o) => o.id === clip.pause)?.label
@@ -1762,17 +1851,340 @@ function renderProduct() {
   if (document.activeElement !== $('clipProductUrl')) $('clipProductUrl').value = p.url ?? ''
   if (document.activeElement !== $('clipProductName')) $('clipProductName').value = p.name ?? ''
   $('clipProductEnabled').checked = p.enabled === true
-  $('clipProductEnabled').disabled = !p.name || localBusy()
+  $('clipProductEnabled').disabled = !p.name
   $('clipProductHint').textContent = !p.url && !p.name
-    ? 'ยังไม่ได้ตั้ง — บทจะไม่มีสินค้าเลย'
+    ? 'ยังไม่ได้ตั้ง — วางลิ้ง Shopee แล้วระบบดึงรูปให้ทันที'
     : !p.name
       ? 'ลิ้งนี้ไม่มีชื่อสินค้าอยู่ใน URL (ลิ้งย่อ) — พิมพ์ชื่อสินค้าในช่องที่สองเอง'
       : p.enabled
         ? `สินค้าจะโผล่เป็นของในมือ 2–3 ครั้งในคลิปใหม่ ("${p.name}") — ไม่พูดราคา ไม่ชวนซื้อ และไม่เป็นปมของเรื่อง`
         : 'มีสินค้าแล้ว แต่ยังไม่ได้เปิดใช้ — ติ๊กช่องด้านบนเพื่อให้โผล่ในคลิปใหม่'
   $('clipProductHint').className = `hint${p.enabled ? ' ok' : ''}`
-  for (const el of [$('clipProductUrl'), $('clipProductName'), $('clipProductClear')]) el.disabled = localBusy()
+  // ตั้งค่าสินค้าใช้ได้ระหว่างผลิตคลิป — มันมีผลตอนสร้าง prompt ของขั้นที่ยังไม่ถึง ไม่ได้ไปยุ่งกับงานที่รันอยู่
+  // (23 พ.ย. 2026 ผู้ใช้กดปุ่มพวกนี้ไม่ได้เพราะกำลังผลิตคลิป แล้วไม่มีอะไรบอกว่าทำไม)
+  for (const el of [$('clipProductUrl'), $('clipProductName'), $('clipProductClear')]) el.disabled = false
 }
+
+// ── รูปสินค้า: ดึงจากแท็บ Shopee หรือวางเอง แล้วให้ ChatGPT เลือกรูปที่ควรแนบ ──
+let productPhotos = null
+/** null = ยังไม่รู้ · false = โปรแกรมในเครื่องรุ่นเก่าไม่มี endpoint นี้ (ซ่อนกล่อง) · true = ใช้ได้ */
+let productSupported = null
+/**
+ * ข้อความล่าสุดของกล่องรูปสินค้า — เก็บไว้เพราะ renderProductPhotos() เขียนทับช่องนี้ทุกครั้ง
+ * 23 พ.ย. 2026 ผู้ใช้กดดึงรูปแล้ว "ไม่สำเร็จ" แต่ใต้ปุ่มกลับเป็นข้อความตั้งต้น ไม่ใช่สาเหตุที่ล้ม
+ * เพราะ error ถูก render ทับทันที ทำให้ไล่ปัญหาไม่ได้เลย — ข้อความจึงต้องค้างจนกว่าจะมีเรื่องใหม่
+ */
+let productMsg = null
+function setProductStatus(text, kind = '') {
+  productMsg = text ? { text, kind } : null
+  renderProductPhotos()
+}
+
+async function productCall(path, body) {
+  try {
+    productPhotos = await api(await localApp(), path, body)
+  } catch (err) {
+    // โปรแกรมในเครื่องรุ่นเก่ายังไม่มี endpoint รูปสินค้า → ตอบ 404 ซึ่งอ่านแล้วไม่รู้ว่าต้องทำอะไร
+    const old = /\b404\b/.test(err.message)
+    if (old) productSupported = false
+    productMsg = { text: old ? 'โปรแกรมในเครื่องยังเป็นรุ่นเก่า — ปิดโปรแกรมแล้วเปิดใหม่ (ปิดโปรแกรม.bat → เปิดโปรแกรม.bat)' : err.message, kind: 'error' }
+  }
+  renderProductPhotos()
+}
+
+function renderProductPhotos() {
+  const box = $('productPhotos')
+  if (!box) return
+  // ซ่อนกล่องเฉพาะตอนโปรแกรมในเครื่องไม่รองรับ (รุ่นเก่า) — อ่านไม่สำเร็จด้วยเหตุอื่นต้องยังเห็นปุ่มกับข้อความ
+  // เดิมซ่อนทุกครั้งที่ productPhotos ว่าง ทำให้ error ที่เกิดก่อนอ่านสำเร็จหายไปทั้งกล่อง กดอะไรไม่ได้เลย
+  box.hidden = productSupported === false
+  const p = productPhotos ?? { images: [], previews: [], chosen: null, description: '' }
+  const list = $('productThumbs')
+  list.replaceChildren()
+  for (const photo of p.previews) {
+    const li = document.createElement('li')
+    if (photo.picked) li.classList.add('picked')
+    const img = Object.assign(document.createElement('img'), { src: photo.dataUrl, alt: photo.picked ? 'รูปที่เลือกไว้' : 'รูปสินค้า' })
+    // กดที่รูป = ใช้รูปนี้เป็นแบบให้ Flow เอง ไม่ต้องให้ AI เลือก
+    img.title = photo.picked ? 'รูปนี้คือแบบที่แนบให้ Flow' : 'กดเพื่อใช้รูปนี้เป็นแบบให้ Flow'
+    img.tabIndex = 0
+    img.setAttribute('role', 'button')
+    img.addEventListener('click', () => !photo.picked && chooseProductPhoto(photo.name))
+    img.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && !photo.picked && (e.preventDefault(), chooseProductPhoto(photo.name)))
+    li.append(img)
+    const del = Object.assign(document.createElement('button'), { type: 'button', textContent: '✕', title: 'ลบรูปนี้' })
+    del.addEventListener('click', () => productCall('/api/product/image/delete', { name: photo.name }))
+    li.append(del)
+    list.append(li)
+  }
+  const picked = p.previews.find((x) => x.picked)
+  const w = visionWriter()
+  const mine = p.pickedBy === 'user' && picked
+  // ข้อความสถานะ/ข้อผิดพลาดล่าสุดต้องชนะข้อความตั้งต้นเสมอ ไม่งั้นสาเหตุที่ล้มหายไปก่อนผู้ใช้ทันอ่าน
+  $('productHint').textContent = productMsg?.text ?? (!p.images.length
+    ? 'วางลิ้ง Shopee ด้านบนแล้วระบบดึงรูปให้เอง — ยังไม่มีรูป Flow จะวาดสินค้าเอาจากชื่อ อาจไม่เหมือนของจริง'
+    : p.stale
+      // รูปในคลังเป็นของสินค้าตัวเก่า (23 พ.ย. 2026: ชื่อเป็นนาฬิกาแต่รูปยังเป็นรองเท้า) — ไม่แนบ ไม่ใช้คำบรรยาย จนกว่าจะดึงใหม่
+      ? 'รูปเหล่านี้เป็นของสินค้าตัวเก่า ไม่ตรงกับลิ้งด้านบน — ตอนนี้ไม่แนบให้ Flow และไม่ใช้คำบรรยาย · กด "ดึงรูปจากแท็บ Shopee" เพื่อใช้รูปของสินค้านี้แทน'
+      : picked
+      ? `แนบรูปที่${mine ? 'คุณเลือกเอง' : ' AI เลือกไว้'}ให้ Flow (${p.images.length} รูปในคลัง)${p.description ? ` · ${p.description}` : ' · ยังไม่มีคำบรรยายหน้าตา'}`
+      : `มี ${p.images.length} รูป — กดที่รูปเพื่อเลือกเป็นแบบเอง หรือกด "ให้ ${w.label} เลือกรูป" · ยังไม่เลือก = ไม่แนบรูปให้ Flow (วาดจากชื่ออย่างเดียว)`)
+  $('productHint').className = `hint${productMsg ? (productMsg.kind === 'error' ? ' err' : productMsg.kind === 'ok' ? ' ok' : '') : p.stale ? ' err' : picked ? ' ok' : ''}`
+  // ดึงรูปจาก Shopee ใช้แท็บของตัวเอง ไม่ชนกับงานผลิตที่กำลังรัน → กดได้ตลอด
+  // แต่ปุ่ม AI ต้องยืมแท็บ ChatGPT/Gemini ซึ่งงานผลิตใช้อยู่ → ปิดไว้ระหว่างผลิต พร้อมบอกเหตุผล
+  // (Gemini API ถามผ่านโปรแกรมในเครื่อง ไม่ได้ใช้แท็บ จึงกดได้ตลอด)
+  $('pullShopee').disabled = false
+  $('productFile').disabled = false
+  const needsTab = w.id !== 'gemini'
+  const describeOnly = mine || p.images.length === 1
+  $('pickProduct').textContent = describeOnly ? `✨ ให้ ${w.label} บรรยายรูปที่เลือก` : `✨ ให้ ${w.label} เลือกรูป`
+  $('pickProduct').disabled = !p.images.length || p.stale || (needsTab && localBusy())
+  $('pickProduct').title = !p.images.length
+    ? 'ยังไม่มีรูปสินค้า'
+    : p.stale ? 'รูปเป็นของสินค้าตัวเก่า — ดึงรูปของสินค้านี้ก่อน'
+      : needsTab && localBusy() ? `กำลังผลิตคลิปอยู่ — ${w.label} ไม่ว่าง รอผลิตเสร็จแล้วค่อยกด`
+        : describeOnly ? `ส่งรูปที่เลือกให้ ${w.label} บรรยายหน้าตา (ไม่เปลี่ยนรูปที่คุณเลือก)` : `ส่งรูปทั้งหมดให้ ${w.label} เลือกใบที่ไม่ติดมือคนและบรรยายหน้าตา`
+}
+
+/** ระดับความเด่นของสินค้าในภาพ — โปรแกรมในเครื่องรุ่นเก่าไม่ส่งตัวเลือกมา → ซ่อนแถวนี้ */
+function renderProminence() {
+  const row = $('clipProminenceRow')
+  if (!row) return
+  const options = clip?.options?.productProminence ?? []
+  row.hidden = !options.length
+  if (!options.length) return
+  const box = $('clipProminence')
+  if (box.dataset.options !== JSON.stringify(options)) {
+    // dataset เป็น getter อย่างเดียว — ใส่ผ่าน Object.assign ไม่ได้ ("Cannot set property dataset")
+    box.replaceChildren(...options.map((o) => {
+      const b = Object.assign(document.createElement('button'), { type: 'button', textContent: o.label })
+      b.dataset.value = o.id
+      return b
+    }))
+    box.dataset.options = JSON.stringify(options)
+  }
+  const current = clip?.product?.prominence ?? 'prop'
+  for (const b of box.querySelectorAll('button')) {
+    b.setAttribute('aria-pressed', String(b.dataset.value === current))
+    b.disabled = false
+  }
+  const busyNote = localBusy() ? ' · กำลังผลิตคลิปอยู่ — ที่เปลี่ยนตอนนี้มีผลกับขั้นที่ยังไม่ถึงและคลิปถัดไป' : ''
+  $('clipProminenceHint').textContent = `${options.find((o) => o.id === current)?.shots ?? ''} · ทุกระดับสินค้ายังห้ามเป็นของขลังหรือเป็นตัวเฉลยปมของเรื่อง${busyNote}`
+}
+
+/**
+ * ดึงรูปสินค้าจากหน้า Shopee — เซิร์ฟเวอร์ Shopee ส่ง HTML ก้อนเดียวกันทุก URL (ไม่มีแม้แต่ og:image)
+ * ต้องอ่านจากหน้าที่เรนเดอร์แล้วเท่านั้น · ใช้แท็บที่เปิดหน้านี้อยู่ก่อน ไม่มีค่อยเปิดเองแล้วปิดคืนให้
+ * เปิดเองได้เพราะเป็นหน้าที่ผู้ใช้วางลิ้งมาเอง เปิดครั้งเดียวต่อสินค้า ไม่ใช่ไล่ยิงหลายหน้า
+ */
+async function pullShopeePhotos(url) {
+  const sameProduct = (tabUrl) => {
+    try { return url && new URL(tabUrl).pathname === new URL(url).pathname } catch { return false }
+  }
+  const open = await chrome.tabs.query({ url: ['https://shopee.co.th/*', 'https://*.shopee.co.th/*'] })
+  let tab = [...open].sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0)).find((t) => sameProduct(t.url))
+    ?? (url ? null : [...open].sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0))[0])
+  let opened = false
+  if (!tab) {
+    if (!url) throw new Error('ยังไม่ได้วางลิ้งสินค้า — วางลิ้ง Shopee ในช่องด้านบนก่อน')
+    tab = await chrome.tabs.create({ url, active: false })
+    opened = true
+    await waitTabLoaded(tab.id)
+  }
+  try {
+    // หน้า Shopee โหลดรูปด้วย JavaScript ทีหลัง — ถามซ้ำจนกว่าจะเห็นรูป
+    let last = null
+    let injected = false
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await new Promise((r) => setTimeout(r, attempt === 0 && !opened ? 0 : 1500))
+      const res = await chrome.tabs.sendMessage(tab.id, { type: 'SHOPEE_PRODUCT' }).catch((err) => ({ ok: false, error: String(err.message), noScript: true }))
+      if (res?.ok) return res
+      // แท็บที่เปิดค้างไว้ตั้งแต่ก่อนติดตั้ง/รีโหลดส่วนขยาย ยังไม่มีตัวอ่านอยู่ในหน้า — ฉีดเข้าไปเองแล้วลองใหม่
+      // (วิธีเดียวกับที่ askChatGPT ทำกับแท็บ ChatGPT ที่เปิดค้างไว้)
+      if (res?.noScript && !injected) {
+        injected = true
+        try {
+          await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content-shopee.js'] })
+          continue
+        } catch (err) {
+          throw new Error(`ใส่ตัวอ่านลงหน้า Shopee ไม่ได้ (${err.message}) — เปิด chrome://extensions กดรีเฟรชที่ "ผี 1 บาท" แล้วอนุญาตสิทธิ์ shopee.co.th`)
+        }
+      }
+      last = res?.error
+    }
+    throw new Error(last ?? 'อ่านหน้า Shopee ไม่ได้ — กด F5 ที่แท็บนั้นแล้วลองใหม่')
+  } finally {
+    if (opened) await chrome.tabs.remove(tab.id).catch(() => {}) // แท็บที่เราเปิดเอง เก็บคืนให้ ไม่ทิ้งค้างไว้
+  }
+}
+
+/** ดึงรูป → เก็บลงคลัง → ให้ ChatGPT เลือกให้เลย (auto = เรียกเองหลังวางลิ้ง ไม่ต้องกดปุ่ม) */
+async function fetchProductPhotos({ auto = false } = {}) {
+  // ปุ่มบอกเองว่ากำลังทำงาน — กดแล้วเงียบคือสิ่งที่ทำให้ไล่ปัญหาไม่ได้มาตลอด
+  const btn = $('pullShopee')
+  const label = btn.textContent
+  btn.textContent = '⏳ กำลังดึงรูป…'
+  btn.disabled = true
+  setProductStatus(auto ? 'วางลิ้งแล้ว — กำลังเปิดหน้าสินค้าเพื่อดึงรูป…' : 'กำลังอ่านรูปจากหน้า Shopee…')
+  try {
+    const res = await pullShopeePhotos(clip?.product?.url)
+    // บอกด้วยว่ารูปชุดนี้เป็นของสินค้าไหน — โปรแกรมในเครื่องจะล้างรูปของสินค้าตัวเก่าให้เองก่อนรับรูปชุดใหม่
+    for (const img of res.images) await productCall('/api/product/image', { ...img, source: 'shopee', sourceUrl: clip?.product?.url })
+    // ชื่อจากหัวหน้าเว็บแม่นกว่าชื่อที่เดาจากลิ้ง (ลิ้งมักมีชื่อร้านกับคำโฆษณาปนมา) — ทับให้เลย
+    // ผู้ใช้แก้ชื่อทับได้อีกทีในช่องชื่อ ถ้าหน้าเว็บตั้งชื่อยาวเกินไป
+    if (res.name) await saveClipSettings({ productName: res.name, productEnabled: true })
+    // ไม่ส่งให้ AI เลือกเอง — รอให้ผู้ใช้สั่ง (กดที่รูปเพื่อเลือกเอง หรือกดปุ่มให้ AI เลือก)
+    // ผู้ใช้ 23 พ.ย. 2026: "ถ้าเราไม่สั่งให้ส่งไป ChatGPT ก็ยังไม่ต้องส่งไป"
+    setProductStatus(`ดึงมา ${productPhotos?.images.length ?? res.images.length} รูป — กดที่รูปเพื่อเลือกเป็นแบบเอง หรือกด "ให้ ${visionWriter().label} เลือกรูป"`, 'ok')
+  } catch (err) {
+    setProductStatus(`${err.message} · ก๊อปรูปจากหน้า Shopee มาวางเองก็ได้`, 'error')
+  } finally {
+    btn.textContent = label
+    btn.disabled = false
+  }
+}
+
+$('pullShopee').addEventListener('click', () => fetchProductPhotos())
+
+/** ให้ ChatGPT ดูรูปทั้งกองแล้วเลือกใบที่ไม่ติดมือคน ไม่ติดตัวหนังสือ แล้วบรรยายหน้าตาสินค้า */
+/**
+ * AI ที่ใช้ดูรูปสินค้า = ผู้เขียนบทที่เลือกไว้ในตั้งค่าคลิป
+ * ผู้ใช้ 23 พ.ย. 2026: "ถ้าเราจะให้ ChatGPT สร้างก็ส่งไป ChatGPT แต่ถ้าเราเลือก Gemini ก็ส่งไป Gemini"
+ */
+function visionWriter() {
+  if (clip?.writer === 'gemini-web') return { id: 'gemini-web', label: 'Gemini' }
+  if (clip?.writer === 'gemini') return { id: 'gemini', label: 'Gemini API' }
+  return { id: 'chatgpt', label: 'ChatGPT' }
+}
+
+/** แท็บ Gemini — ใช้แท็บที่เปิดอยู่แล้ว (โหลดหน้าแชตใหม่) ไม่มีค่อยเปิด · เก็บเลขแท็บในชื่อเดียวกับ background */
+async function freshGeminiTab() {
+  const { geminiTabId: savedId } = await chrome.storage.session.get('geminiTabId')
+  let tab = preferredGeminiTab(await chrome.tabs.query({ url: ['https://gemini.google.com/*'] }), savedId)
+  if (tab) await chrome.tabs.update(tab.id, { url: 'https://gemini.google.com/app' })
+  else tab = await chrome.tabs.create({ url: 'https://gemini.google.com/app', active: false })
+  await chrome.storage.session.set({ geminiTabId: tab.id })
+  await waitTabLoaded(tab.id)
+  await new Promise((r) => setTimeout(r, 2500)) // หน้า SPA render ช่องพิมพ์ต่ออีกนิด
+  return tab.id
+}
+
+async function askGeminiWeb(prompt, attachments) {
+  const tabId = await freshGeminiTab()
+  const send = () => chrome.tabs.sendMessage(tabId, { type: 'ASK', prompt, newChat: true, attachments })
+  let res = await send().catch(() => null)
+  if (!res) {
+    // content script ยังไม่อยู่ในหน้า (เช่นเพิ่งติดตั้ง extension) → ฉีดเองแล้วลองใหม่
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['content-common.js', 'content-gemini.js'] })
+    res = await send().catch((err) => ({ ok: false, error: String(err.message) }))
+  }
+  if (!res?.ok) throw new Error(res?.error ?? 'Gemini ไม่ตอบกลับ')
+  return res.text
+}
+
+/** ส่งรูปสินค้าให้ AI ตัวที่เลือกไว้ดู · Gemini API ถามผ่านโปรแกรมในเครื่อง (key อยู่ในเครื่อง ไม่อยู่ในแผงข้าง) */
+async function askVision(prompt, photos) {
+  const w = visionWriter()
+  if (w.id === 'gemini') return (await api(await localApp(), '/api/product/ask-gemini', { prompt, names: photos.map((p) => p.name) })).text
+  // ChatGPT และ Gemini เว็บรับรูปเป็น { name, type, base64 } ไม่ใช่ data URL
+  const attachments = photos.map((p) => ({
+    name: p.name,
+    type: p.dataUrl.slice(5, p.dataUrl.indexOf(';')),
+    base64: p.dataUrl.slice(p.dataUrl.indexOf(',') + 1),
+  }))
+  return w.id === 'gemini-web' ? askGeminiWeb(prompt, attachments) : askChatGPT(prompt, attachments)
+}
+
+/** รูปที่ผู้ใช้กดเลือกเอง — AI ต้องไม่เลือกทับ ทำได้แค่บรรยาย */
+const userPickedPhoto = () => (productPhotos?.pickedBy === 'user' ? productPhotos.previews.find((p) => p.picked) ?? null : null)
+
+async function pickProductPhoto() {
+  const photos = productPhotos?.previews ?? []
+  if (!photos.length) return
+  const name = clip?.product?.name ?? ''
+  const w = visionWriter()
+  // เลือกเองไว้แล้ว หรือมีรูปเดียว = ไม่มีอะไรให้เลือก ให้บรรยายรูปนั้นอย่างเดียว
+  const only = userPickedPhoto() ?? (photos.length === 1 ? photos[0] : null)
+  const sent = only ? [only] : photos
+  try {
+    const prompt = only
+      ? productDescribePrompt({ name, language: S.language })
+      : productPickPrompt({ name, count: sent.length, language: S.language })
+    const text = await withBusy('productHint', `${w.label} กำลังดูรูปสินค้า`, () => askVision(prompt, sent))
+    const result = parseProductPick(text, sent.length)
+    if (!result) throw new Error(`${w.label} ตอบมาในรูปแบบที่อ่านไม่ได้ — ลองกดอีกครั้ง`)
+    if (userPickedPhoto()) {
+      // รูปที่ผู้ใช้เลือกเองไม่เปลี่ยน — เก็บแค่คำบรรยาย
+      await productCall('/api/product/pick', { description: result.description })
+      setProductStatus(`${w.label} บรรยายรูปที่คุณเลือกแล้ว${result.warning ? ` · ${result.warning}` : ''}`, 'ok')
+    } else {
+      await productCall('/api/product/pick', { chosen: sent[result.pick - 1].name, description: result.description, by: 'ai' })
+      setProductStatus(`${w.label} เลือกรูปที่ ${result.pick}${result.warning ? ` · ${result.warning}` : ''}`, 'ok')
+    }
+  } catch (err) {
+    setProductStatus(err.message, 'error')
+  }
+}
+
+/** กดที่รูป = ใช้รูปนี้เป็นแบบให้ Flow (ผู้ใช้ 23 พ.ย. 2026: "เลือกรูปภาพที่เราต้องการจะให้อัปโหลดไปเพื่อเป็น reference ได้เอง") */
+async function chooseProductPhoto(name) {
+  await productCall('/api/product/pick', { chosen: name, by: 'user' })
+  if (productMsg?.kind === 'error') return
+  setProductStatus(`เลือกรูปนี้เป็นแบบให้ Flow แล้ว${productPhotos?.description ? '' : ` · กด "ให้ ${visionWriter().label} บรรยายรูปที่เลือก" ถ้าอยากให้บทรู้หน้าตาสินค้าละเอียดขึ้น`}`, 'ok')
+}
+
+$('pickProduct').addEventListener('click', () => pickProductPhoto())
+
+async function addProductFiles(files) {
+  const images = [...files].filter((f) => /^image\/(png|jpeg|webp)$/.test(f.type))
+  if (!images.length) return false
+  setProductStatus('กำลังบันทึกรูป…')
+  for (const f of images) await productCall('/api/product/image', await imageToUpload(f))
+  return true
+}
+
+$('productPaste').addEventListener('paste', async (e) => {
+  const files = [...(e.clipboardData?.files ?? [])]
+  if (!files.length) return
+  e.preventDefault()
+  await addProductFiles(files)
+})
+$('productPaste').addEventListener('click', (e) => {
+  if (!e.target.closest('label')) $('productPaste').focus()
+})
+$('productPaste').addEventListener('dragover', (e) => {
+  e.preventDefault()
+  $('productPaste').classList.add('drag')
+})
+$('productPaste').addEventListener('dragleave', () => $('productPaste').classList.remove('drag'))
+$('productPaste').addEventListener('drop', async (e) => {
+  e.preventDefault()
+  $('productPaste').classList.remove('drag')
+  await addProductFiles(e.dataTransfer?.files ?? [])
+})
+$('productFile').addEventListener('change', async (e) => {
+  await addProductFiles(e.target.files ?? [])
+  e.target.value = ''
+})
+$('clipProminence').addEventListener('click', (e) => {
+  const b = e.target.closest('button')
+  if (b) saveClipSettings({ productProminence: b.dataset.value })
+})
+
+localApp()
+  .then((app) => api(app, '/api/product'))
+  .then((data) => {
+    productPhotos = data
+    productSupported = true
+    renderProductPhotos()
+  })
+  .catch((err) => {
+    // อ่านคลังไม่ได้ต้องยังเห็นกล่องกับเหตุผล ไม่ใช่กล่องหายไปเฉยๆ จนกดปุ่มอะไรไม่ได้
+    productSupported = !/\b404\b/.test(err.message)
+    setProductStatus(productSupported
+      ? `อ่านคลังรูปสินค้าไม่ได้: ${err.message}`
+      : 'โปรแกรมในเครื่องยังเป็นรุ่นเก่า — ปิดโปรแกรมแล้วเปิดใหม่', 'error')
+  })
 
 /** คำอธิบายใต้ชื่อผู้เขียนแต่ละคนบนสวิตช์ */
 const WRITER_INFO = {
@@ -1867,8 +2279,24 @@ $('clipWriter').addEventListener('click', (e) => {
   if (b && !localBusy()) saveClipSettings({ writer: b.dataset.value })
 })
 // สินค้าในเรื่อง — วางลิ้งแล้วชื่อขึ้นเอง · แก้ชื่อทับได้ · วางลิ้งใหม่ = ตั้งใจใช้ จึงเปิดให้เลย
-$('clipProductUrl').addEventListener('change', (e) => {
-  if (!localBusy()) saveClipSettings({ productUrl: e.target.value, ...(e.target.value.trim() && { productEnabled: true }) })
+// วางลิ้งเสร็จดึงรูปให้เลย ไม่ต้องกดปุ่มเอง (ผู้ใช้ 23 พ.ย. 2026: "ทำไมไม่ดึงให้อัตโนมัติ")
+// ติดที่ change อย่างเดียวไม่พอ: มันยิงตอนช่องเสียโฟกัส คนวางลิ้งแล้วนั่งรออยู่จึงไม่เห็นอะไรเกิดขึ้น
+// ("จะดึงตอนไหน") → ยิงตอนวาง (paste) และตอนกด Enter ด้วย
+let productUrlDone = ''
+async function saveProductUrl(value) {
+  const url = String(value ?? '').trim()
+  if (url === productUrlDone) return
+  productUrlDone = url
+  await saveClipSettings({ productUrl: url, ...(url && { productEnabled: true }) })
+  if (url && clip?.product?.url === url) await fetchProductPhotos({ auto: true })
+}
+$('clipProductUrl').addEventListener('change', (e) => saveProductUrl(e.target.value))
+$('clipProductUrl').addEventListener('paste', (e) => {
+  const pasted = e.clipboardData?.getData('text/plain')?.trim()
+  if (pasted) setTimeout(() => saveProductUrl(pasted), 0) // รอให้ค่าลงช่องก่อน
+})
+$('clipProductUrl').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') saveProductUrl(e.target.value)
 })
 $('clipProductName').addEventListener('change', (e) => {
   if (!localBusy()) saveClipSettings({ productName: e.target.value, ...(e.target.value.trim() && { productEnabled: true }) })
@@ -4077,3 +4505,151 @@ async function followAutoInBackground() {
     followingAuto = false
   }
 }
+
+// ── คลังตัวละคร 48 ตัว ──
+// ผู้ใช้ 23 พ.ย. 2026: "ตัวละครมันมั่วสลับไปสลับมา ก็เลยทำให้ Google Flow งง เพราะฉะนั้นทำตัวละคร
+// เผื่อไว้ทั้งหมด แล้วก็ไปสร้างใน ChatGPT Web ... เพื่อที่จะแนบไปสร้างภาพได้"
+// Character Bible เขียนละเอียดอยู่แล้ว แต่เป็นตัวหนังสือ — Flow ไม่เคยเห็นหน้าใคร คำบรรยายล็อกหน้าไม่ได้ รูปล็อกได้
+let castState = null
+let castSupported = null
+// ข้อความสถานะต้องค้างจนมีเรื่องใหม่ (บทเรียนจากกล่องรูปสินค้า: render ทับทันทีแล้วไล่ปัญหาไม่ได้)
+let castMsg = null
+let castBusy = false
+const setCastStatus = (text, kind = '') => {
+  castMsg = text ? { text, kind } : null
+  renderCast()
+}
+
+async function castCall(path, body) {
+  try {
+    castState = await api(await localApp(), path, body)
+    castSupported = true
+  } catch (err) {
+    const old = /\b404\b/.test(err.message)
+    if (old) castSupported = false
+    castMsg = { text: old ? 'โปรแกรมในเครื่องยังเป็นรุ่นเก่า — ปิดโปรแกรมแล้วเปิดใหม่ (ปิดโปรแกรม.bat → เปิดโปรแกรม.bat)' : err.message, kind: 'error' }
+  }
+  renderCast()
+}
+
+function renderCast() {
+  const box = $('castGroups')
+  if (!box) return
+  const wrap = box.parentElement
+  if (wrap) wrap.hidden = castSupported === false
+  const s = castState ?? { total: 48, done: 0, groups: [] }
+  $('castCount').textContent = `${s.done}/${s.total}`
+  box.replaceChildren(...s.groups.map((g) => {
+    const sec = document.createElement('div')
+    sec.style.margin = '8px 0 0'
+    const done = g.members.filter((m) => m.file).length
+    sec.append(Object.assign(document.createElement('div'), { className: 'hint', textContent: `${g.label} ${done}/${g.members.length} — ${g.note}` }))
+    const list = Object.assign(document.createElement('ul'), { className: 'charThumbs' })
+    for (const m of g.members) {
+      const li = document.createElement('li')
+      li.title = `${m.name} — ${m.look}`
+      if (m.dataUrl) {
+        li.append(Object.assign(document.createElement('img'), { src: m.dataUrl, alt: m.name }))
+        const del = Object.assign(document.createElement('button'), { type: 'button', textContent: '✕', title: `ลบแผ่นแบบของ ${m.name}` })
+        del.addEventListener('click', () => castCall('/api/cast/image/delete', { id: m.id }))
+        li.append(del)
+      } else {
+        // ยังไม่มีรูป = ช่องว่างที่กดวาดได้ทีละตัว (ไม่ต้องรอวาดทั้ง 48 ตัว)
+        const slot = Object.assign(document.createElement('button'), { type: 'button', className: 'castSlot', textContent: m.name })
+        slot.disabled = castBusy
+        slot.addEventListener('click', () => drawCast([m]))
+        li.append(slot)
+      }
+      list.append(li)
+    }
+    sec.append(list)
+    return sec
+  }))
+  const missing = s.total - s.done
+  $('castHint').textContent = castMsg?.text ?? (s.done === 0
+    ? `ยังไม่มีแผ่นแบบเลย — กด "ให้ ChatGPT วาดตัวที่ยังขาด" แล้วปล่อยไว้ (${s.total} ตัว ใช้เวลานาน ทำครั้งเดียวใช้ได้ทุกคลิป)`
+    : missing > 0
+      ? `มีแล้ว ${s.done} ตัว ขาดอีก ${missing} ตัว — ตัวที่มีรูปแล้วจะถูกแนบให้ Flow เมื่อเรื่องใช้ตัวนั้น`
+      : 'ครบทั้งคลัง — ทุกเรื่องหยิบตัวละครจากคลังนี้ได้เลย ไม่ต้องให้ Flow เดาหน้าใหม่')
+  $('castHint').className = `hint${castMsg ? (castMsg.kind === 'error' ? ' err' : castMsg.kind === 'ok' ? ' ok' : '') : missing === 0 && s.done ? ' ok' : ''}`
+  // วาดรูปต้องใช้แท็บ ChatGPT — กดระหว่างงานผลิตที่ใช้แท็บเดียวกันอยู่ไม่ได้
+  const drawBtn = $('castDrawMissing')
+  if (drawBtn) {
+    drawBtn.disabled = castBusy || localBusy() || missing === 0
+    drawBtn.title = missing === 0 ? 'ครบทั้งคลังแล้ว' : localBusy() ? 'กำลังมีงานใช้แท็บ ChatGPT อยู่ — รอให้งานนั้นจบก่อน' : `วาด ${missing} ตัวที่ยังขาด`
+    drawBtn.textContent = castBusy ? '⏳ กำลังวาด…' : `✨ ให้ ChatGPT วาดตัวที่ยังขาด${missing ? ` (${missing})` : ''}`
+  }
+  if ($('castClear')) $('castClear').disabled = castBusy || !s.done
+}
+
+/** สั่ง ChatGPT วาดรูปแล้วเอารูปกลับมา (คนละทางกับ askChatGPT ที่เอาข้อความ) */
+async function askChatGPTImage(prompt, attachments = []) {
+  await chrome.storage.session.set({ chatAskUntil: Date.now() + 20 * 60_000 })
+  try {
+    const tabId = await freshChatTab()
+    stopIfRequested()
+    const send = () => chrome.tabs.sendMessage(tabId, { type: 'ASK_IMAGE', prompt, newChat: false, attachments })
+    let res = await send().catch(() => null)
+    if (!res) {
+      stopIfRequested()
+      await chrome.scripting.executeScript({ target: { tabId }, files: ['selectors.js', 'content-common.js', 'content-chatgpt.js'] })
+      res = await send().catch((err) => ({ ok: false, error: String(err.message) }))
+    }
+    if (!res?.ok) throw new Error(res?.error ?? 'ChatGPT ไม่ตอบกลับ')
+    return res
+  } finally {
+    await chrome.storage.session.set({ chatAskUntil: 0 }).catch(() => {})
+  }
+}
+
+/**
+ * วาดแผ่นแบบทีละตัว แล้วบันทึกทันทีที่ได้ — ไม่รอให้ครบทั้งชุด
+ * 48 ตัวใช้เวลานาน ถ้าเก็บไว้บันทึกตอนท้าย ปิดแผงหรือล้มกลางทางแล้วเสียทั้งหมด
+ * ตัวที่ล้มข้ามไป ทำต่อตัวถัดไป แล้วสรุปตอนจบว่าตัวไหนไม่สำเร็จ
+ */
+async function drawCast(members) {
+  if (castBusy) return
+  castBusy = true
+  const failed = []
+  let ok = 0
+  try {
+    for (const [i, m] of members.entries()) {
+      setCastStatus(`กำลังวาด ${m.name} (${i + 1}/${members.length})… ปล่อยแท็บ ChatGPT ไว้ อย่าปิด`, '')
+      try {
+        const todo = await api(await localApp(), `/api/cast/todo?limit=48`)
+        const job = todo.todo.find((t) => t.id === m.id)
+        if (!job?.prompt) { ok++; continue } // มีรูปแล้วระหว่างนี้ → ข้าม
+        // แนบภาพอ้างอิงลายเส้นไปกับคำสั่งด้วย ไม่งั้น ChatGPT วาดเป็นอนิเมะหรือลายเส้นดิจิทัล
+        const image = await askChatGPTImage(job.prompt, job.attachments ?? [])
+        await castCall('/api/cast/image', { id: m.id, type: image.type ?? 'image/png', base64: image.base64 })
+        ok++
+      } catch (err) {
+        if (err instanceof Stopped) throw err
+        failed.push(`${m.name} (${err.message})`)
+      }
+    }
+    setCastStatus(
+      failed.length
+        ? `วาดเสร็จ ${ok} ตัว · ไม่สำเร็จ ${failed.length} ตัว: ${failed.slice(0, 3).join(' · ')}${failed.length > 3 ? ' …' : ''} — กดวาดอีกครั้งเพื่อลองตัวที่เหลือ`
+        : `วาดเสร็จ ${ok} ตัว`,
+      failed.length ? 'error' : 'ok',
+    )
+  } catch (err) {
+    setCastStatus(err instanceof Stopped ? `หยุดแล้ว — วาดไปได้ ${ok} ตัว กดวาดอีกครั้งเพื่อทำต่อ` : err.message, 'error')
+  } finally {
+    castBusy = false
+    await castCall('/api/cast')
+  }
+}
+
+$('castDrawMissing')?.addEventListener('click', async () => {
+  await castCall('/api/cast')
+  const missing = (castState?.groups ?? []).flatMap((g) => g.members.filter((m) => !m.file))
+  if (!missing.length) return setCastStatus('ครบทั้งคลังแล้ว', 'ok')
+  await drawCast(missing)
+})
+$('castClear')?.addEventListener('click', async () => {
+  if (!confirm('ลบแผ่นแบบตัวละครทั้งคลัง? ต้องให้ ChatGPT วาดใหม่ทั้งหมด')) return
+  await castCall('/api/cast/clear')
+  setCastStatus('ล้างคลังแล้ว', '')
+})

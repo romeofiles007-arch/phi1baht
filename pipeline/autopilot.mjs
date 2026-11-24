@@ -21,7 +21,7 @@ import { join, dirname, basename } from 'node:path'
 import { loadConfig, projectDir, slugify, ROOT } from './lib/config.mjs'
 import { bgmFor, bgmMode, bgmDb } from './lib/bgm.mjs'
 import { requireBridge, runJob } from './lib/bridge.mjs'
-import { scriptPrompt, scoredTopicsPrompt, parseScoredTopics, opensWithHaveYouEver, endsWithLecture, endsCliffhanger, endsGeneric, tellsAsYou, lacksReveal } from './lib/prompts.mjs'
+import { scriptPrompt, scoredTopicsPrompt, parseScoredTopics, opensWithHaveYouEver, endsWithLecture, endsCliffhanger, endsGeneric, tellsAsYou, lacksReveal, stockPhrases } from './lib/prompts.mjs'
 import { saveScript, loadScript, scriptProblem } from './lib/stage2.mjs'
 import { shotlistFiles, readRounds, resetRounds, mergeRounds, saveRound, nextRoundPrompt } from './lib/shotlist.mjs'
 import { collectImages } from './lib/shotfile.mjs'
@@ -437,6 +437,14 @@ async function scriptDepartment() {
     if (lacksReveal(text) && attempt < 3) {
       console.warn('   บทไม่ได้เฉลยเป็นคำพูดในช่วงท้าย (ดูจบแล้วงง) — ขอเขียนใหม่ให้เฉลยชัด')
       feedback = '\n\n⚠️ บทรอบก่อนตัดจบแบบงงๆ — ช่วงท้ายไม่มีบรรทัดไหนบอกตรงๆ ว่าใครคือต้นเหตุ มาทำไม และเบาะแสที่ปูไว้หมายถึงอะไร เขียนบทใหม่ทั้งหมดให้ช่วงท้ายครบ 3 ส่วนตามหัวข้อ "เฉลยแล้วต้องเข้าใจ": ① เฉลยเป็นคำพูดตรงๆ 2–3 บรรทัด ② ผลลัพธ์ของตัวเอก 2–3 บรรทัด ③ ประโยคปิดสอนใจ 1 ประโยคที่เป็นข้อคิดของเรื่อง — ห้ามเฉลยด้วยภาพลอยๆ หรือคำสั่งของผีแล้วจบ'
+      continue
+    }
+    // ผู้ใช้ (23 พ.ย. 2026): "เนื้อเรื่องมันวกวนมากเลย ดูแล้วไม่ค่อยเข้าใจ" — 5 คลิปแรกใช้ "ตาโปน ฟันแหลม"
+    // ครบทั้ง 5 เรื่อง ฉากตกใจซ้ำสำนวนทำให้คนดูรู้สึกว่าเรื่องไม่ไปไหน · รอบสุดท้ายยอมรับ ไม่ให้งานผลิตค้าง
+    const stock = stockPhrases(text)
+    if (stock.length >= 2 && attempt < 3) {
+      console.warn(`   บทใช้สำนวนผีสำเร็จรูป (${stock.join(', ')}) — ขอเขียนใหม่ให้บรรยายผีตัวนี้เอง`)
+      feedback = `\n\n⚠️ บทรอบก่อนบรรยายผีด้วยชุดคำสำเร็จรูปที่ใช้กับผีตัวไหนก็ได้ (${stock.join(', ')}) ซึ่งซ้ำกับคลิปก่อนๆ — เขียนบทใหม่ทั้งหมด ห้ามใช้คำเหล่านี้เลย ให้บรรยายผีด้วยสิ่งที่ผีตัวนี้มีคนเดียว (ส่วนที่ผิดธรรมชาติ แสงหรือสีประจำตัว ของที่ติดตัวมา เสียงเฉพาะตัว) และฉากเผชิญหน้าแบบประชิดหน้าให้มีครั้งเดียว`
       continue
     }
     // ChatGPT ถามกลับแทนที่จะเขียนบท เช่น "ต้องการให้ใช้บุคคลใดเป็นตัวเอกครับ?" → ขอใหม่

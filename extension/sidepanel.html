@@ -210,6 +210,13 @@
   .charThumbs li { position: relative; }
   .charThumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); display: block; }
   .charThumbs button { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; font-size: 12px; line-height: 1; padding: 0; }
+  /* รูปสินค้า: กดที่รูปเพื่อเลือกเป็นแบบให้ Flow — รูปที่เลือกอยู่มีกรอบเขียวและป้าย "แบบ" */
+  #productThumbs img { cursor: pointer; }
+  #productThumbs li.picked img { outline: 3px solid var(--ok); outline-offset: 1px; cursor: default; }
+  #productThumbs li.picked::after { content: 'แบบ'; position: absolute; left: 4px; bottom: 4px; padding: 1px 5px; border-radius: 6px; background: var(--ok); color: #06210f; font-size: 10px; font-weight: 700; }
+  /* ช่องตัวละครที่ยังไม่มีแผ่นแบบ — กดวาดได้ทีละตัว ขนาดเท่ารูปย่อเพื่อให้คลังเรียงเป็นตารางเดียวกัน */
+  .charThumbs button.castSlot { position: static; width: 72px; height: 72px; border-radius: 8px; border: 1px dashed var(--line); background: transparent; font-size: 10px; line-height: 1.25; padding: 4px; white-space: normal; overflow: hidden; }
+  .charThumbs button.castSlot:disabled { opacity: .5; cursor: default; }
   .clipSettings textarea { width: 100%; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); color: var(--ink); font: inherit; font-size: 13px; resize: vertical; }
   .projectRow { display: grid; grid-template-columns: 1fr; gap: 6px; }
   .projectCover { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: start; }
@@ -572,6 +579,15 @@
         </div>
         <p class="hint" id="charHint" style="margin:4px 0 0">ยังไม่ได้ตั้ง — ระบบใช้ตัวละครตาม Blueprint</p>
       </div>
+      <div class="pick">คลังตัวละคร <span id="castCount" class="kieBadge">0/48</span>
+        <p class="hint" style="margin:2px 0 6px">ให้ ChatGPT วาดแผ่นแบบตัวละครไว้ล่วงหน้า แล้วแนบให้ Flow เป็นแบบของคนคนนั้น — ตัวละครจะไม่สลับหน้ากันอีก</p>
+        <div class="controls" style="margin:0 0 6px">
+          <button type="button" class="ghost" id="castDrawMissing">✨ ให้ ChatGPT วาดตัวที่ยังขาด</button>
+          <button type="button" class="ghost" id="castClear">ล้างคลัง</button>
+        </div>
+        <div id="castGroups"></div>
+        <p class="hint" id="castHint" style="margin:4px 0 0"></p>
+      </div>
       <div class="pick">สินค้าในเรื่อง <small>(ตัวทดลอง)</small>
         <input id="clipProductUrl" type="url" inputmode="url" placeholder="วางลิ้งสินค้าจาก Shopee" />
         <input id="clipProductName" type="text" maxlength="60" placeholder="ชื่อสินค้าที่จะให้เรียกในเรื่อง เช่น ไฟส่องกบ" />
@@ -580,6 +596,22 @@
           <button type="button" class="ghost" id="clipProductClear">ล้างสินค้า</button>
         </div>
         <p class="hint" id="clipProductHint" style="margin:4px 0 0">ยังไม่ได้ตั้ง — บทจะไม่มีสินค้าเลย</p>
+        <div class="pick" id="clipProminenceRow" style="margin-top:8px">สินค้าเด่นแค่ไหนในภาพ
+          <div class="seg" id="clipProminence" role="group" aria-label="ความเด่นของสินค้า"></div>
+          <span class="hint" id="clipProminenceHint" style="margin:2px 0 0"></span>
+        </div>
+        <div id="productPhotos" style="margin-top:8px">
+          <div class="pasteZone" id="productPaste" tabindex="0" role="button" aria-describedby="productHint">
+            📋 คลิกตรงนี้แล้วกด <kbd>Ctrl</kbd>+<kbd>V</kbd> วางรูปสินค้า
+            <span class="sub">หรือ <label class="linkish">เลือกไฟล์<input type="file" id="productFile" accept="image/png,image/jpeg,image/webp" multiple hidden /></label></span>
+          </div>
+          <ul class="charThumbs" id="productThumbs"></ul>
+          <div class="controls" style="margin:6px 0 0">
+            <button type="button" class="ghost" id="pullShopee">⬇ ดึงรูปจากแท็บ Shopee</button>
+            <button type="button" class="ghost" id="pickProduct">✨ ให้ ChatGPT เลือกรูป</button>
+          </div>
+          <p class="hint" id="productHint" style="margin:4px 0 0">วางลิ้ง Shopee ด้านบนแล้วระบบดึงรูปให้เอง — ยังไม่มีรูป Flow จะวาดสินค้าเอาจากชื่อ อาจไม่เหมือนของจริง</p>
+        </div>
       </div>
       <p class="hint" style="margin:0">แนวภาพและตัวละครใช้กับ prompt/ภาพที่สร้างใหม่ · ซับไตเติลใช้ตอนตัดต่อ · ช่วงเงียบใช้ตอนทำเสียง (คลิปเดิมปรับได้ในขั้นที่ 6)</p>
     </details>

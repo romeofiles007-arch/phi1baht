@@ -21,6 +21,9 @@
     "https://flow.google.com/*",
     "https://labs.google/*",
     "https://*.googleusercontent.com/*",
+    "https://shopee.co.th/*",
+    "https://*.shopee.co.th/*",
+    "https://*.susercontent.com/*",
     "https://www.tiktok.com/*",
     "http://127.0.0.1/*"
   ],
@@ -83,6 +86,16 @@
       "js": [
         "content-common.js",
         "content-gemini.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://shopee.co.th/*",
+        "https://*.shopee.co.th/*"
+      ],
+      "js": [
+        "content-shopee.js"
       ],
       "run_at": "document_idle"
     }

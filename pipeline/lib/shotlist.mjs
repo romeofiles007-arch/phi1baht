@@ -12,7 +12,8 @@ import { projectDir } from './config.mjs'
 import { blueprint, parseShotList, flowPrompt, orientationRule, aspectOf, stripSafeArea, clipLanguage, imageLanguageRule, clipProduct, productShotRule, withFullBleed } from './prompts.mjs'
 import { activeCharacter, characterRule, bodyStyleRule } from './character.mjs'
 import { readProfile } from './clip_profile.mjs'
-import { categoryRule } from '../../extension/prompts.js'
+import { categoryRule, castingRule } from '../../extension/prompts.js'
+import { readCast, castById } from './cast.mjs'
 import { coverRequest, parseCover, saveCoverPrompt, readCoverPrompt, coverShot, coverBriefLines } from './cover.mjs'
 import { riddleRequest, parseRiddle, parseRiddleDraft, riddleProblem, saveRiddle } from './riddle.mjs'
 import { themeOf } from './topics.mjs'
@@ -80,6 +81,12 @@ export function briefHead(raw) {
 
 const bibleOf = (raws) => raws.map(briefHead).find((h) => h.length) ?? ''
 
+/**
+ * ตัวละครในคลังที่ "วาดแผ่นแบบไว้แล้ว" — ส่งให้ ChatGPT เลือกได้เฉพาะตัวที่เราแนบรูปได้จริง
+ * ยังไม่ได้วาดเลย = ไม่มีกฎนี้ในคำสั่ง ทุกอย่างทำงานเหมือนเดิม (คลังเป็นของเสริม ไม่ใช่ของบังคับ)
+ */
+const availableCast = () => Object.keys(readCast().sheets).map(castById).filter(Boolean)
+
 const slotLine = (s) =>
   `${s.filename} | SHOT ${String(s.shot).padStart(2, '0')} | ${s.duration}s | ${s.continuation ? '(ภาพต่อเนื่องจากช็อตก่อน) ' : ''}${s.narration}`
 
@@ -146,7 +153,8 @@ ${batch.map(slotLine).join('\n')}
 - ส่วน 5.3 ต้องขึ้นต้นด้วยบรรทัด "=== SHOT LIST ===" แล้วตามด้วย shot
 ${OUTPUT_RULES}${orientationRule(config) ? `\n${orientationRule(config)}` : ''}
 ${bodyStyleRule(character, profile)}${charRule ? `\n${charRule}` : ''}${catRule ? `\n${catRule}` : ''}
-${coverRequest(orientationOf(config) === 'portrait', language, profile?.category, profile?.issue)}${riddleRequest(language, themeOf(slug)) ? `\n${riddleRequest(language, themeOf(slug))}` : ''}${productShotRule(clipProduct(config)) ? `\n${productShotRule(clipProduct(config))}` : ''}`,
+${castingRule(availableCast()) ? `${castingRule(availableCast())}
+` : ''}${coverRequest(orientationOf(config) === 'portrait', language, profile?.category, profile?.issue)}${riddleRequest(language, themeOf(slug)) ? `\n${riddleRequest(language, themeOf(slug))}` : ''}${productShotRule(clipProduct(config)) ? `\n${productShotRule(clipProduct(config))}` : ''}`,
     }
   }
 

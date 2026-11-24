@@ -63,11 +63,12 @@ test('mergeRounds ตัดคำรุนแรงก่อนเขียน s
 test('flowAttachments = ตัวละครของฉัน + Style Kit ฉากของหมวด (ไม่มีปก) · ชุดเดียวกับที่ flowPrompt บอก agent', () => {
   for (const category of ['ghost', 'saiyasat', 'folk', 'drama', 'comedy']) {
     withClip({ category, round: ROUND }, (slug) => {
-      const { character, kit } = flowAttachmentParts(slug)
+      const { character, kit, cast, product } = flowAttachmentParts(slug)
       assert.deepEqual(kit.map((a) => a.name), styleKitAttachments(category).map((a) => a.name), category)
       assert.ok(kit.length >= 1, `${category}: ไม่มีภาพ kit`)
       assert.ok(!kit.some((a) => a.name === 'kit-cover.jpg'), `${category}: แนบปก`)
-      assert.deepEqual(flowAttachments(slug).map((a) => a.name), [...character, ...kit].map((a) => a.name))
+      // แผ่นแบบจากคลังตัวละครแล้วค่อยรูปสินค้าต่อท้ายสุด — ลำดับต้องตรงกับที่ flowPrompt บอก agent
+      assert.deepEqual(flowAttachments(slug).map((a) => a.name), [...character, ...kit, ...cast, ...product].map((a) => a.name))
       // คำสั่ง Flow ของแผงข้างพูดถึงภาพ kit ทุกใบที่แนบ และไม่พูดถึงภาพ kit ที่ไม่ได้แนบ
       const prompt = mergeRounds(slug).flowPrompt
       for (const a of kit) assert.ok(prompt.includes(a.name), `${category}: prompt ไม่บอก ${a.name}`)
@@ -93,15 +94,23 @@ test('แผงข้าง: แนบรูปชุดเดียวกับ
   assert.ok(!/attachments=1/.test(panel), 'ยังแนบแค่รูปตัวละคร')
   assert.match(run, /aspect: shotsData\.aspect \?\? '9:16'/)
   // บันทึกภาพครบแล้วเรียก inkify ครั้งเดียว (ก่อนสรุปสถานะ)
-  const save = /async function saveFlowImages[\s\S]*?\n}\n/.exec(panel)[0]
+  // \r?\n: ไฟล์ในโครงการนี้ลงท้ายบรรทัดแบบ CRLF — regex ที่ใช้ \n เฉยๆ จะตัดไม่ได้แล้วล้มทั้งข้อ ทั้งที่โค้ดถูก
+  const save = /async function saveFlowImages[\s\S]*?\r?\n\}\r?\n/.exec(panel)[0]
   assert.ok(save.indexOf("'/api/images/save'") < save.indexOf("'/api/images/inkify'"))
 })
 
 test('bridge: /api/flow/attachments ใช้ flowAttachments · /api/images/inkify ใช้ inkifyAll ตามสวิตช์ (inkifyEnabled)', () => {
   const ui = read('bridge/ui.js')
-  const att = /path === '\/api\/flow\/attachments'[\s\S]*?\n {6}}\n/.exec(ui)[0]
-  assert.match(att, /flowAttachments\(slug\)/)
-  const ink = /path === '\/api\/images\/inkify'[\s\S]*?\n {6}}\n/.exec(ui)[0]
+  // ตัดช่วงของแต่ละ endpoint ด้วย "ถึง endpoint ถัดไป" แทนการนับวงเล็บปิดตามการเยื้อง
+  // (แบบเดิมผูกกับ `\n      }\n` พอแก้โค้ดรอบๆ ทีไรก็ตัดไม่ได้แล้วล้มทั้งข้อ ทั้งที่โค้ดยังถูก)
+  const section = (route) => {
+    const start = ui.indexOf(`path === '${route}'`)
+    assert.ok(start > 0, `ไม่พบ endpoint ${route}`)
+    const next = ui.indexOf("path === '/api/", start + route.length + 12)
+    return ui.slice(start, next > 0 ? next : ui.length)
+  }
+  assert.match(section('/api/flow/attachments'), /flowAttachments\(slug\)/)
+  const ink = section('/api/images/inkify')
   assert.match(ink, /inkifyEnabled\(loadConfig\(\), profile\)/)
   assert.match(ink, /inkifyAll\(dir, \{ categoryId: profile\?\.category/)
 })

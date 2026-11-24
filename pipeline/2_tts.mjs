@@ -12,6 +12,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rename
 import { join } from 'node:path'
 import { createInterface } from 'node:readline'
 import { loadConfig, projectDir, ROOT, ttsPython } from './lib/config.mjs'
+import { recordTtsUsage } from './lib/usage.mjs'
 import { segmentScript, estimateMinutes } from './lib/segment.mjs'
 import { probeDuration, concatAudio, trimSilence, eachLimit, run } from './lib/ffmpeg.mjs'
 import { hhmmss } from './lib/timecode.mjs'
@@ -156,6 +157,11 @@ if (cloud) {
       segments.map((s) => ({ index: s.index, text: s.text, out: join(partsDir, `${String(s.index).padStart(4, '0')}.wav`) })),
       { voice: cloud.voice, model: cloud.model, emotion: cloud.emotion ?? shared.emotion, speed: shared.speed, sampleRate: config.tts.sampleRate, tag: cloud.tag, settings: cloud.settings, pitch: cloud.pitch, rate: cloud.rate },
       printEvent,
+    )
+    // จดจำนวนตัวอักษรที่ส่งไป — ElevenLabs หักเครดิตตามนี้ (ดู clipCost ในแผงข้าง)
+    recordTtsUsage(
+      { engine: config.tts.engine, model: cloud.model, voice: cloud.voiceName ?? cloud.voice, chars: segments.reduce((n, s) => n + s.text.length, 0), segments: segments.length },
+      join(ROOT, 'projects', slug, 'usage.json'),
     )
   } catch (err) {
     console.error(`

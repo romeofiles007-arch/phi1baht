@@ -491,20 +491,67 @@ async function configureAgent(model, { dryRun, ratio = "16:9" }) {
   return summary
 }
 
-/** แนบรูปตัวละครเป็น ingredient ของ agent (วางด้วย paste เหมือน Ctrl+V) */
+/**
+ * รูปที่โปรแกรมในเครื่องส่งมา → File — ถ้าช่อง base64 หายหรือเสีย ให้ฟ้องชื่อไฟล์
+ * 23 พ.ย. 2026: รูปสินค้าส่งมาแบบไม่มี base64 เลยได้ atob(undefined) → "Failed to execute 'atob'"
+ * ซึ่งไม่บอกว่ารูปไหน แล้วล้มทั้งรอบ ได้ภาพ 0/27
+ */
+function attachmentFile(a) {
+  if (typeof a?.base64 !== 'string' || !a.base64) throw new Error(`รูปแนบ "${a?.name ?? '(ไม่มีชื่อ)'}" ส่งมาไม่มีข้อมูลภาพ`)
+  try {
+    return new File([Uint8Array.from(atob(a.base64), (c) => c.charCodeAt(0))], a.name, { type: a.type })
+  } catch {
+    throw new Error(`รูปแนบ "${a.name}" อ่านไม่ออก (ข้อมูลภาพเสีย)`)
+  }
+}
+
+/**
+ * รูปแนบที่ยังอัปโหลดไม่เสร็จ — ตรวจกับหน้าจริง 24 พ.ย. 2026: Flow เลิกใช้วงหมุน
+ * ตอนอัปโหลดปุ่มของรูปแนบเป็น aria-busy="true" และมีลายเคลื่อนไหว <flow-soupy-overlay> ทับรูป
+ * ตัวเช็กเดิมหาแต่วงหมุน เลยคิดว่าอัปโหลดเสร็จทันทีที่รูปโผล่ แล้วกด Enter ระหว่างรูปยังขึ้นไม่เสร็จ
+ * → Flow ไม่รับ Enter (ทดลองแล้ว ข้อความค้างในช่อง) · แผ่นแบบตัวละครเป็น PNG ใบละ ~3 MB อัปโหลดนานกว่ารูปเดิมมาก
+ * ผู้ใช้เจอ 24 พ.ย. 2026: "รอ Flow รับ prompt ไม่เจอ" แล้วรอบต่อไปแนบรูปซ้อนจนช่องมีรูป 13 ใบ ได้ภาพ 0/31
+ */
+const CHIP_BUSY = [
+  'flow-ingredient-chip [aria-busy="true"]',
+  'flow-ingredient-chip flow-soupy-overlay',
+  'flow-ingredient-chip mat-progress-spinner',
+  'flow-ingredient-chip [role="progressbar"]',
+].join(', ')
+const chipsBusy = () => !!document.querySelector(CHIP_BUSY)
+const chipCount = () => document.querySelectorAll('flow-ingredient-chip').length
+
+/**
+ * ล้างรูปแนบและข้อความที่ค้างในช่องพิมพ์จากรอบที่ส่งไม่ออก — ไม่งั้นรอบใหม่แนบรูปชุดเดิมซ้อนลงไปอีก
+ * คลิกที่รูปแนบ = เอารูปนั้นออก (ตรวจกับหน้าจริง 24 พ.ย. 2026) · รูปในข้อความที่ส่งไปแล้วไม่ใช่ flow-ingredient-chip ไม่โดนลบ
+ */
+async function clearLeftovers() {
+  for (let i = 0; i < 40; i++) {
+    const chip = $$('flow-ingredient-chip button.chip-container').find(visible)
+    if (!chip) break
+    realClick(chip)
+    await sleep(400)
+  }
+  const editor = SEL.editor()
+  if (editor && text(editor)) {
+    editor.focus()
+    document.execCommand('selectAll', false)
+    document.execCommand('delete', false)
+    await sleep(300)
+  }
+}
+
+/** แนบรูปตัวละครเป็น ingredient ของ agent (วางด้วย paste เหมือน Ctrl+V) แล้วรอจนอัปโหลดเสร็จทุกใบ */
 async function attachImages(editor, attachments) {
   if (!attachments?.length) return
-  const chips = () => document.querySelectorAll('flow-ingredient-chip').length
-  const before = chips()
+  const before = chipCount()
   const dt = new DataTransfer()
-  for (const a of attachments) dt.items.add(new File([Uint8Array.from(atob(a.base64), (c) => c.charCodeAt(0))], a.name, { type: a.type }))
+  for (const a of attachments) dt.items.add(attachmentFile(a))
   editor.focus()
   editor.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
-  await waitFor(() => chips() >= before + attachments.length && !document.querySelector('flow-ingredient-chip mat-progress-spinner, flow-ingredient-chip [role="progressbar"]'), {
-    timeout: 60_000,
-    interval: 500,
-    label: 'Flow อัปโหลดรูปตัวละคร',
-  })
+  await waitFor(() => chipCount() >= before + attachments.length, { timeout: 60_000, interval: 500, label: 'Flow รับรูปแนบ' })
+  // อัปโหลดจริงช้ากว่ารูปโผล่มาก — รูปเล็ก 4 ใบ ~10 วิ แผ่นแบบ PNG 3 MB นานกว่านั้นหลายเท่า
+  await waitFor(() => !chipsBusy(), { timeout: 5 * 60_000, interval: 1000, label: 'Flow อัปโหลดรูปแนบให้เสร็จ' })
   await sleep(1000)
 }
 
@@ -543,6 +590,7 @@ async function sendPrompt(prompt, attachments) {
   await waitBeforeNextPrompt()
   if (expectedAccount && !Q.sameAccount(await verifiedAccountEmail(), expectedAccount)) throw new Error('FLOW_ACCOUNTS_EXHAUSTED: บัญชี Flow เปลี่ยนระหว่างทำงาน')
   checkAccountQuota()
+  await clearLeftovers()
   await attachImages(await waitFor(SEL.editor, { label: 'ช่องพิมพ์' }), attachments)
   // แนบรูปแล้ว Flow วาดช่องพิมพ์ใหม่ (element เดิมหลุดจากหน้า — ตรวจกับหน้าจริงแล้ว) → ต้องหาช่องพิมพ์ใหม่ทุกครั้ง
   const pasteText = async () => {
@@ -578,10 +626,18 @@ async function sendPrompt(prompt, attachments) {
       if (why) throw flowFailureError(why)
       throw new Error('วาง prompt ลงช่องพิมพ์ของ Flow ไม่ได้ — ช่องพิมพ์ล้างไม่ออกหรือพิมพ์ไม่ลง · เปิดแท็บ Flow ดูว่ามีอะไรค้างในช่องพิมพ์ แล้วสั่งใหม่')
     }
-    await waitFor(() => (SEL.send() && !SEL.send().disabled ? SEL.send() : null), { label: 'ปุ่มส่งพร้อมใช้งาน' })
+    // ปุ่มส่งกดได้ + รูปแนบขึ้นครบ — กด Enter ตอนรูปยังอัปโหลด Flow เงียบ ไม่ส่ง (ทดลองกับหน้าจริง 24 พ.ย. 2026)
+    await waitFor(() => (SEL.send() && !SEL.send().disabled && !chipsBusy() ? SEL.send() : null), { timeout: 5 * 60_000, interval: 500, label: 'ปุ่มส่งพร้อมใช้งาน' })
     await chrome.storage.local.set({ [FLOW_LAST_PROMPT_KEY]: Date.now() })
     await trustedEnter(await waitFor(SEL.editor, { label: 'ช่องพิมพ์' }), prompt)
-    await waitFor(() => agentBusy() || agentFailed() || !text(SEL.editor()), { timeout: 15_000, label: 'Flow รับ prompt' })
+    const accepted = () => agentBusy() || agentFailed() || !text(SEL.editor())
+    const took = await waitFor(accepted, { timeout: 15_000, label: 'Flow รับ prompt' }).catch(() => null)
+    if (!took) {
+      // Enter ไม่ติด — กดปุ่ม "เริ่มสร้าง" แทนหนึ่งครั้ง (ปุ่มกดได้ = ข้อความกับรูปแนบพร้อมแล้ว) แล้วรอนานขึ้น
+      const send = SEL.send()
+      if (send && !send.disabled && !chipsBusy()) realClick(send)
+      await waitFor(accepted, { timeout: 30_000, label: 'Flow รับ prompt (กดปุ่มเริ่มสร้าง)' })
+    }
     // รอให้การ์ดคำตอบนิ่งก่อนตัดสิน — Flow ขึ้น "เกิดข้อผิดพลาด" ภายในไม่กี่วินาทีเมื่อไม่รับงาน
     const failed = await waitFor(agentFailed, { timeout: 12_000, interval: 500, label: 'คำตอบของ Agent' }).catch(() => null)
     if (!failed) return

@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { ROOT, loadConfig, slugify } from './config.mjs'
 import { recentThemes, themeOf } from './topics.mjs'
@@ -6,20 +6,27 @@ import { characterFlowNote, bodyStyleRule, bodyStyleFlowNote, activeCharacter, c
 import { SHOT_VARIETY_RULE, WORLD_RICHNESS_RULE } from './continuity.mjs'
 import { readProfile } from './clip_profile.mjs'
 import { styleKitFiles, styleKitAttachments } from './style-kit.mjs'
+import { productAttachment, readProduct, prominenceOf, productMatches } from './product.mjs'
+import { castAttachments } from './cast.mjs'
 
 import * as shared from '../../extension/prompts.js'
 
-export const { cleanScript, parseTopics, GENRES, opensWithHaveYouEver, endsWithLecture, endsCliffhanger, endsGeneric, tellsAsYou, lacksReveal, productFromUrl, productRule } = shared
+export const { cleanScript, parseTopics, GENRES, opensWithHaveYouEver, endsWithLecture, endsCliffhanger, endsGeneric, tellsAsYou, lacksReveal, stockPhrases, STOCK_PHRASES, productFromUrl, productRule, parseCasting, castingRule } = shared
 
 /**
  * สินค้าที่ขอให้โผล่ในเรื่อง (ตัวทดลอง) — config.script.product = { url, name, enabled }
  * ชื่อจากลิ้ง Shopee ใช้เป็นค่าตั้งต้น ผู้ใช้แก้ชื่อทับได้ในแผงข้าง · ปิดอยู่ = ไม่ส่งไปใน prompt เลย
  */
-export function clipProduct(config) {
+export function clipProduct(config = loadConfig()) {
   const p = config.script?.product
   if (!p?.enabled) return null
   const name = p.name?.trim() || shared.productFromUrl(p.url)?.name || null
-  return name ? { name, url: p.url ?? '', enabled: true } : null
+  if (!name) return null
+  // คำบรรยายและรูปที่ ChatGPT เลือกใช้ได้เฉพาะเมื่อคลังรูปเป็นของสินค้าตัวนี้ — ไม่งั้นบทจะบอกหน้าตาของสินค้าตัวเก่า
+  // (23 พ.ย. 2026: ชื่อเป็นนาฬิกาแต่คำบรรยายยังเป็นรองเท้าผ้าใบ)
+  const own = productMatches(p.url)
+  const { description, chosen } = own ? readProduct() : { description: '', chosen: null }
+  return { name, url: p.url ?? '', enabled: true, prominence: prominenceOf(p.prominence), description, photo: chosen }
 }
 
 /** Blueprint คือแหล่งความจริงเดียวของกติกาทั้งหมด — ส่งไปทั้งฉบับทุกครั้ง ไม่สรุปย่อ */
@@ -109,8 +116,11 @@ export const withFullBleed = (prompt) => {
 export function productShotRule(product) {
   const name = product?.name?.trim()
   if (!name) return ''
-  return `- สินค้าในเรื่องคลิปนี้: "${name}" — ให้โผล่ใน 2–3 ช็อตเป็นของในมือ ของสะพาย หรือของวางข้างตัวละคร เขียนลงใน field Action หรือ Chars ให้เห็นรูปร่างชัดพอจำได้ (ขนาด สี ทรง) แต่ห้ามเป็นช็อตโคลสอัปตัวสินค้าแบบโฆษณา ห้ามเป็นจุดสนใจของช็อต
-- ตัวสินค้าห้ามมีตัวหนังสือ โลโก้ ยี่ห้อ หรือ label ใดๆ (กฎ 7 ของ Blueprint) · ให้วาดเป็นของใช้ธรรมดาในลายเส้นเล่มละบาทเหมือนของประกอบฉากชิ้นอื่น`
+  const level = shared.PROMINENCE[shared.prominenceOf(product.prominence)]
+  const look = product.description?.trim()
+  return `- สินค้าในเรื่องคลิปนี้: "${name}" (${level.label} · ${level.shots})${look ? ` — หน้าตา: ${look}` : ''}
+- ${level.rule} · เขียนตัวสินค้าลงใน field Action หรือ Chars พร้อมรูปทรงและสีให้ชัด ไม่ใช่แค่เอ่ยชื่อ
+- ตัวสินค้าห้ามมีตัวหนังสือ โลโก้ ยี่ห้อ หรือ label ใดๆ (กฎ 7 ของ Blueprint) · วาดด้วยลายเส้นเล่มละบาทเหมือนของประกอบฉากชิ้นอื่น ไม่ใช่รูปถ่ายแปะลงไป`
 }
 
 /**
@@ -168,12 +178,91 @@ export function orientationRule(config = loadConfig()) {
  * flowPrompt บอก agent ตามรายการนี้ จึงไม่พูดถึงภาพที่ไม่ได้แนบ
  */
 export function flowAttachmentParts(slug = null, categoryId = readProfile(slug)?.category) {
-  return { character: characterAttachments(activeCharacter(slug)), kit: styleKitAttachments(categoryId) }
+  // รูปสินค้าแนบเฉพาะตอนเปิดใช้สินค้าและ ChatGPT เลือกรูปไว้แล้ว — รูปเดียวเท่านั้น ไม่แนบทั้งกอง
+  const product = clipProduct() ? productAttachment() : null
+  // แผ่นแบบของตัวละครที่คลิปนี้เลือกจากคลัง (อ่านรหัส CAST: จาก Character Bible ของคลิป)
+  const cast = pastable(clipCastAttachments(slug))
+  return {
+    character: pastable(characterAttachments(activeCharacter(slug))),
+    // ภาพ Style Kit เป็นฉากที่มีคนอยู่ในภาพ (หนุ่มถือตะเกียง · สาวเสื้อเหลือง) — Flow หยิบคนในภาพไปใส่ทุกเรื่อง
+    // แม้คำสั่งจะห้ามแล้ว (ผู้ใช้ 23 พ.ย. 2026: "ใช้ 2 คนนี้ แนบไปตลอด เลยมีในทุกเรื่อง")
+    // คลิปที่มีแผ่นแบบจากคลังแล้วไม่ต้องใช้ kit: แผ่นแบบวาดด้วยลายเส้นเดียวกัน และมีแต่คนที่เรื่องนี้ใช้จริง
+    // kit แนบเฉพาะคลิปที่ไม่มีแผ่นแบบเลย (คลิปรุ่นเก่า / บทไม่ได้เลือกตัวละครจากคลัง) — ไม่งั้นไม่มีอะไรบอกลายเส้นเป็นภาพ
+    kit: cast.length ? [] : pastable(styleKitAttachments(categoryId)),
+    cast,
+    product: pastable(product ? [product] : []),
+  }
 }
-/** รูปที่แนบทั้งหมดตามลำดับ: ตัวละครก่อน แล้ว Style Kit (ลำดับเดียวกับที่ styleKitFlowNote บอก agent) */
+
+/**
+ * ตัวละครที่คลิปนี้เลือกจากคลัง — ChatGPT เขียน [CAST:<id>] ไว้ใน Character Bible ตอนทำ Shot List
+ * ที่อ่านจาก Bible ไม่ใช่เก็บเป็นสถานะแยก: Bible เป็นแหล่งความจริงเดียวอยู่แล้ว เขียนบทใหม่ก็ไม่ค้างค่าเก่า
+ * แนบไม่เกิน 3 ตัว — แนบรูปเยอะคือสาเหตุที่ Flow สับสนตั้งแต่แรก
+ */
+/**
+ * Character Bible ของคลิป — อ่านจากไฟล์คำตอบของ ChatGPT ตรงๆ
+ * ไม่ import shotlist.mjs เพราะ shotlist.mjs import ไฟล์นี้อยู่ (วนกัน) · รหัส CAST: อยู่ในรอบแรกเสมอ
+ */
+function readBible(slug) {
+  const dir = join(ROOT, 'projects', slug, '04_shotlist', 'rounds')
+  if (!existsSync(dir)) return ''
+  return readdirSync(dir)
+    .filter((f) => f.endsWith('.txt'))
+    .sort()
+    .map((f) => readFileSync(join(dir, f), 'utf8'))
+    .join('\n')
+}
+
+export function clipCastAttachments(slug, { max = 3 } = {}) {
+  if (!slug) return []
+  try {
+    const bible = readBible(slug)
+    return bible ? castAttachments(parseCasting(bible), { max }) : []
+  } catch {
+    return []
+  }
+}
+/**
+ * ด่านเดียวก่อนส่งรูปออกไป: ทิ้งรูปที่ส่วนขยายวางไม่ได้ (ไม่มี base64 หรือไม่มีชนิดไฟล์)
+ * ส่วนขยายวางรูปด้วย atob(a.base64) ถ้าช่องนั้นหายไป มันจะ throw แล้วล้มทั้งรอบ ได้ภาพ 0 รูป
+ * ทิ้งรูปเสียไปรูปเดียวแล้วได้ภาพครบ ดีกว่าแนบครบแล้วไม่ได้อะไรเลย — และ flowPrompt จะไม่พูดถึงรูปที่ทิ้งด้วย
+ */
+export const pastable = (list) => (list ?? []).filter((a) => a?.name && a.type && typeof a.base64 === 'string' && a.base64.length > 0)
+/** รูปที่แนบทั้งหมดตามลำดับ: ตัวละคร → Style Kit → คลังตัวละคร → สินค้า (ลำดับเดียวกับที่ flowPrompt บอก agent) */
 export function flowAttachments(slug = null, categoryId = readProfile(slug)?.category) {
-  const { character, kit } = flowAttachmentParts(slug, categoryId)
-  return [...character, ...kit]
+  const { character, kit, cast, product } = flowAttachmentParts(slug, categoryId)
+  return [...character, ...kit, ...cast, ...product]
+}
+
+/**
+ * บอก agent ว่ารูปไหนคือตัวละครตัวไหน — คลังตัวละคร 48 ตัว (ผู้ใช้ 23 พ.ย. 2026: "ตัวละครมันมั่วสลับไปสลับมา")
+ * ต้องผูกรูปกับ @TAG ให้ชัด ไม่งั้น Flow เห็นรูปคนหลายคนแล้วเอาหน้าไปสลับกันเองอยู่ดี
+ * before = จำนวนรูปที่แนบก่อนหน้า (ตัวละครของฉัน + Style Kit)
+ */
+export function castFlowNote(cast = [], before = 0) {
+  if (!cast.length) return ''
+  const lines = cast.map((a, i) => `  · รูปลำดับที่ ${before + i + 1} = ${a.castName}`)
+  return `รูปที่แนบลำดับที่ ${before + 1}${cast.length > 1 ? `–${before + cast.length}` : ''} เป็นแผ่นแบบตัวละคร (แต่ละรูปมีคนคนเดียว วาดไว้ 3 ท่า บนพื้นขาว) — ใช้เป็นแบบหน้าตา ทรงผม ชุด และสีของตัวละครตัวนั้น:
+${lines.join('\n')}
+- ตัวละครที่ Character Bible กำกับรหัสคลังไว้ ให้วาดตามแผ่นแบบของตัวนั้นทุกช็อต — ห้ามเปลี่ยนทรงผม สีเสื้อ สีผ้านุ่ง หรือของติดตัว และห้ามสลับหน้าระหว่างตัวละคร
+- แผ่นแบบเป็นแค่แบบของ "คน" ไม่ใช่ฉาก — ห้ามลอกพื้นขาวหรือการจัด 3 ท่าของแผ่นแบบไปใส่ในภาพของเรื่อง แต่ละภาพของเรื่องยังเป็นฉากเต็มเฟรมตามปกติ
+- ตัวละครที่ไม่มีแผ่นแบบ ให้วาดตามคำบรรยายใน Character Bible เหมือนเดิม
+- แผ่นแบบวาดด้วยลายเส้นที่ต้องการอยู่แล้ว — ใช้เป็นแบบเส้นหมึก การแรเงา และการลงสีของทั้งเรื่องด้วย ทั้งตัวละครและฉากหลัง`
+}
+
+/**
+ * บอก agent ว่ารูปสุดท้ายคือรูปสินค้าจริง ให้วาดสินค้าให้เหมือนรูปนี้ — ไม่ใช่ตัวละคร ไม่ใช่แบบลายเส้น
+ * ที่ต้องบอกชัด: Flow เคยหยิบรูปอ้างอิงไปวาดเป็นตัวละครหรือเลียนโทนสีทั้งภาพมาแล้ว
+ */
+export function productFlowNote(product, before = 0) {
+  // ต้องตัดสินด้วยด่านเดียวกับที่แนบจริง ไม่งั้นคำสั่งจะพูดถึงรูปที่ถูกทิ้งไป
+  if (!product?.name || !pastable([productAttachment()]).length) return ''
+  const look = product.description?.trim()
+  return `รูปที่แนบลำดับที่ ${before + 1} (ท้ายสุด) เป็นรูปถ่ายสินค้าจริงชื่อ "${product.name}" — ใช้เป็นแบบของ "สิ่งของ" ชิ้นนี้เท่านั้น: วาดสินค้าในภาพการ์ตูนให้รูปทรง สัดส่วน และสีตรงกับรูปนี้ จนคนดูจำได้ว่าเป็นของชิ้นเดียวกัน${look ? ` (${look})` : ''}
+- รูปนี้ไม่ใช่ตัวละคร ไม่ใช่ฉาก และไม่ใช่แบบลายเส้น — ห้ามวาดคน มือ พื้นหลังสตูดิโอ ตัวหนังสือ หรือโลโก้จากรูปนี้ลงในผลงาน ห้ามเลียนโทนสีของรูปนี้ไปทั้งภาพ
+- วาดสินค้าด้วยลายเส้นการ์ตูนเล่มละบาทเหมือนของชิ้นอื่นในฉาก ไม่ใช่เอารูปถ่ายไปแปะ
+- ห้ามวาดรูปนี้ใหม่ทั้งใบเป็นผลงานภาพไหนก็ตาม — ทุกภาพต้องเป็นฉากของเรื่อง สินค้าเป็นแค่ของชิ้นเล็กในฉาก
+- ภาพปก (COVER) ห้ามใช้รูปนี้เป็นแบบ และไม่ต้องมีสินค้าชิ้นนี้ในปก — ปกวาดตามคำสั่งของปกเท่านั้น`
 }
 
 /**
@@ -197,10 +286,12 @@ export function flowPrompt(agentBrief, config = loadConfig(), slug = null) {
   const charNote = characterFlowNote(character, profile)
   const attached = flowAttachmentParts(slug, profile?.category) // ภาพที่แนบจริง — บอก agent เฉพาะภาพที่แนบไปเท่านั้น
   const kitNote = styleKitFlowNote(profile?.category, attached.character.length, attached.kit.map((a) => a.name))
+  const castNote = castFlowNote(attached.cast, attached.character.length + attached.kit.length)
+  const productNote = productFlowNote(clipProduct(config), attached.character.length + attached.kit.length + attached.cast.length)
   return `สร้างรูป ตามนี้ อย่าลืม lock ตัวละครต่างๆ ด้วยนะ
 เริ่มสร้างภาพทุกช็อตทันทีจนครบ ไม่ต้องสรุปแผน Storyboard และไม่ต้องถามยืนยันก่อน
 ${bodyStyleFlowNote(character, profile)}
-${shared.artStyleOf(profile).flow}${charNote ? `\n${charNote}` : ''}${kitNote ? `\n${kitNote}` : ''}${portrait ? '\nทุกภาพเป็นแนวตั้ง 9:16 จัดองค์ประกอบแนวตั้ง ตัวละครอยู่กลางภาพ' : ''}
+${shared.artStyleOf(profile).flow}${charNote ? `\n${charNote}` : ''}${kitNote ? `\n${kitNote}` : ''}${castNote ? `\n${castNote}` : ''}${productNote ? `\n${productNote}` : ''}${portrait ? '\nทุกภาพเป็นแนวตั้ง 9:16 จัดองค์ประกอบแนวตั้ง ตัวละครอยู่กลางภาพ' : ''}
 ทุกภาพต้องเต็มเฟรม ฉากหลังยาวถึงขอบทุกด้าน ห้ามมีแถบว่าง ขอบขาว หรือพื้นที่เปล่าด้านบน/ล่าง
 ${shared.FULL_BLEED_RULE}
 ${shared.categoryColorRule(profile?.category)}

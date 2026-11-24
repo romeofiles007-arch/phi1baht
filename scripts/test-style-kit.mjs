@@ -111,8 +111,11 @@ test('5_images.mjs แนบ Style Kit ของหมวดคลิปต่�
   assert.match(src, /import \{ flowPrompt, flowAttachments,[^}]*\} from '\.\/lib\/prompts\.mjs'/)
   assert.match(src, /attachments: flowAttachments\(slug, profile\?\.category\)/)
   const prompts = readFileSync(new URL('../pipeline/lib/prompts.mjs', import.meta.url), 'utf8')
-  assert.match(prompts, /character: characterAttachments\(activeCharacter\(slug\)\), kit: styleKitAttachments\(categoryId\)/)
-  assert.match(prompts, /return \[\.\.\.character, \.\.\.kit\]/)
+  // แต่ละส่วนมาจากตัวสร้างของตัวเอง — เช็กทีละช่อง ไม่ผูกกับการจัดบรรทัด (เดิมเป็น regex บรรทัดเดียว ล้มทุกครั้งที่จัดบรรทัดใหม่)
+  assert.match(prompts, /character: [\w(]*characterAttachments\(activeCharacter\(slug\)\)/)
+  assert.match(prompts, /kit: cast\.length \? \[\] : [\w(]*styleKitAttachments\(categoryId\)/)
+  // 23 พ.ย. 2026: ลำดับ ตัวละคร → Style Kit → คลังตัวละคร → สินค้า — ต้องตรงกับที่ flowPrompt บอก agent
+  assert.match(prompts, /return \[\.\.\.character, \.\.\.kit, \.\.\.cast, \.\.\.product\]/)
 })
 
 test('kit.json จริง: ไฟล์ครบ < 400 KB ไม่อ้าง references/ · ghost ได้ฉาก ≤2 ไม่มีปก · ทุกหมวดได้ฉาก ≥1', () => {

@@ -157,8 +157,13 @@ globalThis.bridgeInspect = function bridgeInspect(site) {
 function pasteFiles(el, attachments) {
   const dt = new DataTransfer()
   for (const a of attachments ?? []) {
-    const bytes = Uint8Array.from(atob(a.base64), (c) => c.charCodeAt(0))
-    dt.items.add(new File([bytes], a.name, { type: a.type }))
+    // ช่อง base64 หายหรือเสีย = ข้ามรูปนั้น ไม่ให้ atob โยน error แล้วล้มทั้งงาน (23 พ.ย. 2026)
+    if (typeof a?.base64 !== 'string' || !a.base64) continue
+    try {
+      dt.items.add(new File([Uint8Array.from(atob(a.base64), (c) => c.charCodeAt(0))], a.name, { type: a.type }))
+    } catch {
+      // ignore
+    }
   }
   if (!dt.files.length) return false
   el.focus()
