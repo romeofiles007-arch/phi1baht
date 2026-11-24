@@ -15,7 +15,9 @@ projects/_previews/
 tts/.venv-edge/
 projects/_trash/
 bridge/jobs.json
-characters/
+characters/*
+# คลังตัวละคร 48 ตัว (แผ่นแบบวาดใน ChatGPT) ขึ้น repo ด้วย — ผู้ใช้ 24 พ.ย. 2026 · รูปสินค้ายังอยู่ในเครื่องเท่านั้น
+!characters/cast/
 bridge/jobs-*.json
 
 # งานของผู้ใช้ (บท เสียงพากย์ ภาพ วิดีโอ) — ไม่ขึ้น repo สาธารณะ

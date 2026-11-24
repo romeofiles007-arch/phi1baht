@@ -1,0 +1,196 @@
+{
+  "sheets": {
+    "man_young": {
+      "file": "cast_man_young_mwt53bcj.png",
+      "savedAt": 1795430716724
+    },
+    "woman_young": {
+      "file": "cast_woman_young_mwt5fspg.png",
+      "savedAt": 1795431299093
+    },
+    "baby": {
+      "file": "cast_baby_mwt5smhe.png",
+      "savedAt": 1795431897556
+    },
+    "boy": {
+      "file": "cast_boy_mwt5smho.png",
+      "savedAt": 1795431897567
+    },
+    "girl": {
+      "file": "cast_girl_mwt5smhy.png",
+      "savedAt": 1795431897575
+    },
+    "labourer": {
+      "file": "cast_labourer_mwt5smi4.png",
+      "savedAt": 1795431897582
+    },
+    "man_mid": {
+      "file": "cast_man_mid_mwt5smib.png",
+      "savedAt": 1795431897588
+    },
+    "old_man": {
+      "file": "cast_old_man_mwt5smii.png",
+      "savedAt": 1795431897595
+    },
+    "old_woman": {
+      "file": "cast_old_woman_mwt5smiq.png",
+      "savedAt": 1795431897603
+    },
+    "pregnant": {
+      "file": "cast_pregnant_mwt5smiw.png",
+      "savedAt": 1795431897610
+    },
+    "servant": {
+      "file": "cast_servant_mwt5smj3.png",
+      "savedAt": 1795431897617
+    },
+    "teen_boy": {
+      "file": "cast_teen_boy_mwt5smja.png",
+      "savedAt": 1795431897624
+    },
+    "teen_girl": {
+      "file": "cast_teen_girl_mwt5smji.png",
+      "savedAt": 1795431897631
+    },
+    "woman_mid": {
+      "file": "cast_woman_mid_mwt5smjp.png",
+      "savedAt": 1795431897639
+    },
+    "doctor": {
+      "file": "cast_doctor_mwt67na7.png",
+      "savedAt": 1795432598432
+    },
+    "driver": {
+      "file": "cast_driver_mwt67naf.png",
+      "savedAt": 1795432598440
+    },
+    "headman": {
+      "file": "cast_headman_mwt67nao.png",
+      "savedAt": 1795432598449
+    },
+    "medium": {
+      "file": "cast_medium_mwt67nav.png",
+      "savedAt": 1795432598457
+    },
+    "monk": {
+      "file": "cast_monk_mwt67nb4.png",
+      "savedAt": 1795432598465
+    },
+    "nurse": {
+      "file": "cast_nurse_mwt69sek.png",
+      "savedAt": 1795432698382
+    },
+    "patient": {
+      "file": "cast_patient_mwt67nbk.png",
+      "savedAt": 1795432598482
+    },
+    "police": {
+      "file": "cast_police_mwt67nbs.png",
+      "savedAt": 1795432598490
+    },
+    "shaman": {
+      "file": "cast_shaman_mwt67nc4.png",
+      "savedAt": 1795432598501
+    },
+    "teacher": {
+      "file": "cast_teacher_mwt67ncb.png",
+      "savedAt": 1795432598508
+    },
+    "g_kongkoi": {
+      "file": "cast_g_kongkoi_mwt6tj1x.png",
+      "savedAt": 1795433619383
+    },
+    "g_krahang": {
+      "file": "cast_g_krahang_mwt6rk7s.png",
+      "savedAt": 1795433527577
+    },
+    "g_krasue": {
+      "file": "cast_g_krasue_mwt7y44o.png",
+      "savedAt": 1795435512938
+    },
+    "g_phong": {
+      "file": "cast_g_phong_mwt6rk8a.png",
+      "savedAt": 1795433527595
+    },
+    "g_phop": {
+      "file": "cast_g_phop_mwt6rk8j.png",
+      "savedAt": 1795433527606
+    },
+    "g_phrai": {
+      "file": "cast_g_phrai_mwt6rk8t.png",
+      "savedAt": 1795433527614
+    },
+    "g_pret": {
+      "file": "cast_g_pret_mwt6rk91.png",
+      "savedAt": 1795433528563
+    },
+    "g_taihong": {
+      "file": "cast_g_taihong_mwt6rl0s.png",
+      "savedAt": 1795433528621
+    },
+    "g_taithangklom": {
+      "file": "cast_g_taithangklom_mwt6rl10.png",
+      "savedAt": 1795433528629
+    },
+    "g_tani": {
+      "file": "cast_g_tani_mwt6rl1a.png",
+      "savedAt": 1795433528639
+    },
+    "hunphayon": {
+      "file": "cast_hunphayon_mwt6wc98.png",
+      "savedAt": 1795433750542
+    },
+    "kumarnthong": {
+      "file": "cast_kumarnthong_mwt6wc9h.png",
+      "savedAt": 1795433750550
+    },
+    "suea_saming": {
+      "file": "cast_suea_saming_mwt6wc9q.png",
+      "savedAt": 1795433750560
+    },
+    "mermaid": {
+      "file": "cast_mermaid_mwt77mkt.png",
+      "savedAt": 1795434278042
+    },
+    "phaya_nak": {
+      "file": "cast_phaya_nak_mwt77naa.png",
+      "savedAt": 1795434278051
+    },
+    "prince": {
+      "file": "cast_prince_mwt77nai.png",
+      "savedAt": 1795434278059
+    },
+    "princess": {
+      "file": "cast_princess_mwt77naq.png",
+      "savedAt": 1795434278067
+    },
+    "ruesi": {
+      "file": "cast_ruesi_mwt77naz.png",
+      "savedAt": 1795434278146
+    },
+    "soldier": {
+      "file": "cast_soldier_mwt77nd6.png",
+      "savedAt": 1795434278155
+    },
+    "thep_thida": {
+      "file": "cast_thep_thida_mwt77ndf.png",
+      "savedAt": 1795434278164
+    },
+    "yak": {
+      "file": "cast_yak_mwt77ndn.png",
+      "savedAt": 1795434278173
+    },
+    "city_man": {
+      "file": "cast_city_man_mwt7eyc7.png",
+      "savedAt": 1795434618968
+    },
+    "fake_shaman": {
+      "file": "cast_fake_shaman_mwt7eyci.png",
+      "savedAt": 1795434618979
+    },
+    "thid": {
+      "file": "cast_thid_mwt7eycr.png",
+      "savedAt": 1795434618988
+    }
+  }
+}
