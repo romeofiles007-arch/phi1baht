@@ -525,11 +525,25 @@ chrome.notifications?.onClicked.addListener(async (id) => {
 // กดไอคอน = เลื่อนแผงข้างออกมา
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {})
 
+/**
+ * เปิด Chrome / ติดตั้งหรือ reload extension → เปิด bridge เองเลย ไม่ต้องรอผู้ใช้กดไอคอนเปิดแผงข้าง
+ * (เดิม bridge เปิดเฉพาะตอนแผงข้างส่ง ENSURE_APP — เปิด Chrome ทิ้งไว้เฉยๆ งานในคิวไม่เดิน)
+ * ทำแค่ตอนเริ่มเท่านั้น ไม่ทำซ้ำทุกนาที — ผู้ใช้กด ปิดโปรแกรม.bat แล้วต้องปิดจริง
+ * ยังไม่ได้รันตัวติดตั้ง (ไม่มี native host) → ensureApp คืน error เฉยๆ แผงข้างยังบอกวิธีแก้เหมือนเดิม
+ */
+async function autoStartApp() {
+  const app = await ensureApp().catch((err) => ({ ok: false, error: String(err?.message ?? err) }))
+  if (!app.ok) {
+    console.warn('เปิดโปรแกรมอัตโนมัติตอนเริ่ม Chrome ไม่สำเร็จ', app.error)
+    pollLoop() // bridge อาจเปิดอยู่แล้วจากทางอื่น (เปิดโปรแกรม.bat) — ลองรับงานตามค่าเดิม
+  }
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create('poll', { periodInMinutes: 1 })
-  pollLoop()
+  autoStartApp()
 })
-chrome.runtime.onStartup.addListener(pollLoop)
+chrome.runtime.onStartup.addListener(autoStartApp)
 chrome.alarms?.onAlarm.addListener(() => {
   pollLoop()
   checkAutopilot()
