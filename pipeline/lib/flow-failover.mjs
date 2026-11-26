@@ -3,7 +3,11 @@
 export const FLOW_BATCH_SIZE = 10
 
 /** Keep batches and account changes serialized; completion means files written by the bridge. */
-export async function generateWithFailover({ payload, runJob, promptFor, onProgress, onSwitch = () => {} }) {
+/**
+ * attachmentsFor(shots) = รูปแนบของชุดนั้น (ไม่ส่ง = ใช้ payload.attachments ทุกชุด)
+ * แต่ละชุดแนบรูปพร้อมคำสั่งแรกของชุดเอง จึงแนบแผ่นแบบเฉพาะตัวละครที่ชุดนั้นใช้ได้
+ */
+export async function generateWithFailover({ payload, runJob, promptFor, attachmentsFor, onProgress, onSwitch = () => {} }) {
   const allShots = payload.shots
   const files = new Map()
   const tried = new Set()
@@ -12,8 +16,9 @@ export async function generateWithFailover({ payload, runJob, promptFor, onProgr
     if (typeof promptFor !== 'function') throw new Error('ขาดตัวสร้าง prompt ของชุดภาพ Flow — หยุดก่อนส่งรายการเกินขนาด')
     return promptFor(shots)
   }
+  const batchFiles = shots => (typeof attachmentsFor === 'function' ? { attachments: attachmentsFor(shots) } : {})
   const first = batch(allShots)
-  let request = typeof promptFor === 'function' || allShots.length > FLOW_BATCH_SIZE ? { ...payload, shots: first, prompt: prompt(first) } : payload
+  let request = typeof promptFor === 'function' || allShots.length > FLOW_BATCH_SIZE ? { ...payload, shots: first, prompt: prompt(first), ...batchFiles(first) } : payload
   let currentProject = payload.projectUrl
   for (let attempt = 0; attempt < allShots.length + 20; attempt++) {
     const committed = files.size
@@ -36,7 +41,7 @@ export async function generateWithFailover({ payload, runJob, promptFor, onProgr
       try { project = new URL(currentProject) } catch {}
       if (project?.origin !== 'https://flow.google.com' || !/\/project\//.test(project.pathname)) throw new Error('Flow ไม่ได้ส่ง URL โปรเจกต์ของชุดภาพกลับมา — หยุดก่อนใช้โปรเจกต์ผิดคลิป')
       const shots = batch(remaining)
-      request = { ...request, shots, prompt: prompt(shots), projectUrl: project.href, newProject: false }
+      request = { ...request, shots, prompt: prompt(shots), ...batchFiles(shots), projectUrl: project.href, newProject: false }
       continue
     }
     if (!quota || !remaining.length) {
@@ -56,7 +61,7 @@ export async function generateWithFailover({ payload, runJob, promptFor, onProgr
     if (!next.meta?.email || tried.has(next.meta.email.toLowerCase())) throw new Error('FLOW_ACCOUNTS_EXHAUSTED: ยืนยันบัญชี Flow ใหม่ไม่ได้ — หยุดก่อนส่งคำสั่งสร้างภาพ')
     const shots = batch(remaining)
     currentProject = null
-    request = { ...payload, shots, prompt: prompt(shots), projectUrl: null, newProject: true, expectedAccount: next.meta.email }
+    request = { ...payload, shots, prompt: prompt(shots), ...batchFiles(shots), projectUrl: null, newProject: true, expectedAccount: next.meta.email }
   }
   throw new Error('Flow ทำชุดภาพไม่คืบหน้าภายในจำนวนรอบที่กำหนด — เก็บไฟล์ที่ได้แล้วและหยุดรอ')
 }

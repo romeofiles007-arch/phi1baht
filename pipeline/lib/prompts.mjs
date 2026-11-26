@@ -176,12 +176,13 @@ export function orientationRule(config = loadConfig()) {
  * รูปที่แนบไปกับคำสั่ง Flow — ทุกทางที่ส่งภาพให้ Flow ใช้ชุดนี้ (autopilot 5_images และแผงข้างแบบทำเองผ่าน /api/flow/attachments)
  *   character = รูปตัวละครของฉัน (ถ้ามี) · kit = ภาพ Style Kit ของหมวด (เฉพาะ kind 'scene' — ปกมีตัวหนังสือ ไม่แนบ)
  * flowPrompt บอก agent ตามรายการนี้ จึงไม่พูดถึงภาพที่ไม่ได้แนบ
+ * shotsText = ข้อความช็อตของงานนี้ (เลือกแผ่นแบบเฉพาะตัวที่อยู่ในช็อตเหล่านี้) · ไม่ส่ง = ทุกช็อตของคลิป (agent_brief.txt)
  */
-export function flowAttachmentParts(slug = null, categoryId = readProfile(slug)?.category) {
+export function flowAttachmentParts(slug = null, categoryId = readProfile(slug)?.category, { shotsText } = {}) {
   // รูปสินค้าแนบเฉพาะตอนเปิดใช้สินค้าและ ChatGPT เลือกรูปไว้แล้ว — รูปเดียวเท่านั้น ไม่แนบทั้งกอง
   const product = clipProduct() ? productAttachment() : null
   // แผ่นแบบของตัวละครที่คลิปนี้เลือกจากคลัง (อ่านรหัส CAST: จาก Character Bible ของคลิป)
-  const cast = pastable(clipCastAttachments(slug))
+  const cast = pastable(clipCastAttachments(slug, { shotsText }))
   return {
     character: pastable(characterAttachments(activeCharacter(slug))),
     // ภาพ Style Kit เป็นฉากที่มีคนอยู่ในภาพ (หนุ่มถือตะเกียง · สาวเสื้อเหลือง) — Flow หยิบคนในภาพไปใส่ทุกเรื่อง
@@ -213,14 +214,83 @@ function readBible(slug) {
     .join('\n')
 }
 
-export function clipCastAttachments(slug, { max = 3 } = {}) {
-  if (!slug) return []
+/** ข้อความช็อตทั้งหมดของคลิป (agent_brief.txt) — ใช้เมื่อผู้เรียกไม่ได้บอกว่างานนี้มีช็อตไหน */
+function readClipShots(slug) {
+  const file = join(ROOT, 'projects', slug, '04_shotlist', 'agent_brief.txt')
+  return existsSync(file) ? readFileSync(file, 'utf8') : ''
+}
+
+/** @TAG → รหัสคลัง จากบรรทัด "@hero = ชาญ ชายหนุ่ม... [CAST:man_young]" ใน Character Bible (ตัวแรกที่เจอชนะ) */
+export function castTags(bible) {
+  const out = new Map()
+  for (const m of String(bible ?? '').matchAll(/^\s*(@\w+)\s*[=:：][^\n]*?\[?CAST:\s*([a-z][a-z0-9_]*)/gim)) {
+    const member = shared.castById(m[2].toLowerCase())
+    if (member && !out.has(m[1])) out.set(m[1], member.id)
+  }
+  return out
+}
+
+/** บรรทัดภาพในคำสั่ง (ชื่อไฟล์ .png ต้นบรรทัด) ที่มีช่อง Chars: */
+const IMAGE_LINE = /^\S+\.png\b/
+const charsField = (line) => /\bChars\s*:\s*([^|\n]*)/i.exec(line)?.[1] ?? null
+/** @TAG ในช่อง Chars: ของบรรทัดช็อตเดียว */
+export const shotCharTags = (line) => [...String(charsField(line) ?? '').matchAll(/@\w+/g)].map((m) => m[0])
+
+/**
+ * เลือกแผ่นแบบที่จะแนบ (ผู้ใช้ 26 พ.ย. 2026: "แนบตัวละครที่ไม่เกี่ยวข้องลงไปด้วยในบางฉาก ทำให้ Flow สับสน")
+ * - แนบเฉพาะตัวที่โผล่ในช่อง Chars: ของช็อตในงานนี้ — ตัวที่มีแค่ใน Bible แต่ไม่อยู่ในช็อตไหนเลยไม่แนบ
+ * - เกิน max เลือกตัวที่ออกหลายช็อตที่สุดก่อน (เท่ากันเรียงตาม Bible) — เดิมเอา 3 ตัวแรกของ Bible ตัวหลักอาจหลุด
+ * - นับเฉพาะบรรทัด SHOT ไม่นับปก: แผงข้างขอรูป (ไม่มีปก) กับคำสั่ง Flow (มีปก) จะได้ชุดเดียวกัน
+ * ช็อตไม่มีช่อง Chars: เลย (คลิปรุ่นเก่า) = ใช้แบบเดิม: ตาม Bible ไม่เกิน max
+ */
+export function castPlan(slug, shotsText = null, { max = 3 } = {}) {
+  const empty = { attachments: [], tags: new Map(), perShot: false }
+  if (!slug) return empty
+  const bible = readBible(slug)
+  if (!bible) return empty
+  const order = parseCasting(bible)
+  const tags = castTags(bible)
+  const lines = String(shotsText ?? readClipShots(slug)).split('\n').filter((l) => IMAGE_LINE.test(l) && /\bSHOT\s*\d+/i.test(l))
+  const counted = lines.filter((l) => charsField(l) !== null)
+  if (!counted.length) return { ...empty, attachments: castAttachments(order, { max }) }
+  const count = new Map()
+  for (const line of counted) {
+    for (const id of new Set(shotCharTags(line).map((t) => tags.get(t)).filter(Boolean))) count.set(id, (count.get(id) ?? 0) + 1)
+  }
+  const ranked = order.filter((id) => count.has(id)).sort((a, b) => count.get(b) - count.get(a) || order.indexOf(a) - order.indexOf(b))
+  const names = tagNames(bible)
+  const storyName = (id) => {
+    const tag = [...tags].find(([, v]) => v === id)?.[0]
+    return String(names[tag] ?? '').replace(/\s*\[?CAST:[^\]\s]*\]?/gi, '').trim().split(/\s+/)[0] || null
+  }
+  // ช็อตแรกของงานอาจไม่มีตัวใดมีแผ่นแบบเลย → ไม่แนบสักรูป (ไม่ใช่ย้อนไปแนบทั้ง Bible)
+  return { attachments: castAttachments(ranked, { max }).map((a) => ({ ...a, storyName: storyName(a.castId) })), tags, perShot: true }
+}
+
+export function clipCastAttachments(slug, { max = 3, shotsText = null } = {}) {
   try {
-    const bible = readBible(slug)
-    return bible ? castAttachments(parseCasting(bible), { max }) : []
+    return castPlan(slug, shotsText, { max }).attachments
   } catch {
     return []
   }
+}
+
+/**
+ * ต่อท้ายบรรทัดภาพแต่ละบรรทัดว่าใช้แผ่นแบบรูปไหน — Flow Agent รับรูปแนบครั้งเดียวทั้ง project แนบแยกรายช็อตไม่ได้
+ * จึงผูกรูปกับช็อตด้วยคำสั่งแทน: ช็อตที่ไม่มีตัวนั้นต้องไม่เอาคนจากแผ่นแบบนั้นไปใส่
+ * cast = แผ่นแบบที่แนบจริง (ลำดับเดียวกับที่แนบ) · before = จำนวนรูปที่แนบก่อนแผ่นแบบ
+ */
+export function annotateCastShots(text, cast = [], tags = new Map(), before = 0) {
+  if (!cast.length) return text
+  const index = new Map(cast.map((a, i) => [a.castId, { n: before + i + 1, name: a.storyName ?? a.castName }]))
+  const range = `${before + 1}${cast.length > 1 ? `–${before + cast.length}` : ''}`
+  return String(text).split('\n').map((line) => {
+    if (!IMAGE_LINE.test(line) || charsField(line) === null) return line
+    const refs = [...new Set(shotCharTags(line).map((t) => tags.get(t)).filter((id) => index.has(id)))].map((id) => index.get(id))
+    if (!refs.length) return `${line} [แผ่นแบบ: ภาพนี้ไม่มีตัวละครจากแผ่นแบบรูปที่ ${range} — ห้ามวาดคนจากแผ่นแบบลงในภาพนี้ วาดเฉพาะตัวละครในช่อง Chars]`
+    const others = cast.length - refs.length
+    return `${line} [แผ่นแบบ: ${refs.map((r) => `รูปที่ ${r.n} = ${r.name}`).join(', ')}${others ? ` · ห้ามวาดตัวละครจากแผ่นแบบรูปอื่นลงในภาพนี้` : ''}]`
+  }).join('\n')
 }
 /**
  * ด่านเดียวก่อนส่งรูปออกไป: ทิ้งรูปที่ส่วนขยายวางไม่ได้ (ไม่มี base64 หรือไม่มีชนิดไฟล์)
@@ -229,8 +299,8 @@ export function clipCastAttachments(slug, { max = 3 } = {}) {
  */
 export const pastable = (list) => (list ?? []).filter((a) => a?.name && a.type && typeof a.base64 === 'string' && a.base64.length > 0)
 /** รูปที่แนบทั้งหมดตามลำดับ: ตัวละคร → Style Kit → คลังตัวละคร → สินค้า (ลำดับเดียวกับที่ flowPrompt บอก agent) */
-export function flowAttachments(slug = null, categoryId = readProfile(slug)?.category) {
-  const { character, kit, cast, product } = flowAttachmentParts(slug, categoryId)
+export function flowAttachments(slug = null, categoryId = readProfile(slug)?.category, { shotsText } = {}) {
+  const { character, kit, cast, product } = flowAttachmentParts(slug, categoryId, { shotsText })
   return [...character, ...kit, ...cast, ...product]
 }
 
@@ -239,15 +309,18 @@ export function flowAttachments(slug = null, categoryId = readProfile(slug)?.cat
  * ต้องผูกรูปกับ @TAG ให้ชัด ไม่งั้น Flow เห็นรูปคนหลายคนแล้วเอาหน้าไปสลับกันเองอยู่ดี
  * before = จำนวนรูปที่แนบก่อนหน้า (ตัวละครของฉัน + Style Kit)
  */
-export function castFlowNote(cast = [], before = 0) {
+export function castFlowNote(cast = [], before = 0, { perShot = false } = {}) {
   if (!cast.length) return ''
-  const lines = cast.map((a, i) => `  · รูปลำดับที่ ${before + i + 1} = ${a.castName}`)
+  const lines = cast.map((a, i) => `  · รูปลำดับที่ ${before + i + 1} = ${a.storyName ? `${a.storyName} (${a.castName})` : a.castName}`)
+  const perShotRule = perShot
+    ? '\n- ท้ายบรรทัดของแต่ละภาพมี [แผ่นแบบ: ...] บอกว่าภาพนั้นใช้แผ่นแบบรูปไหน — วาดเฉพาะตัวละครที่ภาพนั้นระบุ ห้ามเอาคนจากแผ่นแบบรูปอื่นไปใส่ในภาพที่ไม่ได้ระบุ แม้จะแนบมาพร้อมกัน'
+    : ''
   return `รูปที่แนบลำดับที่ ${before + 1}${cast.length > 1 ? `–${before + cast.length}` : ''} เป็นแผ่นแบบตัวละคร (แต่ละรูปมีคนคนเดียว วาดไว้ 3 ท่า บนพื้นขาว) — ใช้เป็นแบบหน้าตา ทรงผม ชุด และสีของตัวละครตัวนั้น:
 ${lines.join('\n')}
 - ตัวละครที่ Character Bible กำกับรหัสคลังไว้ ให้วาดตามแผ่นแบบของตัวนั้นทุกช็อต — ห้ามเปลี่ยนทรงผม สีเสื้อ สีผ้านุ่ง หรือของติดตัว และห้ามสลับหน้าระหว่างตัวละคร
 - แผ่นแบบเป็นแค่แบบของ "คน" ไม่ใช่ฉาก — ห้ามลอกพื้นขาวหรือการจัด 3 ท่าของแผ่นแบบไปใส่ในภาพของเรื่อง แต่ละภาพของเรื่องยังเป็นฉากเต็มเฟรมตามปกติ
 - ตัวละครที่ไม่มีแผ่นแบบ ให้วาดตามคำบรรยายใน Character Bible เหมือนเดิม
-- แผ่นแบบวาดด้วยลายเส้นที่ต้องการอยู่แล้ว — ใช้เป็นแบบเส้นหมึก การแรเงา และการลงสีของทั้งเรื่องด้วย ทั้งตัวละครและฉากหลัง`
+- แผ่นแบบวาดด้วยลายเส้นที่ต้องการอยู่แล้ว — ใช้เป็นแบบเส้นหมึก การแรเงา และการลงสีของทั้งเรื่องด้วย ทั้งตัวละครและฉากหลัง${perShotRule}`
 }
 
 /**
@@ -278,15 +351,24 @@ export function styleKitFlowNote(categoryId, characterCount = 0, attached = null
   return `${where} (${names}) เป็นภาพอ้างอิงลายเส้นเท่านั้น (Style Kit) — ใช้เป็นแบบเทคนิคเส้นหมึก การแรเงา และรอยสีไม้/สีน้ำ ไม่ใช่ตัวละคร: ห้ามวาดตัวละคร ฉาก หรือองค์ประกอบจากภาพเหล่านี้ลงในผลงาน · ห้ามเลียนโทนสีรวมหรือสีกระดาษของภาพอ้างอิง — ผลงานต้องสีสดบนกระดาษขาวสะอาด ขาวต้องขาว ไม่มีเหลืองคลุมทั้งภาพ${characterCount > 0 ? ` ตัวละครหลักคือ ${characterCount} รูปแรกเท่านั้น` : ''}`
 }
 
-/** ข้อความที่วางลง Flow — คำกำกับข้างบนตามที่ผู้ใช้ระบุในข้อ 5 ของสเปก */
-export function flowPrompt(agentBrief, config = loadConfig(), slug = null) {
+/**
+ * ข้อความที่วางลง Flow — คำกำกับข้างบนตามที่ผู้ใช้ระบุในข้อ 5 ของสเปก
+ * castFrom = ข้อความช็อตทั้งงานที่ใช้เลือกแผ่นแบบ (ต้องตรงกับ flowAttachments ของงานเดียวกัน)
+ *   ไม่ส่ง = ใช้ agentBrief เอง · คำสั่งซ้ำเฉพาะช็อตที่ขาดต้องส่งของทั้งงาน ไม่งั้นเลขรูปแนบจะเลื่อน
+ */
+export function flowPrompt(agentBrief, config = loadConfig(), slug = null, { castFrom = null } = {}) {
   const portrait = orientationOf(config) === 'portrait'
   const character = activeCharacter(slug)
   const profile = readProfile(slug)
   const charNote = characterFlowNote(character, profile)
-  const attached = flowAttachmentParts(slug, profile?.category) // ภาพที่แนบจริง — บอก agent เฉพาะภาพที่แนบไปเท่านั้น
+  const shotsText = castFrom ?? agentBrief
+  const attached = flowAttachmentParts(slug, profile?.category, { shotsText }) // ภาพที่แนบจริง — บอก agent เฉพาะภาพที่แนบไปเท่านั้น
   const kitNote = styleKitFlowNote(profile?.category, attached.character.length, attached.kit.map((a) => a.name))
-  const castNote = castFlowNote(attached.cast, attached.character.length + attached.kit.length)
+  const castBefore = attached.character.length + attached.kit.length
+  const plan = attached.cast.length ? castPlan(slug, shotsText) : null
+  const perShot = !!plan?.perShot
+  const castNote = castFlowNote(attached.cast, castBefore, { perShot })
+  if (perShot) agentBrief = annotateCastShots(agentBrief, attached.cast, plan.tags, castBefore)
   const productNote = productFlowNote(clipProduct(config), attached.character.length + attached.kit.length + attached.cast.length)
   return `สร้างรูป ตามนี้ อย่าลืม lock ตัวละครต่างๆ ด้วยนะ
 เริ่มสร้างภาพทุกช็อตทันทีจนครบ ไม่ต้องสรุปแผน Storyboard และไม่ต้องถามยืนยันก่อน

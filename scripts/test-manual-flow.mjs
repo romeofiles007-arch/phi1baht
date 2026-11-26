@@ -117,7 +117,9 @@ test('bridge: /api/flow/attachments ใช้ flowAttachments · /api/images/ink
 
 test('5_images ใช้ flowAttachments ตัวเดียวกัน · 6_render แปลงภาพที่ยังไม่แปลงก่อนตัดต่อ (ด่านเดียวของทุกที่มา)', () => {
   const images = read('pipeline/5_images.mjs')
-  assert.match(images, /attachments: flowAttachments\(slug, profile\?\.category\)/)
+  assert.match(images, /attachments: flowAttachments\(slug, profile\?\.category, \{ shotsText: brief \}\)/)
+  // แต่ละชุดของ Flow แนบแผ่นแบบเฉพาะตัวละครในชุดนั้น — ดู test-cast-per-shot.mjs
+  assert.match(images, /attachmentsFor: batchShots => flowAttachments\(slug, profile\?\.category, \{ shotsText:/)
   const render = read('pipeline/6_render.mjs')
   assert.match(render, /inkifyEnabled\(config, profile\)[\s\S]*inkifyAll\(imagesDir/)
   assert.ok(render.indexOf('inkifyAll(imagesDir') < render.indexOf('renderVideo('), 'ต้องแปลงก่อน render')

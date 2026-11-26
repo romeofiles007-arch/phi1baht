@@ -119,6 +119,9 @@ const result = await generateWithFailover({
     ...remaining.filter(s => s.filename === COVER_NAME).flatMap(s => coverBriefLines(untag(shots.find(original => original.filename === s.filename)), aspect === '9:16')),
     ...remaining.filter(s => s.filename === RIDDLE_NAME).flatMap(() => riddleBriefLines(riddle)),
   ].join('\n\n'), undefined, slug),
+  // ทุกชุด (ไม่เกิน 10 ช็อต) แนบรูปพร้อมคำสั่งแรกของชุดเอง → แนบแผ่นแบบเฉพาะตัวละครที่อยู่ในช็อตของชุดนั้น
+  // เลือกจากบรรทัดช็อตชุดเดียวกับที่ promptFor ใส่ในคำสั่ง เลขรูปแนบใน [แผ่นแบบ: รูปที่ N] จึงตรงกัน
+  attachmentsFor: batchShots => flowAttachments(slug, profile?.category, { shotsText: batchShots.map(s => `${s.filename} ${s.prompt}`).join('\n') }),
   onSwitch: (quota, missing) => console.log(`\n  บัญชี Flow ${quota.email} ติดลิมิต — สลับบัญชีอัตโนมัติและทำต่อเฉพาะ ${missing} ภาพที่ขาด`),
   payload: {
     prompt: flowPrompt(brief, undefined, slug),
@@ -128,7 +131,8 @@ const result = await generateWithFailover({
     projectTitle: title, // ตั้งชื่อ project ใน Flow เป็นชื่อเรื่อง แทนชื่อวันที่ของ Flow
     // รูปตัวละครของฉัน (ถ้ามี) + ภาพ Style Kit ของหมวด 1–2 ภาพ (kit ว่าง = ไม่มี) — แนบเป็น ingredient กับ prompt แรก
     // ชุดเดียวกับที่แผงข้างแนบ (/api/flow/attachments) และที่ flowPrompt บอก agent
-    attachments: flowAttachments(slug, profile?.category),
+    // แต่ละชุดใช้ attachmentsFor แทนรายการนี้ (เหลือไว้เป็นค่าตั้งต้นของงานที่ไม่มีตัวแบ่งชุด)
+    attachments: flowAttachments(slug, profile?.category, { shotsText: brief }),
     outDir: imagesDir,
     newProject: !savedProject?.url,
     projectUrl: savedProject?.url ?? null,

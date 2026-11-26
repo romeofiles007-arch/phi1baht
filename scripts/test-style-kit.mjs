@@ -109,7 +109,8 @@ test('5_images.mjs แนบ Style Kit ของหมวดคลิปต่�
   const src = readFileSync(new URL('../pipeline/5_images.mjs', import.meta.url), 'utf8')
   // ชุดรูปแนบอยู่ที่ flowAttachments (prompts.mjs) — ใช้ร่วมกับแผงข้าง (/api/flow/attachments) · ดู test-manual-flow.mjs
   assert.match(src, /import \{ flowPrompt, flowAttachments,[^}]*\} from '\.\/lib\/prompts\.mjs'/)
-  assert.match(src, /attachments: flowAttachments\(slug, profile\?\.category\)/)
+  assert.match(src, /attachments: flowAttachments\(slug, profile\?\.category, \{ shotsText: brief \}\)/)
+  assert.match(src, /attachmentsFor: batchShots => flowAttachments\(slug, profile\?\.category, \{ shotsText:/)
   const prompts = readFileSync(new URL('../pipeline/lib/prompts.mjs', import.meta.url), 'utf8')
   // แต่ละส่วนมาจากตัวสร้างของตัวเอง — เช็กทีละช่อง ไม่ผูกกับการจัดบรรทัด (เดิมเป็น regex บรรทัดเดียว ล้มทุกครั้งที่จัดบรรทัดใหม่)
   assert.match(prompts, /character: [\w(]*characterAttachments\(activeCharacter\(slug\)\)/)
