@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ผี 1 บาท",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "ขับ ChatGPT และ Google Flow พร้อม Kie API ในเครื่องเพื่อทำคลิปการ์ตูนผีไทยอัตโนมัติ",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAg+KghFPOR1TqJe+HoXDVWB9keqmfLSADqHxRSjfgYYAb4/QKdvxh0NMyujvj557rfNclixE2VFbhYvwlu+3bcZORuXuXuwWZF6JBBw67W61JnkhTOq4wJ4mz3QlPSL+rmuE5QnsmeBdv5snPnmAqLlfE7JrUsqiQgl6SRWtv8h8HeBbE6PHulo7neLsM+g00Wbaxv0e6OMCDLrB/l0sdYX+K5djpbFt3pK+OtpbEbF5ecja4FvGDwvo5Dk/9NCUcx3kSFVgPtEkpCguaWHUTmJZblJJwe3e1pWp4T2/kMjtjOgAm6rrl98Ir43g3tPj5jSuLrljdopi0GOyYtfrJ9QIDAQAB",
   "permissions": [
